@@ -941,11 +941,17 @@
                     }
                 }
 
+                // フォント情報の整合性確保
+                // txHeight = fontSize (実際のフォントサイズ、_buildSingleStyleと一致)
+                // sizeValue = fontSize * 8.21 (PRTLフォーマットの内部サイズ値、75→616の比率)
+                // txSCaps = fontSize (スモールキャップのサイズ)
+                // これらの値は _buildSingleStyle、_buildTextChain と整合性を保つ
+
                 let xml = '<TextDescriptions Version="4">';
                 fonts.forEach((fontFamily, index) => {
                     const ref = this.idCounter + index;
                     const txHeight = representativeFontSize;
-                    const sizeValue = Math.round(representativeFontSize * 8.21); // 75→616の比率から計算
+                    const sizeValue = Math.round(representativeFontSize * 8.21);
                     const txSCaps = representativeFontSize;
                     xml += `<TextDescription Reference="${ref}"><TypeSpec><size>${sizeValue}</size><txHeight>${txHeight}</txHeight><txKern>0</txKern><baselineShift>0</baselineShift><leading>0</leading><txSCaps>${txSCaps}</txSCaps><txSCapsOn>false</txSCapsOn><txSlant>0</txSlant><txUnderline>false</txUnderline><txWidth>67.5</txWidth><linked>false</linked><fiBold>0</fiBold><fiItalic>0</fiItalic><fifullName>${this._escapeXML(fontFamily)}</fifullName><fifontFamilyName>${this._escapeXML(fontFamily)}</fifontFamilyName><fifontStyle>Regular</fifontStyle><fifontType>5</fifontType><ficategory>1</ficategory></TypeSpec></TextDescription>`;
                 });
@@ -972,9 +978,15 @@
                 const fontSize = firstChar.fontSize || 72;
                 let fragments = '';
 
+                // 整合性確保：txBase、txHeight、fillSizeの関係を統一
+                // txBase = fontSize * 1.2 (BasePropertiesで使用)
+                // txHeight = fontSize (実際のフォントサイズ)
+                // fillSize = txHeight * 1.04 (塗りのFragmentサイズ、PRTLサンプルの比率)
+                const txBase = fontSize * 1.2;
+                const txHeight = fontSize;
+                const fillSize = Math.round(txHeight * 1.04);
+
                 // 1. 塗り (annotation 4, painterMix 10) を最初に追加
-                // サンプルPRTLではtxHeight=75でsize=78なので、fontSize * 1.04を使用
-                const fillSize = Math.round(fontSize * 1.04);
                 fragments += `<Fragment><size>${fillSize}</size><offset>0</offset><angle>0</angle><ghost>false</ghost><isExtendedShadowFragment>false</isExtendedShadowFragment><eFragmentType>2</eFragmentType><fragmentOff>false</fragmentOff><placeHolder>false</placeHolder><annotation>4</annotation><placeHolderShaderIndex>4294967295</placeHolderShaderIndex><painterMix>10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 </painterMix></Fragment>`;
 
                 // 2. アウトライン (annotation 3, 2, ...) - 有効なストロークがある場合
@@ -985,7 +997,11 @@
                         const annotation = 3 - i; // 3, 2, 1...
                         const painterNum = 11 + i; // 11, 12, 13...
                         if (annotation >= 1) {
-                            fragments += `<Fragment><size>${stroke.width * 2}</size><offset>0</offset><angle>0</angle><ghost>false</ghost><isExtendedShadowFragment>false</isExtendedShadowFragment><eFragmentType>2</eFragmentType><fragmentOff>false</fragmentOff><placeHolder>false</placeHolder><annotation>${annotation}</annotation><placeHolderShaderIndex>4294967295</placeHolderShaderIndex><painterMix>${painterNum} ${painterNum} ${painterNum} ${painterNum} ${painterNum} ${painterNum} ${painterNum} ${painterNum} ${painterNum} ${painterNum} ${painterNum} ${painterNum} ${painterNum} ${painterNum} ${painterNum} ${painterNum} </painterMix></Fragment>`;
+                            // ストローク幅の整合性確保：UIの幅値を適切にスケーリング
+                            // stroke.widthはUI上のピクセル値、Fragment sizeはフォントサイズに対する相対値
+                            // txHeightに対する比率で計算し、適切にスケーリング
+                            const strokeSize = Math.round(stroke.width * txHeight / 36);
+                            fragments += `<Fragment><size>${strokeSize}</size><offset>0</offset><angle>0</angle><ghost>false</ghost><isExtendedShadowFragment>false</isExtendedShadowFragment><eFragmentType>2</eFragmentType><fragmentOff>false</fragmentOff><placeHolder>false</placeHolder><annotation>${annotation}</annotation><placeHolderShaderIndex>4294967295</placeHolderShaderIndex><painterMix>${painterNum} ${painterNum} ${painterNum} ${painterNum} ${painterNum} ${painterNum} ${painterNum} ${painterNum} ${painterNum} ${painterNum} ${painterNum} ${painterNum} ${painterNum} ${painterNum} ${painterNum} ${painterNum} </painterMix></Fragment>`;
                         }
                     });
                 }
@@ -1095,6 +1111,10 @@
                 const width = obj.width || estimatedWidth;
                 const height = obj.height || fontSize * 1.5;
 
+                // フォント情報の整合性確保：_buildSingleStyleと同じ計算式を使用
+                // txBase = fontSize * 1.2 (ベースライン位置の基準)
+                const txBase = fontSize * 1.2;
+
                 let xml = '<TextChain>';
                 xml += `<ChainProperty Version="9">`;
                 xml += `<wordWrap>false</wordWrap>`;
@@ -1114,7 +1134,6 @@
                 const persistentID = index + 3;
                 xml += `<TextLine Version="2" objectID="${objectID}" persistentID="${persistentID}">`;
 
-                const txBase = fontSize * 1.2;
                 xml += `<BaseProperties Version="5">`;
                 xml += `<txBase>${txBase}</txBase>`;
                 xml += `<XPos>${x}</XPos>`;
