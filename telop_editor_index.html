@@ -281,7 +281,8 @@
             <button class="btn btn-secondary" onclick="exportGIF()">GIF書き出し</button>
             <button class="btn btn-secondary" onclick="exportWebM()">WebM書き出し</button>
             <button class="btn btn-primary" onclick="exportPRTL()">PRTL書き出し</button>
-            <button class="btn btn-secondary" onclick="batchExportPRTL()" title="全キャンバスをPRTL形式で一括書き出し（連番: _000, _001...)">バッチPRTL書き出し</button>
+            <button class="btn btn-secondary" onclick="batchExportPRTLOnly()" title="全キャンバスをPRTL形式でZIP一括書き出し">キャンバスリスト書出し（PRTL）</button>
+            <button class="btn btn-secondary" onclick="batchExportPNGOnly()" title="全キャンバスをPNG形式でZIP一括書き出し">キャンバスリスト書出し（PNG）</button>
             <button class="btn btn-success" onclick="importPRTL()" title="PRTLファイルを読み込んでキャンバスに表示">PRTL読み込み</button>
             <button class="btn btn-primary" onclick="exportMOGRT()">MOGRT書き出し</button>
             <button class="btn btn-secondary" onclick="saveProject()">プロジェクト保存</button>
@@ -908,7 +909,7 @@
                 const fonts = this._collectUniqueFonts(objects);
                 const styles = this._buildStyles(objects);
                 const shaders = this._buildShaders(objects);
-                const textDescriptions = this._buildTextDescriptions(fonts);
+                const textDescriptions = this._buildTextDescriptions(fonts, objects);
                 const textures = this._buildTextures();
                 const logos = this._buildLogos();
                 const layers = this._buildLayers(objects);
@@ -928,12 +929,25 @@
                 return Array.from(fontSet);
             }
 
-            _buildTextDescriptions(fonts) {
+            _buildTextDescriptions(fonts, objects) {
                 if (fonts.length === 0) fonts = ['Yu Gothic UI'];
+
+                // 代表的なフォントサイズを取得（最初のテキストオブジェクトから）
+                let representativeFontSize = 72;
+                for (const obj of objects) {
+                    if (obj.type === 'text' && obj.chars && obj.chars[0] && obj.chars[0].fontSize) {
+                        representativeFontSize = obj.chars[0].fontSize;
+                        break;
+                    }
+                }
+
                 let xml = '<TextDescriptions Version="4">';
                 fonts.forEach((fontFamily, index) => {
                     const ref = this.idCounter + index;
-                    xml += `<TextDescription Reference="${ref}"><TypeSpec><size>616</size><txHeight>75</txHeight><txKern>0</txKern><baselineShift>0</baselineShift><leading>0</leading><txSCaps>75</txSCaps><txSCapsOn>false</txSCapsOn><txSlant>0</txSlant><txUnderline>false</txUnderline><txWidth>67.5</txWidth><linked>false</linked><fiBold>0</fiBold><fiItalic>0</fiItalic><fifullName>${this._escapeXML(fontFamily)}</fifullName><fifontFamilyName>${this._escapeXML(fontFamily)}</fifontFamilyName><fifontStyle>Regular</fifontStyle><fifontType>5</fifontType><ficategory>1</ficategory></TypeSpec></TextDescription>`;
+                    const txHeight = representativeFontSize;
+                    const sizeValue = Math.round(representativeFontSize * 8.21); // 75→616の比率から計算
+                    const txSCaps = representativeFontSize;
+                    xml += `<TextDescription Reference="${ref}"><TypeSpec><size>${sizeValue}</size><txHeight>${txHeight}</txHeight><txKern>0</txKern><baselineShift>0</baselineShift><leading>0</leading><txSCaps>${txSCaps}</txSCaps><txSCapsOn>false</txSCapsOn><txSlant>0</txSlant><txUnderline>false</txUnderline><txWidth>67.5</txWidth><linked>false</linked><fiBold>0</fiBold><fiItalic>0</fiItalic><fifullName>${this._escapeXML(fontFamily)}</fifullName><fifontFamilyName>${this._escapeXML(fontFamily)}</fifontFamilyName><fifontStyle>Regular</fifontStyle><fifontType>5</fifontType><ficategory>1</ficategory></TypeSpec></TextDescription>`;
                 });
                 xml += '</TextDescriptions>';
                 return xml;
@@ -955,10 +969,13 @@
                 const styleId = this.styleCounter + index;
                 const firstChar = obj.chars[0];
                 const strokes = firstChar.strokes || [];
+                const fontSize = firstChar.fontSize || 72;
                 let fragments = '';
 
                 // 1. 塗り (annotation 4, painterMix 10) を最初に追加
-                fragments += `<Fragment><size>0</size><offset>0</offset><angle>0</angle><ghost>false</ghost><isExtendedShadowFragment>false</isExtendedShadowFragment><eFragmentType>2</eFragmentType><fragmentOff>false</fragmentOff><placeHolder>false</placeHolder><annotation>4</annotation><placeHolderShaderIndex>4294967295</placeHolderShaderIndex><painterMix>10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 </painterMix></Fragment>`;
+                // サンプルPRTLではtxHeight=75でsize=78なので、fontSize * 1.04を使用
+                const fillSize = Math.round(fontSize * 1.04);
+                fragments += `<Fragment><size>${fillSize}</size><offset>0</offset><angle>0</angle><ghost>false</ghost><isExtendedShadowFragment>false</isExtendedShadowFragment><eFragmentType>2</eFragmentType><fragmentOff>false</fragmentOff><placeHolder>false</placeHolder><annotation>4</annotation><placeHolderShaderIndex>4294967295</placeHolderShaderIndex><painterMix>10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 </painterMix></Fragment>`;
 
                 // 2. アウトライン (annotation 3, 2, ...) - 有効なストロークがある場合
                 const enabledStrokes = strokes.filter(s => s.enabled);
@@ -7027,6 +7044,11 @@
 
         function exportPNG() {
             exitEditMode(); selectedObjId = null; selectedObjIds = [];
+
+            // ファイル名を入力
+            const fileName = prompt('PNG書き出しファイル名を入力してください（.png は自動で付きます）', 'telop');
+            if (!fileName) return;
+
             // 一時的にセーフマージンを非表示にしてレンダリング
             const safeMarginCheckbox = document.getElementById('safeMarginEnabled');
             const wasEnabled = safeMarginCheckbox.checked;
@@ -7037,7 +7059,7 @@
             render();
 
             const link = document.createElement('a');
-            link.download = `telop_${Date.now()}.png`;
+            link.download = `${fileName}.png`;
             link.href = canvas.toDataURL('image/png');
             link.click();
 
@@ -8043,6 +8065,10 @@
         function exportPRTL() {
             exitEditMode(); selectedObjId = null; selectedObjIds = [];
 
+            // ファイル名を入力
+            const fileName = prompt('PRTL書き出しファイル名を入力してください（.prtl は自動で付きます）', 'title');
+            if (!fileName) return;
+
             // PRTLGeneratorを使用して正しいPRTL構造を生成
             const generator = new PRTLGenerator();
             const canvasData = {
@@ -8058,7 +8084,7 @@
 
             const blob = new Blob([utf8Array], { type: 'application/octet-stream' });
             const link = document.createElement('a');
-            link.download = `title_${Date.now()}.prtl`;
+            link.download = `${fileName}.prtl`;
             link.href = URL.createObjectURL(blob);
             link.click();
 
@@ -8199,8 +8225,8 @@
             alert('MOGRT書き出し機能は現在開発中です。\nMOGRTはAdobe After Effectsの複雑なフォーマットのため、完全な実装には時間が必要です。\n\n代替案:\n1. PRTLとして書き出してPremiere Proで使用\n2. PNG/GIF/WebMとして書き出して使用');
         }
 
-        // バッチPRTL書き出し機能
-        function batchExportPRTL() {
+        // バッチPRTL書き出し機能（PRTL形式のみ、ZIP）
+        async function batchExportPRTLOnly() {
             if (canvases.length === 0) {
                 alert('キャンバスがありません');
                 return;
@@ -8208,26 +8234,9 @@
 
             exitEditMode(); selectedObjId = null; selectedObjIds = [];
 
-            // 書き出し形式を選択
-            const formatChoice = prompt(
-                '書き出し形式を選択してください:\n' +
-                '1 = PRTL のみ\n' +
-                '2 = PNG のみ\n' +
-                '3 = PRTL と PNG 両方',
-                '1'
-            );
-
-            if (!formatChoice || !['1', '2', '3'].includes(formatChoice)) {
-                alert('キャンセルされました');
-                return;
-            }
-
-            const exportPRTL = formatChoice === '1' || formatChoice === '3';
-            const exportPNG = formatChoice === '2' || formatChoice === '3';
-
-            // ユーザーに基本ファイル名を入力してもらう
-            const baseName = prompt('ファイル名を入力してください（番号が自動で付きます）', 'title');
-            if (!baseName) return;
+            // ユーザーにZIPファイル名を入力してもらう
+            const zipName = prompt('ZIPファイル名を入力してください', 'canvases-prtl');
+            if (!zipName) return;
 
             // 現在のキャンバスを保存
             const currentCanvas = {
@@ -8238,61 +8247,120 @@
             };
 
             const generator = new PRTLGenerator();
+            const zip = new JSZip();
 
-            // 各キャンバスを順番に書き出し
-            canvases.forEach((cvs, idx) => {
+            // 各キャンバスを処理してZIPに追加
+            for (let idx = 0; idx < canvases.length; idx++) {
+                const cvs = canvases[idx];
+
                 // キャンバスを切り替え
                 textObjects = JSON.parse(JSON.stringify(cvs.objects || []));
                 canvasBgColor = cvs.bgColor || '#1e1e1e';
                 canvasBgOpacity = cvs.bgOpacity || 100;
                 bgImage = cvs.bgImage || null;
 
-                // レンダリングして画像を生成
-                render();
+                // PRTL生成
+                const canvasData = {
+                    resolution: `${canvas.width}x${canvas.height}`,
+                    objects: textObjects
+                };
+                const prtlXML = generator.generatePRTL(canvasData);
+                const encoder = new TextEncoder();
+                const utf8Array = encoder.encode(prtlXML);
 
                 const paddedIdx = String(idx).padStart(3, '0');
+                zip.file(`${zipName}_${paddedIdx}.prtl`, utf8Array);
 
-                // PNG書き出し（選択された場合のみ）
-                if (exportPNG) {
-                    canvas.toBlob(blob => {
-                        const link = document.createElement('a');
-                        link.download = `${baseName}-${paddedIdx}.png`;
-                        link.href = URL.createObjectURL(blob);
-                        link.click();
-                        setTimeout(() => URL.revokeObjectURL(link.href), 100);
-                    }, 'image/png');
+                // 進捗表示（10個ごと）
+                if ((idx + 1) % 10 === 0 || idx === canvases.length - 1) {
+                    console.log(`PRTL生成中: ${idx + 1}/${canvases.length}`);
                 }
+            }
 
-                // PRTL書き出し（選択された場合のみ）
-                if (exportPRTL) {
-                    const canvasData = {
-                        resolution: `${canvas.width}x${canvas.height}`,
-                        objects: textObjects
-                    };
-                    const prtlXML = generator.generatePRTL(canvasData);
-
-                    // UTF-8（BOMなし）でエンコード
-                    // 参考PRTLファイルはUTF-8（BOMなし）で保存されているが、XMLヘッダーではUTF-16と宣言される
-                    const encoder = new TextEncoder(); // UTF-8エンコーディング
-                    const utf8Array = encoder.encode(prtlXML);
-
-                    const prtlBlob = new Blob([utf8Array], { type: 'application/octet-stream' });
-                    const prtlLink = document.createElement('a');
-                    prtlLink.download = `${baseName}-${paddedIdx}.prtl`;
-                    prtlLink.href = URL.createObjectURL(prtlBlob);
-                    prtlLink.click();
-                    setTimeout(() => URL.revokeObjectURL(prtlLink.href), 100);
-                }
-            });
+            // ZIP生成とダウンロード
+            const zipBlob = await zip.generateAsync({ type: 'blob' });
+            const link = document.createElement('a');
+            link.download = `${zipName}.zip`;
+            link.href = URL.createObjectURL(zipBlob);
+            link.click();
+            setTimeout(() => URL.revokeObjectURL(link.href), 100);
 
             // 元のキャンバスに戻す
             textObjects = currentCanvas.objects;
             canvasBgColor = currentCanvas.bgColor;
             canvasBgOpacity = currentCanvas.bgOpacity;
             bgImage = currentCanvas.bgImage;
-
             render();
-            alert(`${canvases.length}個のPNGとPRTLファイルを書き出しました`);
+
+            alert(`${canvases.length}個のPRTLファイルをZIPで書き出しました`);
+        }
+
+        // バッチPNG書き出し機能（PNG形式のみ、ZIP）
+        async function batchExportPNGOnly() {
+            if (canvases.length === 0) {
+                alert('キャンバスがありません');
+                return;
+            }
+
+            exitEditMode(); selectedObjId = null; selectedObjIds = [];
+
+            // ユーザーにZIPファイル名を入力してもらう
+            const zipName = prompt('ZIPファイル名を入力してください', 'canvases-png');
+            if (!zipName) return;
+
+            // 現在のキャンバスを保存
+            const currentCanvas = {
+                objects: JSON.parse(JSON.stringify(textObjects)),
+                bgColor: canvasBgColor,
+                bgOpacity: canvasBgOpacity,
+                bgImage: bgImage
+            };
+
+            const zip = new JSZip();
+
+            // 各キャンバスを処理してZIPに追加
+            for (let idx = 0; idx < canvases.length; idx++) {
+                const cvs = canvases[idx];
+
+                // キャンバスを切り替え
+                textObjects = JSON.parse(JSON.stringify(cvs.objects || []));
+                canvasBgColor = cvs.bgColor || '#1e1e1e';
+                canvasBgOpacity = cvs.bgOpacity || 100;
+                bgImage = cvs.bgImage || null;
+
+                // レンダリング
+                render();
+
+                // PNGをBlobとして取得
+                const blob = await new Promise(resolve => {
+                    canvas.toBlob(resolve, 'image/png');
+                });
+
+                const paddedIdx = String(idx).padStart(3, '0');
+                zip.file(`${zipName}_${paddedIdx}.png`, blob);
+
+                // 進捗表示（10個ごと）
+                if ((idx + 1) % 10 === 0 || idx === canvases.length - 1) {
+                    console.log(`PNG生成中: ${idx + 1}/${canvases.length}`);
+                }
+            }
+
+            // ZIP生成とダウンロード
+            const zipBlob = await zip.generateAsync({ type: 'blob' });
+            const link = document.createElement('a');
+            link.download = `${zipName}.zip`;
+            link.href = URL.createObjectURL(zipBlob);
+            link.click();
+            setTimeout(() => URL.revokeObjectURL(link.href), 100);
+
+            // 元のキャンバスに戻す
+            textObjects = currentCanvas.objects;
+            canvasBgColor = currentCanvas.bgColor;
+            canvasBgOpacity = currentCanvas.bgOpacity;
+            bgImage = currentCanvas.bgImage;
+            render();
+
+            alert(`${canvases.length}個のPNGファイルをZIPで書き出しました`);
         }
 
         // PRSL読み込み機能
