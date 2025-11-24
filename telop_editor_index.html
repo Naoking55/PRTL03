@@ -957,27 +957,41 @@
                 const strokes = firstChar.strokes || [];
                 let fragments = '';
 
-                strokes.slice().reverse().forEach((stroke, i) => {
-                    if (stroke.enabled) {
-                        const annotation = strokes.length - i;
-                        const painterNum = 10 + (strokes.length - i - 1);
-                        fragments += `<Fragment><size>${stroke.width * 2}</size><offset>0</offset><angle>0</angle><ghost>false</ghost><isExtendedShadowFragment>false</isExtendedShadowFragment><eFragmentType>2</eFragmentType><fragmentOff>${!stroke.enabled}</fragmentOff><placeHolder>false</placeHolder><annotation>${annotation}</annotation><placeHolderShaderIndex>4294967295</placeHolderShaderIndex><painterMix>${painterNum} ${painterNum} ${painterNum} ${painterNum} ${painterNum} ${painterNum} ${painterNum} ${painterNum} ${painterNum} ${painterNum} ${painterNum} ${painterNum} ${painterNum} ${painterNum} ${painterNum} ${painterNum} </painterMix></Fragment>`;
-                    }
-                });
+                // 1. 塗り (annotation 4, painterMix 10) を最初に追加
+                fragments += `<Fragment><size>0</size><offset>0</offset><angle>0</angle><ghost>false</ghost><isExtendedShadowFragment>false</isExtendedShadowFragment><eFragmentType>2</eFragmentType><fragmentOff>false</fragmentOff><placeHolder>false</placeHolder><annotation>4</annotation><placeHolderShaderIndex>4294967295</placeHolderShaderIndex><painterMix>10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 </painterMix></Fragment>`;
 
+                // 2. アウトライン (annotation 3, 2, ...) - 有効なストロークがある場合
+                const enabledStrokes = strokes.filter(s => s.enabled);
+                if (enabledStrokes.length > 0) {
+                    // アウトラインを外側から内側へ（annotation 3, 2, 1...の順）
+                    enabledStrokes.forEach((stroke, i) => {
+                        const annotation = 3 - i; // 3, 2, 1...
+                        const painterNum = 11 + i; // 11, 12, 13...
+                        if (annotation >= 1) {
+                            fragments += `<Fragment><size>${stroke.width * 2}</size><offset>0</offset><angle>0</angle><ghost>false</ghost><isExtendedShadowFragment>false</isExtendedShadowFragment><eFragmentType>2</eFragmentType><fragmentOff>false</fragmentOff><placeHolder>false</placeHolder><annotation>${annotation}</annotation><placeHolderShaderIndex>4294967295</placeHolderShaderIndex><painterMix>${painterNum} ${painterNum} ${painterNum} ${painterNum} ${painterNum} ${painterNum} ${painterNum} ${painterNum} ${painterNum} ${painterNum} ${painterNum} ${painterNum} ${painterNum} ${painterNum} ${painterNum} ${painterNum} </painterMix></Fragment>`;
+                        }
+                    });
+                }
+
+                // 3. 3D押し出し (annotation 65538, painterMix 15)
                 fragments += `<Fragment><size>0</size><offset>0</offset><angle>0</angle><ghost>false</ghost><isExtendedShadowFragment>false</isExtendedShadowFragment><eFragmentType>0</eFragmentType><fragmentOff>false</fragmentOff><placeHolder>false</placeHolder><annotation>65538</annotation><placeHolderShaderIndex>4294967295</placeHolderShaderIndex><painterMix>15 15 15 15 15 15 15 15 15 15 15 15 15 15 15 15 </painterMix></Fragment>`;
 
-                const shadowEnabled = firstChar.shadowEnabled || false;
-                const shadowDistance = firstChar.shadowDistance || 10;
-                const shadowAngle = firstChar.shadowAngle || -45;
+                // 4. 3Dシャドウ (annotation 65537, painterMix 0)
+                const shadowEnabled = firstChar.shadow?.enabled || false;
+                const shadowDistance = firstChar.shadow?.offsetX || 10;
+                const shadowAngle = Math.atan2(firstChar.shadow?.offsetY || 5, firstChar.shadow?.offsetX || 5) * 180 / Math.PI;
                 fragments += `<Fragment><size>0</size><offset>${shadowDistance}</offset><angle>${shadowAngle}</angle><ghost>false</ghost><isExtendedShadowFragment>true</isExtendedShadowFragment><eFragmentType>0</eFragmentType><fragmentOff>${!shadowEnabled}</fragmentOff><placeHolder>false</placeHolder><annotation>65537</annotation><placeHolderShaderIndex>4294967295</placeHolderShaderIndex><painterMix>0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 </painterMix></Fragment>`;
 
+                // ShaderListの生成
                 let shaderList = '';
+                // PainterNumber 2-15
                 for (let i = 2; i <= 15; i++) {
                     const shaderRef = i >= 10 && i <= 13 ? (this.shaderCounter + index * 20 + (i - 10)) : 0;
                     shaderList += `<ShaderRef PainterNumber="${i}"><shaderRef>${shaderRef}</shaderRef></ShaderRef>`;
                 }
-                shaderList += `<ShaderRef PainterNumber="-1"><shaderRef>${this.shaderCounter + index * 20 + 15}</shaderRef></ShaderRef>`;
+                // PainterNumber -1 は塗りのシェーダーを参照（painter 10と同じ）
+                shaderList += `<ShaderRef PainterNumber="-1"><shaderRef>${this.shaderCounter + index * 20 + 0}</shaderRef></ShaderRef>`;
+                // PainterNumber 1000-1015
                 for (let i = 1000; i <= 1015; i++) {
                     shaderList += `<ShaderRef PainterNumber="${i}"><shaderRef>0</shaderRef></ShaderRef>`;
                 }
@@ -987,8 +1001,9 @@
 
             _buildDefaultStyle() {
                 const styleId = this.styleCounter;
-                const fragments = `<Fragment><size>60</size><offset>0</offset><angle>0</angle><ghost>false</ghost><isExtendedShadowFragment>false</isExtendedShadowFragment><eFragmentType>2</eFragmentType><fragmentOff>false</fragmentOff><placeHolder>false</placeHolder><annotation>2</annotation><placeHolderShaderIndex>4294967295</placeHolderShaderIndex><painterMix>12 12 12 12 12 12 12 12 12 12 12 12 12 12 12 12 </painterMix></Fragment><Fragment><size>30</size><offset>0</offset><angle>0</angle><ghost>false</ghost><isExtendedShadowFragment>false</isExtendedShadowFragment><eFragmentType>2</eFragmentType><fragmentOff>false</fragmentOff><placeHolder>false</placeHolder><annotation>1</annotation><placeHolderShaderIndex>4294967295</placeHolderShaderIndex><painterMix>13 13 13 13 13 13 13 13 13 13 13 13 13 13 13 13 </painterMix></Fragment><Fragment><size>0</size><offset>0</offset><angle>0</angle><ghost>false</ghost><isExtendedShadowFragment>false</isExtendedShadowFragment><eFragmentType>0</eFragmentType><fragmentOff>false</fragmentOff><placeHolder>false</placeHolder><annotation>65538</annotation><placeHolderShaderIndex>4294967295</placeHolderShaderIndex><painterMix>15 15 15 15 15 15 15 15 15 15 15 15 15 15 15 15 </painterMix></Fragment><Fragment><size>0</size><offset>10</offset><angle>-45</angle><ghost>false</ghost><isExtendedShadowFragment>true</isExtendedShadowFragment><eFragmentType>0</eFragmentType><fragmentOff>true</fragmentOff><placeHolder>false</placeHolder><annotation>65537</annotation><placeHolderShaderIndex>4294967295</placeHolderShaderIndex><painterMix>0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 </painterMix></Fragment>`;
-                return `<Style ID="${styleId}"><StyleBase Version="4"><type>50000</type><positionDominance>0</positionDominance><lineGradient>false</lineGradient><styleRef>${styleId}</styleRef><faceDistortX>0</faceDistortX><faceDistortY>0</faceDistortY><shadow_softness>30</shadow_softness><personality>0</personality><linked>false</linked><EmbellishmentSizeRule>false</EmbellishmentSizeRule><PainterRampType>Basic</PainterRampType></StyleBase><FragmentList Version="5">${fragments}</FragmentList><ShaderList Version="1"><ShaderRef PainterNumber="12"><shaderRef>4099</shaderRef></ShaderRef><ShaderRef PainterNumber="13"><shaderRef>4100</shaderRef></ShaderRef><ShaderRef PainterNumber="15"><shaderRef>4101</shaderRef></ShaderRef><ShaderRef PainterNumber="-1"><shaderRef>4102</shaderRef></ShaderRef></ShaderList></Style>`;
+                // 正しい順序でFragmentを配置：塗り（4）→アウトライン（3,2）→3D押し出し（65538）→3Dシャドウ（65537）
+                const fragments = `<Fragment><size>0</size><offset>0</offset><angle>0</angle><ghost>false</ghost><isExtendedShadowFragment>false</isExtendedShadowFragment><eFragmentType>2</eFragmentType><fragmentOff>false</fragmentOff><placeHolder>false</placeHolder><annotation>4</annotation><placeHolderShaderIndex>4294967295</placeHolderShaderIndex><painterMix>10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 </painterMix></Fragment><Fragment><size>60</size><offset>0</offset><angle>0</angle><ghost>false</ghost><isExtendedShadowFragment>false</isExtendedShadowFragment><eFragmentType>2</eFragmentType><fragmentOff>false</fragmentOff><placeHolder>false</placeHolder><annotation>3</annotation><placeHolderShaderIndex>4294967295</placeHolderShaderIndex><painterMix>11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 </painterMix></Fragment><Fragment><size>30</size><offset>0</offset><angle>0</angle><ghost>false</ghost><isExtendedShadowFragment>false</isExtendedShadowFragment><eFragmentType>2</eFragmentType><fragmentOff>false</fragmentOff><placeHolder>false</placeHolder><annotation>2</annotation><placeHolderShaderIndex>4294967295</placeHolderShaderIndex><painterMix>12 12 12 12 12 12 12 12 12 12 12 12 12 12 12 12 </painterMix></Fragment><Fragment><size>0</size><offset>0</offset><angle>0</angle><ghost>false</ghost><isExtendedShadowFragment>false</isExtendedShadowFragment><eFragmentType>0</eFragmentType><fragmentOff>false</fragmentOff><placeHolder>false</placeHolder><annotation>65538</annotation><placeHolderShaderIndex>4294967295</placeHolderShaderIndex><painterMix>15 15 15 15 15 15 15 15 15 15 15 15 15 15 15 15 </painterMix></Fragment><Fragment><size>0</size><offset>10</offset><angle>-45</angle><ghost>false</ghost><isExtendedShadowFragment>true</isExtendedShadowFragment><eFragmentType>0</eFragmentType><fragmentOff>true</fragmentOff><placeHolder>false</placeHolder><annotation>65537</annotation><placeHolderShaderIndex>4294967295</placeHolderShaderIndex><painterMix>0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 </painterMix></Fragment>`;
+                return `<Style ID="${styleId}"><StyleBase Version="4"><type>50000</type><positionDominance>0</positionDominance><lineGradient>false</lineGradient><styleRef>${styleId}</styleRef><faceDistortX>0</faceDistortX><faceDistortY>0</faceDistortY><shadow_softness>30</shadow_softness><personality>0</personality><linked>false</linked><EmbellishmentSizeRule>false</EmbellishmentSizeRule><PainterRampType>Basic</PainterRampType></StyleBase><FragmentList Version="5">${fragments}</FragmentList><ShaderList Version="1"><ShaderRef PainterNumber="10"><shaderRef>4098</shaderRef></ShaderRef><ShaderRef PainterNumber="11"><shaderRef>4099</shaderRef></ShaderRef><ShaderRef PainterNumber="12"><shaderRef>4100</shaderRef></ShaderRef><ShaderRef PainterNumber="-1"><shaderRef>4098</shaderRef></ShaderRef></ShaderList></Style>`;
             }
 
             _buildShaders(objects) {
@@ -998,15 +1013,18 @@
                         const char = obj.chars[0];
                         const strokes = char.strokes || [];
 
-                        strokes.forEach((stroke, i) => {
-                            const ref = this.shaderCounter + index * 20 + i;
+                        // 1. 塗り用シェーダー（index * 20 + 0, painter 10用）
+                        const fillRef = this.shaderCounter + index * 20 + 0;
+                        const fillRGB = this._hexToRGB(char.color || '#ffffff');
+                        xml += `<Shader Version="4"><cReference>${fillRef}</cReference><textureRef>0</textureRef><colorOption>4</colorOption><shaderOn>true</shaderOn><glintSize>10</glintSize><glintOffset>0</glintOffset><rampPosTop>75</rampPosTop><rampPosBottom>25</rampPosBottom><rampAngle>0</rampAngle><bevelBalance>0</bevelBalance><rampCycle>0</rampCycle><classicStyle>0</classicStyle><rampType>0</rampType><ColorSpec index="0"><red>${fillRGB.r}</red><green>${fillRGB.g}</green><blue>${fillRGB.b}</blue><xpar>0</xpar></ColorSpec><ColorSpec index="1"><red>0</red><green>0</green><blue>0</blue><xpar>0</xpar></ColorSpec><ColorSpec index="2"><red>0</red><green>0</green><blue>0</blue><xpar>0</xpar></ColorSpec><ColorSpec index="3"><red>0</red><green>0</green><blue>0</blue><xpar>0</xpar></ColorSpec><ColorSpec index="4"><red>250</red><green>250</green><blue>250</blue><xpar>0</xpar></ColorSpec><glintAngle>0</glintAngle><bevelSize>0</bevelSize><bevelDirection>0</bevelDirection><bevelPipe>false</bevelPipe><bevelAngle>0</bevelAngle><bevelShape>1</bevelShape><bevelShining>0</bevelShining><bevelLight>false</bevelLight><bevelMerge>true</bevelMerge><sheenOn>false</sheenOn></Shader>`;
+
+                        // 2. アウトライン用シェーダー（index * 20 + 1, 2, 3..., painter 11, 12, 13用）
+                        const enabledStrokes = strokes.filter(s => s.enabled);
+                        enabledStrokes.forEach((stroke, i) => {
+                            const ref = this.shaderCounter + index * 20 + 1 + i;
                             const rgb = this._hexToRGB(stroke.color);
                             xml += `<Shader Version="4"><cReference>${ref}</cReference><textureRef>0</textureRef><colorOption>4</colorOption><shaderOn>true</shaderOn><glintSize>10</glintSize><glintOffset>0</glintOffset><rampPosTop>75</rampPosTop><rampPosBottom>25</rampPosBottom><rampAngle>0</rampAngle><bevelBalance>0</bevelBalance><rampCycle>0</rampCycle><classicStyle>0</classicStyle><rampType>0</rampType><ColorSpec index="0"><red>0</red><green>0</green><blue>0</blue><xpar>0</xpar></ColorSpec><ColorSpec index="1"><red>0</red><green>0</green><blue>0</blue><xpar>0</xpar></ColorSpec><ColorSpec index="2"><red>0</red><green>0</green><blue>0</blue><xpar>0</xpar></ColorSpec><ColorSpec index="3"><red>0</red><green>0</green><blue>0</blue><xpar>0</xpar></ColorSpec><ColorSpec index="4"><red>${rgb.r}</red><green>${rgb.g}</green><blue>${rgb.b}</blue><xpar>0</xpar></ColorSpec><glintAngle>0</glintAngle><bevelSize>0</bevelSize><bevelDirection>0</bevelDirection><bevelPipe>false</bevelPipe><bevelAngle>0</bevelAngle><bevelShape>1</bevelShape><bevelShining>0</bevelShining><bevelLight>false</bevelLight><bevelMerge>true</bevelMerge><sheenOn>false</sheenOn></Shader>`;
                         });
-
-                        const mainRef = this.shaderCounter + index * 20 + 15;
-                        const mainRGB = this._hexToRGB(char.color || '#ffffff');
-                        xml += `<Shader Version="4"><cReference>${mainRef}</cReference><textureRef>0</textureRef><colorOption>4</colorOption><shaderOn>true</shaderOn><glintSize>10</glintSize><glintOffset>0</glintOffset><rampPosTop>75</rampPosTop><rampPosBottom>25</rampPosBottom><rampAngle>0</rampAngle><bevelBalance>0</bevelBalance><rampCycle>0</rampCycle><classicStyle>0</classicStyle><rampType>0</rampType><ColorSpec index="0"><red>${mainRGB.r}</red><green>${mainRGB.g}</green><blue>${mainRGB.b}</blue><xpar>0</xpar></ColorSpec><ColorSpec index="1"><red>0</red><green>0</green><blue>0</blue><xpar>0</xpar></ColorSpec><ColorSpec index="2"><red>0</red><green>0</green><blue>0</blue><xpar>0</xpar></ColorSpec><ColorSpec index="3"><red>0</red><green>0</green><blue>0</blue><xpar>0</xpar></ColorSpec><ColorSpec index="4"><red>250</red><green>250</green><blue>250</blue><xpar>0</xpar></ColorSpec><glintAngle>0</glintAngle><bevelSize>0</bevelSize><bevelDirection>0</bevelDirection><bevelPipe>false</bevelPipe><bevelAngle>0</bevelAngle><bevelShape>1</bevelShape><bevelShining>0</bevelShining><bevelLight>false</bevelLight><bevelMerge>true</bevelMerge><sheenOn>false</sheenOn></Shader>`;
                     }
                 });
                 xml += '</Shaders>';
@@ -8190,6 +8208,23 @@
 
             exitEditMode(); selectedObjId = null; selectedObjIds = [];
 
+            // 書き出し形式を選択
+            const formatChoice = prompt(
+                '書き出し形式を選択してください:\n' +
+                '1 = PRTL のみ\n' +
+                '2 = PNG のみ\n' +
+                '3 = PRTL と PNG 両方',
+                '1'
+            );
+
+            if (!formatChoice || !['1', '2', '3'].includes(formatChoice)) {
+                alert('キャンセルされました');
+                return;
+            }
+
+            const exportPRTL = formatChoice === '1' || formatChoice === '3';
+            const exportPNG = formatChoice === '2' || formatChoice === '3';
+
             // ユーザーに基本ファイル名を入力してもらう
             const baseName = prompt('ファイル名を入力してください（番号が自動で付きます）', 'title');
             if (!baseName) return;
@@ -8217,33 +8252,37 @@
 
                 const paddedIdx = String(idx).padStart(3, '0');
 
-                // PNG書き出し
-                canvas.toBlob(blob => {
-                    const link = document.createElement('a');
-                    link.download = `${baseName}-${paddedIdx}.png`;
-                    link.href = URL.createObjectURL(blob);
-                    link.click();
-                    setTimeout(() => URL.revokeObjectURL(link.href), 100);
-                }, 'image/png');
+                // PNG書き出し（選択された場合のみ）
+                if (exportPNG) {
+                    canvas.toBlob(blob => {
+                        const link = document.createElement('a');
+                        link.download = `${baseName}-${paddedIdx}.png`;
+                        link.href = URL.createObjectURL(blob);
+                        link.click();
+                        setTimeout(() => URL.revokeObjectURL(link.href), 100);
+                    }, 'image/png');
+                }
 
-                // PRTL書き出し
-                const canvasData = {
-                    resolution: `${canvas.width}x${canvas.height}`,
-                    objects: textObjects
-                };
-                const prtlXML = generator.generatePRTL(canvasData);
+                // PRTL書き出し（選択された場合のみ）
+                if (exportPRTL) {
+                    const canvasData = {
+                        resolution: `${canvas.width}x${canvas.height}`,
+                        objects: textObjects
+                    };
+                    const prtlXML = generator.generatePRTL(canvasData);
 
-                // UTF-8（BOMなし）でエンコード
-                // 参考PRTLファイルはUTF-8（BOMなし）で保存されているが、XMLヘッダーではUTF-16と宣言される
-                const encoder = new TextEncoder(); // UTF-8エンコーディング
-                const utf8Array = encoder.encode(prtlXML);
+                    // UTF-8（BOMなし）でエンコード
+                    // 参考PRTLファイルはUTF-8（BOMなし）で保存されているが、XMLヘッダーではUTF-16と宣言される
+                    const encoder = new TextEncoder(); // UTF-8エンコーディング
+                    const utf8Array = encoder.encode(prtlXML);
 
-                const prtlBlob = new Blob([utf8Array], { type: 'application/octet-stream' });
-                const prtlLink = document.createElement('a');
-                prtlLink.download = `${baseName}-${paddedIdx}.prtl`;
-                prtlLink.href = URL.createObjectURL(prtlBlob);
-                prtlLink.click();
-                setTimeout(() => URL.revokeObjectURL(prtlLink.href), 100);
+                    const prtlBlob = new Blob([utf8Array], { type: 'application/octet-stream' });
+                    const prtlLink = document.createElement('a');
+                    prtlLink.download = `${baseName}-${paddedIdx}.prtl`;
+                    prtlLink.href = URL.createObjectURL(prtlBlob);
+                    prtlLink.click();
+                    setTimeout(() => URL.revokeObjectURL(prtlLink.href), 100);
+                }
             });
 
             // 元のキャンバスに戻す
