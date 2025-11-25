@@ -887,6 +887,32 @@
     <input type="text" id="imeInput" autocomplete="off">
 
     <script>
+        // ==================== CODE INDEX / 目次 ====================
+        // このHTMLファイルは11,000行以上あるため、効率的にコードを読み込むための目次です
+        //
+        // 【主要セクション】
+        // - Line 890-1195:   PRTL Generator Class (PRTLファイル生成クラス)
+        // - Line 1259:       Undo/Redo 履歴管理
+        // - Line 1337:       フォント管理
+        // - Line 1544:       キャンバス管理
+        // - Line 2170:       背景・セーフマージン管理
+        // - Line 2284:       グラデーション管理
+        // - Line 7106:       アニメーション機能
+        // - Line 8099:       PRTL Export/Import Functions (エクスポート・インポート)
+        // - Line 9617:       カスタムスタイル管理
+        // - Line 9774:       ツールバーサイズ切り替え
+        // - Line 9797:       パネルリサイズ機能
+        // - Line 9897:       アニメーションプリセット機能
+        // - Line 10057:      スタイルプリセット機能
+        //
+        // 【重要な関数】
+        // - createTextObject() - Line 3259: テキストオブジェクト作成
+        // - getDefaultStyle() - Line 2334: デフォルトスタイル取得
+        // - exportPRTL() - Line 8099: PRTL書き出し
+        // - importPRTL() - Line 8142: PRTL読み込み
+        //
+        // ==================== End of Code Index ====================
+
         // ==================== PRTL Generator Class ====================
         /**
          * PRTL Generator - Premiere Pro Legacy Title File Generator
@@ -986,8 +1012,14 @@
                 const txHeight = fontSize;
                 const fillSize = Math.round(txHeight * 1.04);
 
-                // 1. 塗り (annotation 4, painterMix 10) を最初に追加
-                fragments += `<Fragment><size>${fillSize}</size><offset>0</offset><angle>0</angle><ghost>false</ghost><isExtendedShadowFragment>false</isExtendedShadowFragment><eFragmentType>2</eFragmentType><fragmentOff>false</fragmentOff><placeHolder>false</placeHolder><annotation>4</annotation><placeHolderShaderIndex>4294967295</placeHolderShaderIndex><painterMix>10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 </painterMix></Fragment>`;
+                // 塗りの有無を判定（opacity > 0 かつ fillType !== 'none' の場合のみ塗りを追加）
+                const hasFill = (firstChar.opacity !== undefined && firstChar.opacity > 0) &&
+                               (firstChar.fillType === undefined || firstChar.fillType !== 'none');
+
+                // 1. 塗り (annotation 4, painterMix 10) - 塗りが有効な場合のみ追加
+                if (hasFill) {
+                    fragments += `<Fragment><size>${fillSize}</size><offset>0</offset><angle>0</angle><ghost>false</ghost><isExtendedShadowFragment>false</isExtendedShadowFragment><eFragmentType>2</eFragmentType><fragmentOff>false</fragmentOff><placeHolder>false</placeHolder><annotation>4</annotation><placeHolderShaderIndex>4294967295</placeHolderShaderIndex><painterMix>10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 </painterMix></Fragment>`;
+                }
 
                 // 2. アウトライン (annotation 3, 2, ...) - 有効なストロークがある場合
                 const enabledStrokes = strokes.filter(s => s.enabled);
@@ -1022,7 +1054,12 @@
                     let shaderRef = 0;
                     if (i >= 10 && i <= 13) {
                         // Painter 10-13: 塗り（10）とストローク（11-13）
-                        shaderRef = this.shaderCounter + index * 20 + (i - 10);
+                        if (i === 10 && !hasFill) {
+                            // 塗りがない場合、Painter 10のシェーダーは0
+                            shaderRef = 0;
+                        } else {
+                            shaderRef = this.shaderCounter + index * 20 + (i - 10);
+                        }
                     } else if (i === 15) {
                         // Painter 15: 3D押し出し用（index * 20 + 4）
                         shaderRef = this.shaderCounter + index * 20 + 4;
