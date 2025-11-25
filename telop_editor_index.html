@@ -500,6 +500,8 @@
                     <option value="solid">ベタ塗り</option>
                     <option value="linear">線形グラデーション</option>
                     <option value="radial">円形グラデーション</option>
+                    <option value="gloss">光沢</option>
+                    <option value="bevel">ベベル</option>
                     <option value="none">透明（塗りなし）</option>
                 </select>
                 <div id="gradientStops">
@@ -531,6 +533,27 @@
                 <div class="row2">
                     <div><label>色</label><input type="color" id="glossColor" value="#ffffff" onchange="applyStyle()"></div>
                     <div><label>不透明度%</label><input type="number" id="glossOpacity" min="0" max="100" value="50" onchange="applyStyle()"></div>
+                </div>
+                <div class="row2">
+                    <div><label>サイズ</label><input type="number" id="glossSize" min="0" max="100" value="10" onchange="applyStyle()"></div>
+                    <div><label>角度°</label><input type="number" id="glossAngle" min="0" max="360" value="0" step="1" onchange="applyStyle()"></div>
+                </div>
+
+                <h4>ベベル</h4>
+                <label><input type="checkbox" id="bevelEnabled" onchange="applyStyle()"> 有効</label>
+                <div class="row2">
+                    <div>
+                        <label>モード</label>
+                        <select id="bevelMode" onchange="applyStyle()">
+                            <option value="text">文字立体</option>
+                            <option value="frame">枠立体</option>
+                            <option value="inner">内側凹み</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="row2">
+                    <div><label>サイズ</label><input type="number" id="bevelSize" min="0" max="200" value="100" onchange="applyStyle()"></div>
+                    <div><label>強さ</label><input type="number" id="bevelStrength" min="-1" max="1" step="0.1" value="0.5" onchange="applyStyle()"></div>
                 </div>
 
                 <label>横揃え</label>
@@ -1012,63 +1035,80 @@
                 const txHeight = fontSize;
                 const fillSize = Math.round(txHeight * 1.04);
 
+                // ベベルの有無を判定（オブジェクトレベルまたは文字レベル）
+                const fillType = firstChar.fillType || obj.fillType || 'solid';
+                const bevelEnabled = (fillType === 'bevel') || obj.bevelEnabled || firstChar.bevelEnabled || false;
+                const bevelSize = obj.bevelSize || firstChar.bevelSize || 100;
+
                 // 塗りの有無を判定（opacity > 0 かつ fillType !== 'none' の場合のみ塗りを追加）
                 const hasFill = (firstChar.opacity !== undefined && firstChar.opacity > 0) &&
-                               (firstChar.fillType === undefined || firstChar.fillType !== 'none');
+                               (fillType !== 'none');
 
-                // 1. 塗り (annotation 4, painterMix 10) - 塗りが有効な場合のみ追加
-                if (hasFill) {
-                    fragments += `<Fragment><size>${fillSize}</size><offset>0</offset><angle>0</angle><ghost>false</ghost><isExtendedShadowFragment>false</isExtendedShadowFragment><eFragmentType>2</eFragmentType><fragmentOff>false</fragmentOff><placeHolder>false</placeHolder><annotation>4</annotation><placeHolderShaderIndex>4294967295</placeHolderShaderIndex><painterMix>10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 </painterMix></Fragment>`;
+                // ベベル無し（パターンA）の場合
+                if (!bevelEnabled) {
+                    // 1. 塗り (annotation 65538, painterMix 15) - 塗りが有効な場合のみ追加
+                    if (hasFill) {
+                        fragments += `<Fragment><size>${fillSize}</size><offset>0</offset><angle>0</angle><ghost>false</ghost><isExtendedShadowFragment>false</isExtendedShadowFragment><eFragmentType>0</eFragmentType><fragmentOff>false</fragmentOff><placeHolder>false</placeHolder><annotation>65538</annotation><placeHolderShaderIndex>4294967295</placeHolderShaderIndex><painterMix>15 15 15 15 15 15 15 15 15 15 15 15 15 15 15 15 </painterMix></Fragment>`;
+                    }
+
+                    // 2. 影 (annotation 65537, painterMix 0)
+                    const shadowEnabled = firstChar.shadowEnabled || obj.shadowEnabled || false;
+                    const shadowDistance = firstChar.shadowDistance || obj.shadowDistance || 10;
+                    const shadowAngle = firstChar.shadowAngle || obj.shadowAngle || -45;
+                    fragments += `<Fragment><size>0</size><offset>${shadowDistance}</offset><angle>${shadowAngle}</angle><ghost>false</ghost><isExtendedShadowFragment>true</isExtendedShadowFragment><eFragmentType>0</eFragmentType><fragmentOff>${!shadowEnabled}</fragmentOff><placeHolder>false</placeHolder><annotation>65537</annotation><placeHolderShaderIndex>4294967295</placeHolderShaderIndex><painterMix>0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 </painterMix></Fragment>`;
+                } else {
+                    // ベベル有り（パターンB）の場合
+                    // 1. 塗り (annotation 65538, painterMix 15)
+                    if (hasFill) {
+                        fragments += `<Fragment><size>${fillSize}</size><offset>0</offset><angle>0</angle><ghost>false</ghost><isExtendedShadowFragment>false</isExtendedShadowFragment><eFragmentType>0</eFragmentType><fragmentOff>false</fragmentOff><placeHolder>false</placeHolder><annotation>65538</annotation><placeHolderShaderIndex>4294967295</placeHolderShaderIndex><painterMix>15 15 15 15 15 15 15 15 15 15 15 15 15 15 15 15 </painterMix></Fragment>`;
+                    }
+
+                    // 2. ベベル (annotation 65540, eFragmentType 1, painterMix 0〜14)
+                    fragments += `<Fragment><size>${bevelSize}</size><offset>0</offset><angle>0</angle><ghost>false</ghost><isExtendedShadowFragment>false</isExtendedShadowFragment><eFragmentType>1</eFragmentType><fragmentOff>false</fragmentOff><placeHolder>false</placeHolder><annotation>65540</annotation><placeHolderShaderIndex>4294967295</placeHolderShaderIndex><painterMix>0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 14 </painterMix></Fragment>`;
+
+                    // 3. 影 (annotation 65537, painterMix 0)
+                    const shadowEnabled = firstChar.shadowEnabled || obj.shadowEnabled || false;
+                    const shadowDistance = firstChar.shadowDistance || obj.shadowDistance || 10;
+                    const shadowAngle = firstChar.shadowAngle || obj.shadowAngle || -45;
+                    fragments += `<Fragment><size>0</size><offset>${shadowDistance}</offset><angle>${shadowAngle}</angle><ghost>false</ghost><isExtendedShadowFragment>true</isExtendedShadowFragment><eFragmentType>0</eFragmentType><fragmentOff>${!shadowEnabled}</fragmentOff><placeHolder>false</placeHolder><annotation>65537</annotation><placeHolderShaderIndex>4294967295</placeHolderShaderIndex><painterMix>0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 </painterMix></Fragment>`;
                 }
-
-                // 2. アウトライン (annotation 3, 2, ...) - 有効なストロークがある場合
-                const enabledStrokes = strokes.filter(s => s.enabled);
-                if (enabledStrokes.length > 0) {
-                    // アウトラインを外側から内側へ（annotation 3, 2, 1...の順）
-                    enabledStrokes.forEach((stroke, i) => {
-                        const annotation = 3 - i; // 3, 2, 1...
-                        const painterNum = 11 + i; // 11, 12, 13...
-                        if (annotation >= 1) {
-                            // ストローク幅の整合性確保：UIの幅値を適切にスケーリング
-                            // stroke.widthはUI上のピクセル値、Fragment sizeはフォントサイズに対する相対値
-                            // txHeightに対する比率で計算し、適切にスケーリング
-                            const strokeSize = Math.round(stroke.width * txHeight / 36);
-                            fragments += `<Fragment><size>${strokeSize}</size><offset>0</offset><angle>0</angle><ghost>false</ghost><isExtendedShadowFragment>false</isExtendedShadowFragment><eFragmentType>2</eFragmentType><fragmentOff>false</fragmentOff><placeHolder>false</placeHolder><annotation>${annotation}</annotation><placeHolderShaderIndex>4294967295</placeHolderShaderIndex><painterMix>${painterNum} ${painterNum} ${painterNum} ${painterNum} ${painterNum} ${painterNum} ${painterNum} ${painterNum} ${painterNum} ${painterNum} ${painterNum} ${painterNum} ${painterNum} ${painterNum} ${painterNum} ${painterNum} </painterMix></Fragment>`;
-                        }
-                    });
-                }
-
-                // 3. 3D押し出し (annotation 65538, painterMix 15)
-                fragments += `<Fragment><size>0</size><offset>0</offset><angle>0</angle><ghost>false</ghost><isExtendedShadowFragment>false</isExtendedShadowFragment><eFragmentType>0</eFragmentType><fragmentOff>false</fragmentOff><placeHolder>false</placeHolder><annotation>65538</annotation><placeHolderShaderIndex>4294967295</placeHolderShaderIndex><painterMix>15 15 15 15 15 15 15 15 15 15 15 15 15 15 15 15 </painterMix></Fragment>`;
-
-                // 4. 3Dシャドウ (annotation 65537, painterMix 0)
-                const shadowEnabled = firstChar.shadow?.enabled || false;
-                const shadowDistance = firstChar.shadow?.offsetX || 10;
-                const shadowAngle = Math.atan2(firstChar.shadow?.offsetY || 5, firstChar.shadow?.offsetX || 5) * 180 / Math.PI;
-                fragments += `<Fragment><size>0</size><offset>${shadowDistance}</offset><angle>${shadowAngle}</angle><ghost>false</ghost><isExtendedShadowFragment>true</isExtendedShadowFragment><eFragmentType>0</eFragmentType><fragmentOff>${!shadowEnabled}</fragmentOff><placeHolder>false</placeHolder><annotation>65537</annotation><placeHolderShaderIndex>4294967295</placeHolderShaderIndex><painterMix>0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 </painterMix></Fragment>`;
 
                 // ShaderListの生成
                 let shaderList = '';
-                // PainterNumber 2-15
-                for (let i = 2; i <= 15; i++) {
-                    let shaderRef = 0;
-                    if (i >= 10 && i <= 13) {
-                        // Painter 10-13: 塗り（10）とストローク（11-13）
-                        if (i === 10 && !hasFill) {
-                            // 塗りがない場合、Painter 10のシェーダーは0
-                            shaderRef = 0;
-                        } else {
-                            shaderRef = this.shaderCounter + index * 20 + (i - 10);
-                        }
-                    } else if (i === 15) {
-                        // Painter 15: 3D押し出し用（index * 20 + 4）
-                        shaderRef = this.shaderCounter + index * 20 + 4;
+                const base = this.shaderCounter + index * 10;
+                const fillRef = base + 0;      // 塗り用
+                const stroke0Ref = base + 1;   // アウトライン1
+                const stroke1Ref = base + 2;   // アウトライン2
+                const bevelRef = base + 3;     // ベベル用
+                const minus1Ref = base + 5;    // PainterNumber -1用
+
+                // ベベル有効時：Painter 0-14 をベベル用Shaderに割り当て
+                if (bevelEnabled) {
+                    for (let p = 0; p <= 14; p++) {
+                        shaderList += `<ShaderRef PainterNumber="${p}"><shaderRef>${bevelRef}</shaderRef></ShaderRef>`;
                     }
-                    shaderList += `<ShaderRef PainterNumber="${i}"><shaderRef>${shaderRef}</shaderRef></ShaderRef>`;
                 }
-                // PainterNumber -1: 専用のシェーダーを参照（index * 20 + 5, colorOption=0）
-                shaderList += `<ShaderRef PainterNumber="-1"><shaderRef>${this.shaderCounter + index * 20 + 5}</shaderRef></ShaderRef>`;
-                // PainterNumber 1000-1015
+
+                // Painter 15: 塗り本体
+                shaderList += `<ShaderRef PainterNumber="15"><shaderRef>${fillRef}</shaderRef></ShaderRef>`;
+
+                // アウトライン（有効な場合のみ）
+                const enabledStrokes = strokes.filter(s => s.enabled);
+                if (enabledStrokes.length > 0 && enabledStrokes[0]) {
+                    shaderList += `<ShaderRef PainterNumber="12"><shaderRef>${stroke0Ref}</shaderRef></ShaderRef>`;
+                }
+                if (enabledStrokes.length > 1 && enabledStrokes[1]) {
+                    shaderList += `<ShaderRef PainterNumber="13"><shaderRef>${stroke1Ref}</shaderRef></ShaderRef>`;
+                }
+
+                // PainterNumber -1: 半透明
+                shaderList += `<ShaderRef PainterNumber="-1"><shaderRef>${minus1Ref}</shaderRef></ShaderRef>`;
+
+                // その他のPainterは0（2-11, 14, 1000-1015）
+                for (let i = 2; i <= 11; i++) {
+                    shaderList += `<ShaderRef PainterNumber="${i}"><shaderRef>0</shaderRef></ShaderRef>`;
+                }
+                shaderList += `<ShaderRef PainterNumber="14"><shaderRef>0</shaderRef></ShaderRef>`;
                 for (let i = 1000; i <= 1015; i++) {
                     shaderList += `<ShaderRef PainterNumber="${i}"><shaderRef>0</shaderRef></ShaderRef>`;
                 }
@@ -1081,6 +1121,33 @@
                 // 正しい順序でFragmentを配置：塗り（4）→アウトライン（3,2）→3D押し出し（65538）→3Dシャドウ（65537）
                 const fragments = `<Fragment><size>0</size><offset>0</offset><angle>0</angle><ghost>false</ghost><isExtendedShadowFragment>false</isExtendedShadowFragment><eFragmentType>2</eFragmentType><fragmentOff>false</fragmentOff><placeHolder>false</placeHolder><annotation>4</annotation><placeHolderShaderIndex>4294967295</placeHolderShaderIndex><painterMix>10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 </painterMix></Fragment><Fragment><size>60</size><offset>0</offset><angle>0</angle><ghost>false</ghost><isExtendedShadowFragment>false</isExtendedShadowFragment><eFragmentType>2</eFragmentType><fragmentOff>false</fragmentOff><placeHolder>false</placeHolder><annotation>3</annotation><placeHolderShaderIndex>4294967295</placeHolderShaderIndex><painterMix>11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 </painterMix></Fragment><Fragment><size>30</size><offset>0</offset><angle>0</angle><ghost>false</ghost><isExtendedShadowFragment>false</isExtendedShadowFragment><eFragmentType>2</eFragmentType><fragmentOff>false</fragmentOff><placeHolder>false</placeHolder><annotation>2</annotation><placeHolderShaderIndex>4294967295</placeHolderShaderIndex><painterMix>12 12 12 12 12 12 12 12 12 12 12 12 12 12 12 12 </painterMix></Fragment><Fragment><size>0</size><offset>0</offset><angle>0</angle><ghost>false</ghost><isExtendedShadowFragment>false</isExtendedShadowFragment><eFragmentType>0</eFragmentType><fragmentOff>false</fragmentOff><placeHolder>false</placeHolder><annotation>65538</annotation><placeHolderShaderIndex>4294967295</placeHolderShaderIndex><painterMix>15 15 15 15 15 15 15 15 15 15 15 15 15 15 15 15 </painterMix></Fragment><Fragment><size>0</size><offset>10</offset><angle>-45</angle><ghost>false</ghost><isExtendedShadowFragment>true</isExtendedShadowFragment><eFragmentType>0</eFragmentType><fragmentOff>true</fragmentOff><placeHolder>false</placeHolder><annotation>65537</annotation><placeHolderShaderIndex>4294967295</placeHolderShaderIndex><painterMix>0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 </painterMix></Fragment>`;
                 return `<Style ID="${styleId}"><StyleBase Version="4"><type>50000</type><positionDominance>0</positionDominance><lineGradient>false</lineGradient><styleRef>${styleId}</styleRef><faceDistortX>0</faceDistortX><faceDistortY>0</faceDistortY><shadow_softness>30</shadow_softness><personality>0</personality><linked>false</linked><EmbellishmentSizeRule>false</EmbellishmentSizeRule><PainterRampType>Basic</PainterRampType></StyleBase><FragmentList Version="5">${fragments}</FragmentList><ShaderList Version="1"><ShaderRef PainterNumber="10"><shaderRef>4098</shaderRef></ShaderRef><ShaderRef PainterNumber="11"><shaderRef>4099</shaderRef></ShaderRef><ShaderRef PainterNumber="12"><shaderRef>4100</shaderRef></ShaderRef><ShaderRef PainterNumber="15"><shaderRef>4098</shaderRef></ShaderRef><ShaderRef PainterNumber="-1"><shaderRef>4101</shaderRef></ShaderRef></ShaderList></Style>`;
+            }
+
+            _bevelParamsFromMode(mode, strength) {
+                switch (mode) {
+                    case 'inner':
+                        return {
+                            bevelBalance: -1,
+                            bevelShining: 0,
+                            bevelLight: false,
+                            bevelMerge: true
+                        };
+                    case 'frame':
+                        return {
+                            bevelBalance: 0,
+                            bevelShining: 0,
+                            bevelLight: false,
+                            bevelMerge: true
+                        };
+                    case 'text':
+                    default:
+                        return {
+                            bevelBalance: 0,
+                            bevelShining: strength !== undefined ? strength : 0.5,
+                            bevelLight: true,
+                            bevelMerge: false
+                        };
+                }
             }
 
             _buildShaders(objects) {
@@ -1097,30 +1164,75 @@
 
                 objects.forEach((obj, index) => {
                     if (obj.type === 'text' && obj.chars && obj.chars.length > 0) {
-                        const char = obj.chars[0];
-                        const strokes = char.strokes || [];
+                        const ch = obj.chars[0];
+                        const color = ch.color || obj.color || '#ffffff';
+                        const strokes = ch.strokes || [];
 
-                        // 1. 塗り用シェーダー（index * 20 + 0, painter 10用）
-                        // 重要: 塗りもcolorOption=4を使用し、ColorSpec[4]に色を設定
-                        const fillRef = this.shaderCounter + index * 20 + 0;
-                        const fillRGB = this._hexToRGB(char.color || '#ffffff');
-                        xml += `<Shader Version="4"><cReference>${fillRef}</cReference><textureRef>0</textureRef><colorOption>4</colorOption><shaderOn>true</shaderOn><glintSize>10</glintSize><glintOffset>0</glintOffset><rampPosTop>75</rampPosTop><rampPosBottom>25</rampPosBottom><rampAngle>0</rampAngle><bevelBalance>0</bevelBalance><rampCycle>0</rampCycle><classicStyle>0</classicStyle><rampType>0</rampType><ColorSpec index="0"><red>0</red><green>0</green><blue>0</blue><xpar>0</xpar></ColorSpec><ColorSpec index="1"><red>0</red><green>0</green><blue>0</blue><xpar>0</xpar></ColorSpec><ColorSpec index="2"><red>0</red><green>0</green><blue>0</blue><xpar>0</xpar></ColorSpec><ColorSpec index="3"><red>0</red><green>0</green><blue>0</blue><xpar>0</xpar></ColorSpec><ColorSpec index="4"><red>${fillRGB.r}</red><green>${fillRGB.g}</green><blue>${fillRGB.b}</blue><xpar>0</xpar></ColorSpec><glintAngle>0</glintAngle><bevelSize>0</bevelSize><bevelDirection>0</bevelDirection><bevelPipe>false</bevelPipe><bevelAngle>0</bevelAngle><bevelShape>1</bevelShape><bevelShining>0</bevelShining><bevelLight>false</bevelLight><bevelMerge>true</bevelMerge><sheenOn>false</sheenOn></Shader>`;
+                        const base = this.shaderCounter + index * 10;
+                        const fillRef = base + 0;
+                        const stroke0Ref = base + 1;
+                        const stroke1Ref = base + 2;
+                        const bevelRef = base + 3;
+                        const minus1Ref = base + 5;
 
-                        // 2. アウトライン用シェーダー（index * 20 + 1, 2, 3..., painter 11, 12, 13用）
+                        // 塗りタイプの判定
+                        const fillType = ch.fillType || obj.fillType || 'solid';
+                        const stops = ch.gradientStops || obj.gradientStops || [];
+                        const angle = ch.gradientAngle ?? obj.gradientAngle ?? 0;
+                        const isGradient = (fillType === 'linear' || fillType === 'radial') && Array.isArray(stops) && stops.length >= 2;
+                        const glossEnabled = (fillType === 'gloss') || obj.glossEnabled || ch.glossEnabled || false;
+                        const bevelEnabled = (fillType === 'bevel') || obj.bevelEnabled || ch.bevelEnabled || false;
+
+                        // === 1. 塗り用Shader (fillRef) ===
+                        if (isGradient) {
+                            // グラデーション塗り
+                            const s0 = stops[0];
+                            const sEnd = stops[stops.length - 1];
+                            const sMid = stops[Math.floor(stops.length / 2)] || sEnd;
+
+                            const rgb0 = this._hexToRGB(s0.color);
+                            const rgbMid = this._hexToRGB(sMid.color);
+                            const rgbEnd = this._hexToRGB(sEnd.color);
+
+                            const rampPosTop = fillType === 'linear' ? 75 : 85.8696;
+                            const rampPosBottom = fillType === 'linear' ? 25 : 44.5652;
+
+                            xml += `<Shader Version="4"><cReference>${fillRef}</cReference><textureRef>0</textureRef><colorOption>0</colorOption><shaderOn>true</shaderOn><glintSize>10</glintSize><glintOffset>0</glintOffset><rampPosTop>${rampPosTop}</rampPosTop><rampPosBottom>${rampPosBottom}</rampPosBottom><rampAngle>${angle}</rampAngle><bevelBalance>0</bevelBalance><rampCycle>0</rampCycle><classicStyle>0</classicStyle><rampType>-1</rampType><ColorSpec index="0"><red>${rgb0.r}</red><green>${rgb0.g}</green><blue>${rgb0.b}</blue><xpar>0</xpar></ColorSpec><ColorSpec index="1"><red>0</red><green>0</green><blue>0</blue><xpar>0</xpar></ColorSpec><ColorSpec index="2"><red>${rgbMid.r}</red><green>${rgbMid.g}</green><blue>${rgbMid.b}</blue><xpar>0</xpar></ColorSpec><ColorSpec index="3"><red>0</red><green>0</green><blue>0</blue><xpar>0</xpar></ColorSpec><ColorSpec index="4"><red>${rgbEnd.r}</red><green>${rgbEnd.g}</green><blue>${rgbEnd.b}</blue><xpar>0</xpar></ColorSpec><glintAngle>0</glintAngle><bevelSize>0</bevelSize><bevelDirection>0</bevelDirection><bevelPipe>false</bevelPipe><bevelAngle>0</bevelAngle><bevelShape>1</bevelShape><bevelShining>0</bevelShining><bevelLight>false</bevelLight><bevelMerge>true</bevelMerge><sheenOn>false</sheenOn></Shader>`;
+                        } else if (glossEnabled && !bevelEnabled) {
+                            // 光沢（黒地＋白いハイライト）
+                            const glossSize = obj.glossSize || ch.glossSize || 10;
+                            const glossAngle = obj.glossAngle ?? ch.glossAngle ?? 0;
+                            const glossColor = obj.glossColor || ch.glossColor || '#ffffff';
+                            const glossRGB = this._hexToRGB(glossColor);
+
+                            xml += `<Shader Version="4"><cReference>${fillRef}</cReference><textureRef>0</textureRef><colorOption>4</colorOption><shaderOn>true</shaderOn><glintSize>${glossSize}</glintSize><glintOffset>0</glintOffset><rampPosTop>75</rampPosTop><rampPosBottom>25</rampPosBottom><rampAngle>0</rampAngle><bevelBalance>0</bevelBalance><rampCycle>0</rampCycle><classicStyle>0</classicStyle><rampType>0</rampType><ColorSpec index="0"><red>0</red><green>0</green><blue>0</blue><xpar>0</xpar></ColorSpec><ColorSpec index="1"><red>0</red><green>0</green><blue>0</blue><xpar>0</xpar></ColorSpec><ColorSpec index="2"><red>0</red><green>0</green><blue>0</blue><xpar>0</xpar></ColorSpec><ColorSpec index="3"><red>0</red><green>0</green><blue>0</blue><xpar>0</xpar></ColorSpec><ColorSpec index="4"><red>${glossRGB.r}</red><green>${glossRGB.g}</green><blue>${glossRGB.b}</blue><xpar>0</xpar></ColorSpec><glintAngle>${glossAngle}</glintAngle><bevelSize>0</bevelSize><bevelDirection>0</bevelDirection><bevelPipe>false</bevelPipe><bevelAngle>0</bevelAngle><bevelShape>1</bevelShape><bevelShining>0</bevelShining><bevelLight>false</bevelLight><bevelMerge>true</bevelMerge><sheenOn>true</sheenOn></Shader>`;
+                        } else {
+                            // 単色塗り or ベベルベース色
+                            const fillRGB = this._hexToRGB(color);
+                            xml += `<Shader Version="4"><cReference>${fillRef}</cReference><textureRef>0</textureRef><colorOption>4</colorOption><shaderOn>true</shaderOn><glintSize>10</glintSize><glintOffset>0</glintOffset><rampPosTop>75</rampPosTop><rampPosBottom>25</rampPosBottom><rampAngle>0</rampAngle><bevelBalance>0</bevelBalance><rampCycle>0</rampCycle><classicStyle>0</classicStyle><rampType>0</rampType><ColorSpec index="0"><red>${fillRGB.r}</red><green>${fillRGB.g}</green><blue>${fillRGB.b}</blue><xpar>0</xpar></ColorSpec><ColorSpec index="1"><red>${fillRGB.r}</red><green>${fillRGB.g}</green><blue>${fillRGB.b}</blue><xpar>0</xpar></ColorSpec><ColorSpec index="2"><red>${fillRGB.r}</red><green>${fillRGB.g}</green><blue>${fillRGB.b}</blue><xpar>0</xpar></ColorSpec><ColorSpec index="3"><red>${fillRGB.r}</red><green>${fillRGB.g}</green><blue>${fillRGB.b}</blue><xpar>0</xpar></ColorSpec><ColorSpec index="4"><red>${fillRGB.r}</red><green>${fillRGB.g}</green><blue>${fillRGB.b}</blue><xpar>0</xpar></ColorSpec><glintAngle>0</glintAngle><bevelSize>0</bevelSize><bevelDirection>0</bevelDirection><bevelPipe>false</bevelPipe><bevelAngle>0</bevelAngle><bevelShape>1</bevelShape><bevelShining>0</bevelShining><bevelLight>false</bevelLight><bevelMerge>true</bevelMerge><sheenOn>false</sheenOn></Shader>`;
+                        }
+
+                        // === 2. アウトライン用Shader ===
                         const enabledStrokes = strokes.filter(s => s.enabled);
-                        enabledStrokes.forEach((stroke, i) => {
-                            const ref = this.shaderCounter + index * 20 + 1 + i;
+                        enabledStrokes.slice(0, 2).forEach((stroke, i) => {
+                            const ref = i === 0 ? stroke0Ref : stroke1Ref;
                             const rgb = this._hexToRGB(stroke.color);
-                            xml += `<Shader Version="4"><cReference>${ref}</cReference><textureRef>0</textureRef><colorOption>4</colorOption><shaderOn>true</shaderOn><glintSize>10</glintSize><glintOffset>0</glintOffset><rampPosTop>75</rampPosTop><rampPosBottom>25</rampPosBottom><rampAngle>0</rampAngle><bevelBalance>0</bevelBalance><rampCycle>0</rampCycle><classicStyle>0</classicStyle><rampType>0</rampType><ColorSpec index="0"><red>0</red><green>0</green><blue>0</blue><xpar>0</xpar></ColorSpec><ColorSpec index="1"><red>0</red><green>0</green><blue>0</blue><xpar>0</xpar></ColorSpec><ColorSpec index="2"><red>0</red><green>0</green><blue>0</blue><xpar>0</xpar></ColorSpec><ColorSpec index="3"><red>0</red><green>0</green><blue>0</blue><xpar>0</xpar></ColorSpec><ColorSpec index="4"><red>${rgb.r}</red><green>${rgb.g}</green><blue>${rgb.b}</blue><xpar>0</xpar></ColorSpec><glintAngle>0</glintAngle><bevelSize>0</bevelSize><bevelDirection>0</bevelDirection><bevelPipe>false</bevelPipe><bevelAngle>0</bevelAngle><bevelShape>1</bevelShape><bevelShining>0</bevelShining><bevelLight>false</bevelLight><bevelMerge>true</bevelMerge><sheenOn>false</sheenOn></Shader>`;
+                            xml += `<Shader Version="4"><cReference>${ref}</cReference><textureRef>0</textureRef><colorOption>4</colorOption><shaderOn>true</shaderOn><glintSize>10</glintSize><glintOffset>0</glintOffset><rampPosTop>75</rampPosTop><rampPosBottom>25</rampPosBottom><rampAngle>0</rampAngle><bevelBalance>0</bevelBalance><rampCycle>0</rampCycle><classicStyle>0</classicStyle><rampType>0</rampType><ColorSpec index="0"><red>${rgb.r}</red><green>${rgb.g}</green><blue>${rgb.b}</blue><xpar>0</xpar></ColorSpec><ColorSpec index="1"><red>${rgb.r}</red><green>${rgb.g}</green><blue>${rgb.b}</blue><xpar>0</xpar></ColorSpec><ColorSpec index="2"><red>${rgb.r}</red><green>${rgb.g}</green><blue>${rgb.b}</blue><xpar>0</xpar></ColorSpec><ColorSpec index="3"><red>${rgb.r}</red><green>${rgb.g}</green><blue>${rgb.b}</blue><xpar>0</xpar></ColorSpec><ColorSpec index="4"><red>${rgb.r}</red><green>${rgb.g}</green><blue>${rgb.b}</blue><xpar>0</xpar></ColorSpec><glintAngle>0</glintAngle><bevelSize>0</bevelSize><bevelDirection>0</bevelDirection><bevelPipe>false</bevelPipe><bevelAngle>0</bevelAngle><bevelShape>1</bevelShape><bevelShining>0</bevelShining><bevelLight>false</bevelLight><bevelMerge>true</bevelMerge><sheenOn>false</sheenOn></Shader>`;
                         });
 
-                        // 3. PainterNumber 15用シェーダー（index * 20 + 4, 3D押し出し用、テキスト塗り色を使用）
-                        const shader15Ref = this.shaderCounter + index * 20 + 4;
-                        xml += `<Shader Version="4"><cReference>${shader15Ref}</cReference><textureRef>0</textureRef><colorOption>0</colorOption><shaderOn>true</shaderOn><glintSize>10</glintSize><glintOffset>0</glintOffset><rampPosTop>75</rampPosTop><rampPosBottom>25</rampPosBottom><rampAngle>0</rampAngle><bevelBalance>0</bevelBalance><rampCycle>0</rampCycle><classicStyle>0</classicStyle><rampType>0</rampType><ColorSpec index="0"><red>${fillRGB.r}</red><green>${fillRGB.g}</green><blue>${fillRGB.b}</blue><xpar>0</xpar></ColorSpec><ColorSpec index="1"><red>0</red><green>0</green><blue>0</blue><xpar>0</xpar></ColorSpec><ColorSpec index="2"><red>0</red><green>0</green><blue>0</blue><xpar>0</xpar></ColorSpec><ColorSpec index="3"><red>0</red><green>0</green><blue>0</blue><xpar>0</xpar></ColorSpec><ColorSpec index="4"><red>0</red><green>0</green><blue>0</blue><xpar>0</xpar></ColorSpec><glintAngle>0</glintAngle><bevelSize>0</bevelSize><bevelDirection>0</bevelDirection><bevelPipe>false</bevelPipe><bevelAngle>0</bevelAngle><bevelShape>1</bevelShape><bevelShining>0</bevelShining><bevelLight>false</bevelLight><bevelMerge>true</bevelMerge><sheenOn>false</sheenOn></Shader>`;
+                        // === 3. ベベル用Shader (bevelEnabled時のみ) ===
+                        if (bevelEnabled) {
+                            const bevelMode = obj.bevelMode || ch.bevelMode || 'text';
+                            const bevelStrength = obj.bevelStrength ?? ch.bevelStrength ?? 0.5;
+                            const bevelSize = obj.bevelSize || ch.bevelSize || 100;
+                            const params = this._bevelParamsFromMode(bevelMode, bevelStrength);
 
-                        // 4. PainterNumber -1用シェーダー（index * 20 + 5, colorOption=0, テキスト色を反映）
-                        const shaderMinus1Ref = this.shaderCounter + index * 20 + 5;
-                        xml += `<Shader Version="4"><cReference>${shaderMinus1Ref}</cReference><textureRef>0</textureRef><colorOption>0</colorOption><shaderOn>true</shaderOn><glintSize>10</glintSize><glintOffset>0</glintOffset><rampPosTop>75</rampPosTop><rampPosBottom>25</rampPosBottom><rampAngle>0</rampAngle><bevelBalance>0</bevelBalance><rampCycle>0</rampCycle><classicStyle>0</classicStyle><rampType>0</rampType><ColorSpec index="0"><red>${fillRGB.r}</red><green>${fillRGB.g}</green><blue>${fillRGB.b}</blue><xpar>127</xpar></ColorSpec><ColorSpec index="1"><red>0</red><green>0</green><blue>0</blue><xpar>0</xpar></ColorSpec><ColorSpec index="2"><red>0</red><green>0</green><blue>0</blue><xpar>0</xpar></ColorSpec><ColorSpec index="3"><red>0</red><green>0</green><blue>0</blue><xpar>0</xpar></ColorSpec><ColorSpec index="4"><red>0</red><green>0</green><blue>0</blue><xpar>0</xpar></ColorSpec><glintAngle>0</glintAngle><bevelSize>0</bevelSize><bevelDirection>0</bevelDirection><bevelPipe>false</bevelPipe><bevelAngle>0</bevelAngle><bevelShape>1</bevelShape><bevelShining>0</bevelShining><bevelLight>false</bevelLight><bevelMerge>true</bevelMerge><sheenOn>false</sheenOn></Shader>`;
+                            xml += `<Shader Version="4"><cReference>${bevelRef}</cReference><textureRef>0</textureRef><colorOption>1</colorOption><shaderOn>true</shaderOn><glintSize>10</glintSize><glintOffset>0</glintOffset><rampPosTop>75</rampPosTop><rampPosBottom>25</rampPosBottom><rampAngle>0</rampAngle><bevelBalance>${params.bevelBalance}</bevelBalance><rampCycle>0</rampCycle><classicStyle>0</classicStyle><rampType>0</rampType><ColorSpec index="0"><red>0</red><green>0</green><blue>0</blue><xpar>0</xpar></ColorSpec><ColorSpec index="1"><red>255</red><green>255</green><blue>255</blue><xpar>0</xpar></ColorSpec><ColorSpec index="2"><red>0</red><green>0</green><blue>0</blue><xpar>0</xpar></ColorSpec><ColorSpec index="3"><red>0</red><green>0</green><blue>0</blue><xpar>0</xpar></ColorSpec><ColorSpec index="4"><red>250</red><green>250</green><blue>250</blue><xpar>0</xpar></ColorSpec><glintAngle>0</glintAngle><bevelSize>${bevelSize}</bevelSize><bevelDirection>0</bevelDirection><bevelPipe>false</bevelPipe><bevelAngle>0</bevelAngle><bevelShape>1</bevelShape><bevelShining>${params.bevelShining}</bevelShining><bevelLight>${params.bevelLight}</bevelLight><bevelMerge>${params.bevelMerge}</bevelMerge><sheenOn>false</sheenOn></Shader>`;
+                        }
+
+                        // === 4. PainterNumber -1 用Shader (半透明) ===
+                        const fillRGB = this._hexToRGB(color);
+                        xml += `<Shader Version="4"><cReference>${minus1Ref}</cReference><textureRef>0</textureRef><colorOption>0</colorOption><shaderOn>true</shaderOn><glintSize>10</glintSize><glintOffset>0</glintOffset><rampPosTop>75</rampPosTop><rampPosBottom>25</rampPosBottom><rampAngle>0</rampAngle><bevelBalance>0</bevelBalance><rampCycle>0</rampCycle><classicStyle>0</classicStyle><rampType>0</rampType><ColorSpec index="0"><red>${fillRGB.r}</red><green>${fillRGB.g}</green><blue>${fillRGB.b}</blue><xpar>127</xpar></ColorSpec><ColorSpec index="1"><red>0</red><green>0</green><blue>0</blue><xpar>0</xpar></ColorSpec><ColorSpec index="2"><red>0</red><green>0</green><blue>0</blue><xpar>0</xpar></ColorSpec><ColorSpec index="3"><red>0</red><green>0</green><blue>0</blue><xpar>0</xpar></ColorSpec><ColorSpec index="4"><red>0</red><green>0</green><blue>0</blue><xpar>0</xpar></ColorSpec><glintAngle>0</glintAngle><bevelSize>0</bevelSize><bevelDirection>0</bevelDirection><bevelPipe>false</bevelPipe><bevelAngle>0</bevelAngle><bevelShape>1</bevelShape><bevelShining>0</bevelShining><bevelLight>false</bevelLight><bevelMerge>true</bevelMerge><sheenOn>false</sheenOn></Shader>`;
                     }
                 });
                 xml += '</Shaders>';
@@ -2404,6 +2516,12 @@
                 glossBlur: parseInt(document.getElementById('glossBlur').value),
                 glossColor: document.getElementById('glossColor').value,
                 glossOpacity: parseInt(document.getElementById('glossOpacity').value),
+                glossSize: parseInt(document.getElementById('glossSize').value),
+                glossAngle: parseInt(document.getElementById('glossAngle').value),
+                bevelEnabled: document.getElementById('bevelEnabled').checked,
+                bevelMode: document.getElementById('bevelMode').value,
+                bevelSize: parseInt(document.getElementById('bevelSize').value),
+                bevelStrength: parseFloat(document.getElementById('bevelStrength').value),
                 scaleX: parseInt(document.getElementById('charScaleX').value),
                 kerning: parseInt(document.getElementById('charKerning').value),
                 tracking: parseInt(document.getElementById('charTracking').value),
