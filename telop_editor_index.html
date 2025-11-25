@@ -1019,11 +1019,18 @@
                 let shaderList = '';
                 // PainterNumber 2-15
                 for (let i = 2; i <= 15; i++) {
-                    const shaderRef = i >= 10 && i <= 13 ? (this.shaderCounter + index * 20 + (i - 10)) : 0;
+                    let shaderRef = 0;
+                    if (i >= 10 && i <= 13) {
+                        // Painter 10-13: 塗り（10）とストローク（11-13）
+                        shaderRef = this.shaderCounter + index * 20 + (i - 10);
+                    } else if (i === 15) {
+                        // Painter 15: 3D押し出し用（index * 20 + 4）
+                        shaderRef = this.shaderCounter + index * 20 + 4;
+                    }
                     shaderList += `<ShaderRef PainterNumber="${i}"><shaderRef>${shaderRef}</shaderRef></ShaderRef>`;
                 }
-                // PainterNumber -1 は塗りのシェーダーを参照（painter 10と同じ）
-                shaderList += `<ShaderRef PainterNumber="-1"><shaderRef>${this.shaderCounter + index * 20 + 0}</shaderRef></ShaderRef>`;
+                // PainterNumber -1: 専用のシェーダーを参照（index * 20 + 5, colorOption=0）
+                shaderList += `<ShaderRef PainterNumber="-1"><shaderRef>${this.shaderCounter + index * 20 + 5}</shaderRef></ShaderRef>`;
                 // PainterNumber 1000-1015
                 for (let i = 1000; i <= 1015; i++) {
                     shaderList += `<ShaderRef PainterNumber="${i}"><shaderRef>0</shaderRef></ShaderRef>`;
@@ -1058,6 +1065,14 @@
                             const rgb = this._hexToRGB(stroke.color);
                             xml += `<Shader Version="4"><cReference>${ref}</cReference><textureRef>0</textureRef><colorOption>4</colorOption><shaderOn>true</shaderOn><glintSize>10</glintSize><glintOffset>0</glintOffset><rampPosTop>75</rampPosTop><rampPosBottom>25</rampPosBottom><rampAngle>0</rampAngle><bevelBalance>0</bevelBalance><rampCycle>0</rampCycle><classicStyle>0</classicStyle><rampType>0</rampType><ColorSpec index="0"><red>0</red><green>0</green><blue>0</blue><xpar>0</xpar></ColorSpec><ColorSpec index="1"><red>0</red><green>0</green><blue>0</blue><xpar>0</xpar></ColorSpec><ColorSpec index="2"><red>0</red><green>0</green><blue>0</blue><xpar>0</xpar></ColorSpec><ColorSpec index="3"><red>0</red><green>0</green><blue>0</blue><xpar>0</xpar></ColorSpec><ColorSpec index="4"><red>${rgb.r}</red><green>${rgb.g}</green><blue>${rgb.b}</blue><xpar>0</xpar></ColorSpec><glintAngle>0</glintAngle><bevelSize>0</bevelSize><bevelDirection>0</bevelDirection><bevelPipe>false</bevelPipe><bevelAngle>0</bevelAngle><bevelShape>1</bevelShape><bevelShining>0</bevelShining><bevelLight>false</bevelLight><bevelMerge>true</bevelMerge><sheenOn>false</sheenOn></Shader>`;
                         });
+
+                        // 3. PainterNumber 15用シェーダー（index * 20 + 4, 3D押し出し用）
+                        const shader15Ref = this.shaderCounter + index * 20 + 4;
+                        xml += `<Shader Version="4"><cReference>${shader15Ref}</cReference><textureRef>0</textureRef><colorOption>4</colorOption><shaderOn>true</shaderOn><glintSize>10</glintSize><glintOffset>0</glintOffset><rampPosTop>75</rampPosTop><rampPosBottom>25</rampPosBottom><rampAngle>0</rampAngle><bevelBalance>0</bevelBalance><rampCycle>0</rampCycle><classicStyle>0</classicStyle><rampType>0</rampType><ColorSpec index="0"><red>253</red><green>255</green><blue>0</blue><xpar>0</xpar></ColorSpec><ColorSpec index="1"><red>0</red><green>0</green><blue>0</blue><xpar>0</xpar></ColorSpec><ColorSpec index="2"><red>0</red><green>0</green><blue>0</blue><xpar>0</xpar></ColorSpec><ColorSpec index="3"><red>0</red><green>0</green><blue>0</blue><xpar>0</xpar></ColorSpec><ColorSpec index="4"><red>250</red><green>250</green><blue>250</blue><xpar>0</xpar></ColorSpec><glintAngle>0</glintAngle><bevelSize>0</bevelSize><bevelDirection>0</bevelDirection><bevelPipe>false</bevelPipe><bevelAngle>0</bevelAngle><bevelShape>1</bevelShape><bevelShining>0</bevelShining><bevelLight>false</bevelLight><bevelMerge>true</bevelMerge><sheenOn>false</sheenOn></Shader>`;
+
+                        // 4. PainterNumber -1用シェーダー（index * 20 + 5, colorOption=0）
+                        const shaderMinus1Ref = this.shaderCounter + index * 20 + 5;
+                        xml += `<Shader Version="4"><cReference>${shaderMinus1Ref}</cReference><textureRef>0</textureRef><colorOption>0</colorOption><shaderOn>true</shaderOn><glintSize>10</glintSize><glintOffset>0</glintOffset><rampPosTop>75</rampPosTop><rampPosBottom>25</rampPosBottom><rampAngle>0</rampAngle><bevelBalance>0</bevelBalance><rampCycle>0</rampCycle><classicStyle>0</classicStyle><rampType>0</rampType><ColorSpec index="0"><red>0</red><green>0</green><blue>0</blue><xpar>0</xpar></ColorSpec><ColorSpec index="1"><red>0</red><green>0</green><blue>0</blue><xpar>0</xpar></ColorSpec><ColorSpec index="2"><red>0</red><green>0</green><blue>0</blue><xpar>0</xpar></ColorSpec><ColorSpec index="3"><red>0</red><green>0</green><blue>0</blue><xpar>0</xpar></ColorSpec><ColorSpec index="4"><red>0</red><green>0</green><blue>0</blue><xpar>0</xpar></ColorSpec><glintAngle>0</glintAngle><bevelSize>0</bevelSize><bevelDirection>0</bevelDirection><bevelPipe>false</bevelPipe><bevelAngle>0</bevelAngle><bevelShape>1</bevelShape><bevelShining>0</bevelShining><bevelLight>false</bevelLight><bevelMerge>true</bevelMerge><sheenOn>false</sheenOn></Shader>`;
                     }
                 });
                 xml += '</Shaders>';
