@@ -3,511 +3,1011 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NLT - Neo Legacy Title Generator</title>
+    <title>NLT - Neo Legacy Title Editor</title>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background: #1e1e1e;
-            color: #fff;
-            padding: 20px;
-        }
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-            display: grid;
-            grid-template-columns: 350px 1fr;
-            gap: 20px;
-        }
-        .panel {
             background: #2d2d2d;
-            border-radius: 8px;
-            padding: 20px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            color: #e0e0e0;
+            overflow: hidden;
+            height: 100vh;
         }
-        h1 {
-            font-size: 24px;
-            margin-bottom: 20px;
-            color: #4a9eff;
-        }
-        h2 {
-            font-size: 16px;
-            margin: 20px 0 10px;
-            color: #aaa;
-            border-bottom: 1px solid #444;
-            padding-bottom: 5px;
-        }
-        .control-group {
-            margin-bottom: 15px;
-        }
-        label {
-            display: block;
-            margin-bottom: 5px;
-            font-size: 13px;
-            color: #aaa;
-        }
-        input[type="text"],
-        input[type="number"],
-        select,
-        textarea {
-            width: 100%;
-            padding: 8px;
-            background: #1e1e1e;
-            border: 1px solid #444;
-            border-radius: 4px;
-            color: #fff;
-            font-size: 14px;
-        }
-        textarea {
-            resize: vertical;
-            min-height: 80px;
-            font-family: inherit;
-        }
-        input[type="color"] {
-            width: 100%;
-            height: 40px;
-            border: 1px solid #444;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-        input[type="range"] {
-            width: 100%;
-        }
-        button {
-            width: 100%;
-            padding: 12px;
-            background: #4a9eff;
-            border: none;
-            border-radius: 4px;
-            color: #fff;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-        button:hover {
-            background: #3a8eef;
-        }
-        button:active {
-            transform: scale(0.98);
-        }
-        .btn-secondary {
-            background: #555;
-            margin-top: 10px;
-        }
-        .btn-secondary:hover {
-            background: #666;
-        }
-        #canvas {
-            border: 1px solid #444;
-            border-radius: 4px;
-            max-width: 100%;
-            display: block;
-        }
-        .canvas-wrapper {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 600px;
-            background: #1e1e1e;
-            border-radius: 4px;
-        }
-        .color-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-        }
-        .checkbox-group {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .checkbox-group input[type="checkbox"] {
-            width: auto;
-        }
-        .value-display {
-            font-size: 12px;
-            color: #888;
-            margin-top: 2px;
-        }
-        .gradient-stops {
+
+        /* メインコンテナ */
+        .main-container {
             display: flex;
             flex-direction: column;
-            gap: 10px;
-            margin-top: 10px;
+            height: 100vh;
         }
-        .gradient-stop {
-            display: grid;
-            grid-template-columns: 60px 1fr auto;
-            gap: 10px;
+
+        /* 上部ツールバー */
+        .toolbar {
+            background: #1e1e1e;
+            padding: 8px 12px;
+            border-bottom: 1px solid #000;
+            display: flex;
+            gap: 8px;
             align-items: center;
         }
-        .gradient-stop input[type="number"] {
-            width: 100%;
+
+        .tool-btn {
+            width: 32px;
+            height: 32px;
+            background: #3a3a3a;
+            border: 1px solid #555;
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #aaa;
+            font-size: 18px;
+            transition: all 0.2s;
         }
-        .resolution-group {
+
+        .tool-btn:hover {
+            background: #4a4a4a;
+            color: #fff;
+        }
+
+        .tool-btn.active {
+            background: #0066cc;
+            color: #fff;
+            border-color: #0077ee;
+        }
+
+        .toolbar-separator {
+            width: 1px;
+            height: 24px;
+            background: #555;
+            margin: 0 4px;
+        }
+
+        /* コンテンツエリア */
+        .content-area {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+        }
+
+        /* キャンバスエリア */
+        .canvas-area {
+            flex: 1;
+            background: #141414;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        #canvas {
+            background: repeating-conic-gradient(
+                #2a2a2a 0% 25%,
+                #1e1e1e 0% 50%
+            ) 50% / 20px 20px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+            cursor: crosshair;
+        }
+
+        #canvas.selection-mode {
+            cursor: default;
+        }
+
+        /* 右側プロパティパネル */
+        .properties-panel {
+            width: 280px;
+            background: #252525;
+            border-left: 1px solid #000;
+            overflow-y: auto;
+            padding: 12px;
+        }
+
+        .property-section {
+            margin-bottom: 16px;
+            background: #2d2d2d;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .property-section-header {
+            background: #1e1e1e;
+            padding: 8px 12px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #aaa;
+            cursor: pointer;
+            user-select: none;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .property-section-header:hover {
+            background: #252525;
+        }
+
+        .property-section-header::after {
+            content: '▼';
+            font-size: 8px;
+            transition: transform 0.2s;
+        }
+
+        .property-section-header.collapsed::after {
+            transform: rotate(-90deg);
+        }
+
+        .property-section-content {
+            padding: 12px;
+            display: block;
+        }
+
+        .property-section-content.hidden {
+            display: none;
+        }
+
+        .property-row {
+            margin-bottom: 10px;
+        }
+
+        .property-row label {
+            display: block;
+            font-size: 11px;
+            color: #aaa;
+            margin-bottom: 4px;
+        }
+
+        .property-row input,
+        .property-row select {
+            width: 100%;
+            padding: 6px 8px;
+            background: #1a1a1a;
+            border: 1px solid #444;
+            border-radius: 3px;
+            color: #fff;
+            font-size: 12px;
+        }
+
+        .property-row input:focus,
+        .property-row select:focus {
+            outline: none;
+            border-color: #0066cc;
+        }
+
+        .property-row input[type="color"] {
+            height: 32px;
+            padding: 2px;
+            cursor: pointer;
+        }
+
+        .property-row input[type="range"] {
+            padding: 0;
+            accent-color: #0066cc;
+        }
+
+        .property-row input[type="checkbox"] {
+            width: auto;
+            margin-right: 6px;
+            accent-color: #0066cc;
+        }
+
+        .property-grid-2 {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 10px;
+            gap: 8px;
         }
+
+        .property-grid-3 {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 6px;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 8px;
+            background: #3a3a3a;
+            border: 1px solid #555;
+            border-radius: 4px;
+            color: #e0e0e0;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn:hover {
+            background: #4a4a4a;
+        }
+
+        .btn-primary {
+            background: #0066cc;
+            border-color: #0077ee;
+            color: #fff;
+        }
+
+        .btn-primary:hover {
+            background: #0077ee;
+        }
+
+        .value-display {
+            font-size: 10px;
+            color: #666;
+            margin-top: 2px;
+        }
+
+        /* ツールチップ */
+        .tooltip {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.9);
+            color: #fff;
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-size: 11px;
+            pointer-events: none;
+            z-index: 1000;
+            display: none;
+        }
+
+        /* 隠しIME入力フィールド */
+        #imeInput {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 1px;
+            height: 1px;
+            opacity: 0.01;
+            z-index: -1;
+        }
+
+        /* スクロールバーのスタイル */
+        ::-webkit-scrollbar {
+            width: 12px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #1a1a1a;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #4a4a4a;
+            border-radius: 6px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #5a5a5a;
+        }
+
+        /* テキストオブジェクトの選択ハンドル */
+        .text-selection-box {
+            position: absolute;
+            border: 2px solid #0066cc;
+            pointer-events: none;
+            z-index: 100;
+        }
+
+        .resize-handle {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background: #fff;
+            border: 1px solid #0066cc;
+            pointer-events: all;
+            cursor: nwse-resize;
+        }
+
+        .resize-handle.nw { top: -4px; left: -4px; cursor: nw-resize; }
+        .resize-handle.ne { top: -4px; right: -4px; cursor: ne-resize; }
+        .resize-handle.sw { bottom: -4px; left: -4px; cursor: sw-resize; }
+        .resize-handle.se { bottom: -4px; right: -4px; cursor: se-resize; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <!-- 左パネル: コントロール -->
-        <div class="panel">
-            <h1>NLT Generator</h1>
-
-            <h2>解像度</h2>
-            <div class="resolution-group">
-                <div class="control-group">
-                    <label>幅</label>
-                    <input type="number" id="canvasWidth" value="1920" min="1">
-                </div>
-                <div class="control-group">
-                    <label>高さ</label>
-                    <input type="number" id="canvasHeight" value="1080" min="1">
-                </div>
+    <div class="main-container">
+        <!-- 上部ツールバー -->
+        <div class="toolbar">
+            <div class="tool-btn active" id="selectTool" title="選択ツール">
+                ➤
             </div>
-
-            <h2>テキスト</h2>
-            <div class="control-group">
-                <label>テキスト内容</label>
-                <textarea id="textContent">レガシータイトル</textarea>
+            <div class="tool-btn" id="textTool" title="テキストツール">
+                T
             </div>
-
-            <div class="control-group">
-                <label>フォント</label>
-                <select id="fontFamily">
-                    <option value="Yu Gothic UI">Yu Gothic UI</option>
-                    <option value="Arial">Arial</option>
-                    <option value="Meiryo">Meiryo</option>
-                    <option value="MS Gothic">MS Gothic</option>
-                    <option value="Hiragino Sans">Hiragino Sans</option>
-                </select>
-            </div>
-
-            <div class="control-group">
-                <label>フォントサイズ (pt)</label>
-                <input type="number" id="fontSize" value="72" min="1" max="500">
-            </div>
-
-            <div class="control-group">
-                <label>横幅スケール (%)</label>
-                <input type="range" id="scaleX" value="100" min="10" max="200" step="1">
-                <div class="value-display" id="scaleXValue">100%</div>
-            </div>
-
-            <h2>位置とアライメント</h2>
-            <div class="control-group">
-                <label>水平位置</label>
-                <input type="number" id="posX" value="960" step="1">
-            </div>
-
-            <div class="control-group">
-                <label>垂直位置</label>
-                <input type="number" id="posY" value="540" step="1">
-            </div>
-
-            <div class="control-group">
-                <label>テキストアライメント</label>
-                <select id="textAlign">
-                    <option value="left">左揃え (left)</option>
-                    <option value="center" selected>中央揃え (center)</option>
-                    <option value="right">右揃え (right)</option>
-                </select>
-            </div>
-
-            <h2>塗りスタイル</h2>
-            <div class="control-group">
-                <label>塗りタイプ</label>
-                <select id="fillType">
-                    <option value="solid" selected>単色 (Solid)</option>
-                    <option value="gradient-linear">線形グラデーション (Linear)</option>
-                    <option value="gradient-radial">円形グラデーション (Radial)</option>
-                    <option value="sheen">光沢 (Sheen)</option>
-                </select>
-            </div>
-
-            <div id="solidControls">
-                <div class="control-group">
-                    <label>塗り色</label>
-                    <input type="color" id="fillColor" value="#fdff00">
-                </div>
-            </div>
-
-            <div id="gradientControls" style="display: none;">
-                <div class="gradient-stops">
-                    <div class="gradient-stop">
-                        <label>開始</label>
-                        <input type="color" id="gradientStart" value="#ff0000">
-                        <span>0%</span>
-                    </div>
-                    <div class="gradient-stop">
-                        <label>中間</label>
-                        <input type="color" id="gradientMiddle" value="#ffff00">
-                        <span>50%</span>
-                    </div>
-                    <div class="gradient-stop">
-                        <label>終端</label>
-                        <input type="color" id="gradientEnd" value="#0000ff">
-                        <span>100%</span>
-                    </div>
-                </div>
-                <div class="control-group">
-                    <label>グラデーション角度 (度)</label>
-                    <input type="range" id="gradientAngle" value="0" min="0" max="360" step="1">
-                    <div class="value-display" id="gradientAngleValue">0°</div>
-                </div>
-            </div>
-
-            <div id="sheenControls" style="display: none;">
-                <div class="control-group">
-                    <label>ベース色</label>
-                    <input type="color" id="sheenBase" value="#000000">
-                </div>
-                <div class="control-group">
-                    <label>ハイライト色</label>
-                    <input type="color" id="sheenHighlight" value="#ffffff">
-                </div>
-                <div class="control-group">
-                    <label>光沢サイズ (0-100)</label>
-                    <input type="range" id="glintSize" value="10" min="0" max="100" step="1">
-                    <div class="value-display" id="glintSizeValue">10</div>
-                </div>
-                <div class="control-group">
-                    <label>光沢角度 (度)</label>
-                    <input type="range" id="glintAngle" value="0" min="0" max="360" step="1">
-                    <div class="value-display" id="glintAngleValue">0°</div>
-                </div>
-            </div>
-
-            <h2>ストローク（フラグメント）</h2>
-            <div class="control-group">
-                <label>プリセット</label>
-                <select id="strokePreset" onchange="applyStrokePreset()">
-                    <option value="custom">カスタム</option>
-                    <option value="legacy-standard" selected>レガシー標準（4層）</option>
-                    <option value="simple">シンプル（2層）</option>
-                    <option value="none">ストロークなし</option>
-                </select>
-            </div>
-
-            <!-- インナーストローク4 -->
-            <div class="control-group">
-                <div class="checkbox-group">
-                    <input type="checkbox" id="stroke4_enabled" checked>
-                    <label>インナーストローク4</label>
-                </div>
-                <div class="color-row">
-                    <div>
-                        <label>サイズ (pt)</label>
-                        <input type="number" id="stroke4_size" value="78" min="0" max="200">
-                    </div>
-                    <div>
-                        <label>色</label>
-                        <input type="color" id="stroke4_color" value="#000000">
-                    </div>
-                </div>
-            </div>
-
-            <!-- インナーストローク3 -->
-            <div class="control-group">
-                <div class="checkbox-group">
-                    <input type="checkbox" id="stroke3_enabled" checked>
-                    <label>インナーストローク3</label>
-                </div>
-                <div class="color-row">
-                    <div>
-                        <label>サイズ (pt)</label>
-                        <input type="number" id="stroke3_size" value="68" min="0" max="200">
-                    </div>
-                    <div>
-                        <label>色</label>
-                        <input type="color" id="stroke3_color" value="#000000">
-                    </div>
-                </div>
-            </div>
-
-            <!-- インナーストローク2 -->
-            <div class="control-group">
-                <div class="checkbox-group">
-                    <input type="checkbox" id="stroke2_enabled" checked>
-                    <label>インナーストローク2</label>
-                </div>
-                <div class="color-row">
-                    <div>
-                        <label>サイズ (pt)</label>
-                        <input type="number" id="stroke2_size" value="38" min="0" max="200">
-                    </div>
-                    <div>
-                        <label>色</label>
-                        <input type="color" id="stroke2_color" value="#ffffff">
-                    </div>
-                </div>
-            </div>
-
-            <!-- インナーストローク1 -->
-            <div class="control-group">
-                <div class="checkbox-group">
-                    <input type="checkbox" id="stroke1_enabled" checked>
-                    <label>インナーストローク1</label>
-                </div>
-                <div class="color-row">
-                    <div>
-                        <label>サイズ (pt)</label>
-                        <input type="number" id="stroke1_size" value="8" min="0" max="200">
-                    </div>
-                    <div>
-                        <label>色</label>
-                        <input type="color" id="stroke1_color" value="#000000">
-                    </div>
-                </div>
-            </div>
-
-            <!-- シャドウ -->
-            <div class="control-group">
-                <div class="checkbox-group">
-                    <input type="checkbox" id="shadow_enabled">
-                    <label>シャドウ</label>
-                </div>
-                <div class="color-row">
-                    <div>
-                        <label>オフセット</label>
-                        <input type="number" id="shadow_offset" value="10" min="0" max="100">
-                    </div>
-                    <div>
-                        <label>角度 (度)</label>
-                        <input type="number" id="shadow_angle" value="-45" min="-180" max="180">
-                    </div>
-                </div>
-                <div class="control-group">
-                    <label>シャドウ色</label>
-                    <input type="color" id="shadow_color" value="#000000">
-                </div>
-                <div class="control-group">
-                    <label>不透明度 (%)</label>
-                    <input type="range" id="shadow_opacity" value="50" min="0" max="100" step="1">
-                    <div class="value-display" id="shadowOpacityValue">50%</div>
-                </div>
-            </div>
-
-            <button onclick="updatePreview()">プレビュー更新</button>
-            <button onclick="exportPRTL()">PRTL書き出し</button>
-            <button class="btn-secondary" onclick="testPRTL()">PRTL構造テスト</button>
+            <div class="toolbar-separator"></div>
+            <span style="font-size: 11px; color: #888;">解像度:</span>
+            <input type="number" id="canvasWidth" value="1920" min="1" style="width: 70px; padding: 4px; background: #3a3a3a; border: 1px solid #555; border-radius: 3px; color: #fff; font-size: 11px;">
+            <span style="font-size: 11px; color: #888;">×</span>
+            <input type="number" id="canvasHeight" value="1080" min="1" style="width: 70px; padding: 4px; background: #3a3a3a; border: 1px solid #555; border-radius: 3px; color: #fff; font-size: 11px;">
+            <div class="toolbar-separator"></div>
+            <button class="btn btn-primary" onclick="exportPRTL()" style="width: auto; padding: 6px 12px;">PRTL書き出し</button>
         </div>
 
-        <!-- 右パネル: プレビュー -->
-        <div class="panel">
-            <h1>プレビュー</h1>
-            <div class="canvas-wrapper">
+        <!-- コンテンツエリア -->
+        <div class="content-area">
+            <!-- キャンバスエリア -->
+            <div class="canvas-area">
                 <canvas id="canvas" width="1920" height="1080"></canvas>
+            </div>
+
+            <!-- 右側プロパティパネル -->
+            <div class="properties-panel">
+                <h3 style="font-size: 12px; margin-bottom: 12px; color: #0066cc;">プロパティ</h3>
+
+                <!-- 変形セクション -->
+                <div class="property-section">
+                    <div class="property-section-header">変形</div>
+                    <div class="property-section-content">
+                        <div class="property-grid-2">
+                            <div class="property-row">
+                                <label>X座標</label>
+                                <input type="number" id="prop_x" value="960" step="0.1">
+                            </div>
+                            <div class="property-row">
+                                <label>Y座標</label>
+                                <input type="number" id="prop_y" value="540" step="0.1">
+                            </div>
+                        </div>
+                        <div class="property-grid-2">
+                            <div class="property-row">
+                                <label>幅</label>
+                                <input type="number" id="prop_width" value="500" step="0.1" readonly>
+                            </div>
+                            <div class="property-row">
+                                <label>高さ</label>
+                                <input type="number" id="prop_height" value="100" step="0.1" readonly>
+                            </div>
+                        </div>
+                        <div class="property-row">
+                            <label>回転 (度)</label>
+                            <input type="number" id="prop_rotation" value="0" step="0.1">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- プロパティセクション -->
+                <div class="property-section">
+                    <div class="property-section-header">フォント</div>
+                    <div class="property-section-content">
+                        <div class="property-row">
+                            <label>フォントファミリー</label>
+                            <select id="prop_fontFamily">
+                                <option value="Yu Gothic UI">Yu Gothic UI</option>
+                                <option value="Arial">Arial</option>
+                                <option value="Meiryo">Meiryo</option>
+                                <option value="MS Gothic">MS Gothic</option>
+                                <option value="Hiragino Sans">Hiragino Sans</option>
+                            </select>
+                        </div>
+                        <div class="property-row">
+                            <label>フォントスタイル</label>
+                            <select id="prop_fontStyle">
+                                <option value="Regular">Regular</option>
+                                <option value="Bold">Bold</option>
+                                <option value="Italic">Italic</option>
+                            </select>
+                        </div>
+                        <div class="property-row">
+                            <label>フォントサイズ</label>
+                            <input type="number" id="prop_fontSize" value="72" min="1" max="500">
+                        </div>
+                        <div class="property-row">
+                            <label>縦横比 (%)</label>
+                            <input type="range" id="prop_scaleX" value="100" min="10" max="200" step="1">
+                            <div class="value-display" id="scaleXValue">100%</div>
+                        </div>
+                        <div class="property-row">
+                            <label>カーニング</label>
+                            <input type="number" id="prop_kerning" value="0" step="1">
+                        </div>
+                        <div class="property-row">
+                            <label>トラッキング</label>
+                            <input type="number" id="prop_tracking" value="0" step="1">
+                        </div>
+                        <div class="property-row">
+                            <label>ベースラインシフト</label>
+                            <input type="number" id="prop_baselineShift" value="0" step="1">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 塗りセクション -->
+                <div class="property-section">
+                    <div class="property-section-header">塗り</div>
+                    <div class="property-section-content">
+                        <div class="property-row">
+                            <label><input type="checkbox" id="fill_enabled" checked>有効</label>
+                        </div>
+                        <div class="property-row">
+                            <label>塗りタイプ</label>
+                            <select id="fill_type">
+                                <option value="solid">ベタ塗り</option>
+                                <option value="gradient-linear">線形グラデーション</option>
+                                <option value="gradient-radial">円形グラデーション</option>
+                                <option value="sheen">光沢</option>
+                            </select>
+                        </div>
+                        <div id="solidFillControls">
+                            <div class="property-grid-2">
+                                <div class="property-row">
+                                    <label>カラー</label>
+                                    <input type="color" id="fill_color" value="#fdff00">
+                                </div>
+                                <div class="property-row">
+                                    <label>不透明度 (%)</label>
+                                    <input type="number" id="fill_opacity" value="100" min="0" max="100">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ストロークセクション -->
+                <div class="property-section">
+                    <div class="property-section-header">ストローク</div>
+                    <div class="property-section-content">
+                        <div class="property-row">
+                            <label><input type="checkbox" id="stroke1_enabled" checked>ストローク1</label>
+                        </div>
+                        <div class="property-grid-3">
+                            <div class="property-row">
+                                <label>サイズ</label>
+                                <input type="number" id="stroke1_size" value="8" min="0" max="200">
+                            </div>
+                            <div class="property-row" style="grid-column: span 2;">
+                                <label>カラー</label>
+                                <input type="color" id="stroke1_color" value="#000000">
+                            </div>
+                        </div>
+
+                        <div class="property-row" style="margin-top: 12px;">
+                            <label><input type="checkbox" id="stroke2_enabled" checked>ストローク2</label>
+                        </div>
+                        <div class="property-grid-3">
+                            <div class="property-row">
+                                <label>サイズ</label>
+                                <input type="number" id="stroke2_size" value="38" min="0" max="200">
+                            </div>
+                            <div class="property-row" style="grid-column: span 2;">
+                                <label>カラー</label>
+                                <input type="color" id="stroke2_color" value="#ffffff">
+                            </div>
+                        </div>
+
+                        <div class="property-row" style="margin-top: 12px;">
+                            <label><input type="checkbox" id="stroke3_enabled" checked>ストローク3</label>
+                        </div>
+                        <div class="property-grid-3">
+                            <div class="property-row">
+                                <label>サイズ</label>
+                                <input type="number" id="stroke3_size" value="68" min="0" max="200">
+                            </div>
+                            <div class="property-row" style="grid-column: span 2;">
+                                <label>カラー</label>
+                                <input type="color" id="stroke3_color" value="#000000">
+                            </div>
+                        </div>
+
+                        <div class="property-row" style="margin-top: 12px;">
+                            <label><input type="checkbox" id="stroke4_enabled" checked>ストローク4</label>
+                        </div>
+                        <div class="property-grid-3">
+                            <div class="property-row">
+                                <label>サイズ</label>
+                                <input type="number" id="stroke4_size" value="78" min="0" max="200">
+                            </div>
+                            <div class="property-row" style="grid-column: span 2;">
+                                <label>カラー</label>
+                                <input type="color" id="stroke4_color" value="#000000">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 影セクション -->
+                <div class="property-section">
+                    <div class="property-section-header">影</div>
+                    <div class="property-section-content">
+                        <div class="property-row">
+                            <label><input type="checkbox" id="shadow_enabled">有効</label>
+                        </div>
+                        <div class="property-grid-2">
+                            <div class="property-row">
+                                <label>カラー</label>
+                                <input type="color" id="shadow_color" value="#000000">
+                            </div>
+                            <div class="property-row">
+                                <label>不透明度 (%)</label>
+                                <input type="number" id="shadow_opacity" value="50" min="0" max="100">
+                            </div>
+                        </div>
+                        <div class="property-grid-2">
+                            <div class="property-row">
+                                <label>距離</label>
+                                <input type="number" id="shadow_distance" value="10" min="0" max="100">
+                            </div>
+                            <div class="property-row">
+                                <label>角度 (度)</label>
+                                <input type="number" id="shadow_angle" value="-45" min="-180" max="180">
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
+
+    <!-- 隠しIME入力用 -->
+    <input type="text" id="imeInput" autocomplete="off">
 
     <script>
         // グローバル変数
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
 
-        // UIイベントリスナー
-        document.getElementById('fillType').addEventListener('change', function() {
-            const fillType = this.value;
-            document.getElementById('solidControls').style.display = fillType === 'solid' ? 'block' : 'none';
-            document.getElementById('gradientControls').style.display = fillType.startsWith('gradient') ? 'block' : 'none';
-            document.getElementById('sheenControls').style.display = fillType === 'sheen' ? 'block' : 'none';
+        let currentTool = 'select'; // 'select' or 'text'
+        let textObjects = []; // { text, x, y, fontSize, fontFamily, scaleX, ... }
+        let selectedObject = null;
+        let isTyping = false;
+        let cursorPosition = 0;
+
+        // ツール切り替え
+        document.getElementById('selectTool').addEventListener('click', () => {
+            currentTool = 'select';
+            document.getElementById('selectTool').classList.add('active');
+            document.getElementById('textTool').classList.remove('active');
+            canvas.classList.add('selection-mode');
+            canvas.style.cursor = 'default';
         });
 
-        document.getElementById('scaleX').addEventListener('input', function() {
-            document.getElementById('scaleXValue').textContent = this.value + '%';
+        document.getElementById('textTool').addEventListener('click', () => {
+            currentTool = 'text';
+            document.getElementById('textTool').classList.add('active');
+            document.getElementById('selectTool').classList.remove('active');
+            canvas.classList.remove('selection-mode');
+            canvas.style.cursor = 'crosshair';
         });
 
-        document.getElementById('gradientAngle').addEventListener('input', function() {
-            document.getElementById('gradientAngleValue').textContent = this.value + '°';
-        });
-
-        document.getElementById('glintSize').addEventListener('input', function() {
-            document.getElementById('glintSizeValue').textContent = this.value;
-        });
-
-        document.getElementById('glintAngle').addEventListener('input', function() {
-            document.getElementById('glintAngleValue').textContent = this.value + '°';
-        });
-
+        // キャンバス解像度変更
         document.getElementById('canvasWidth').addEventListener('change', function() {
             canvas.width = parseInt(this.value);
-            updatePreview();
+            render();
         });
 
         document.getElementById('canvasHeight').addEventListener('change', function() {
             canvas.height = parseInt(this.value);
-            updatePreview();
+            render();
         });
 
-        document.getElementById('shadow_opacity').addEventListener('input', function() {
-            document.getElementById('shadowOpacityValue').textContent = this.value + '%';
-        });
-
-        /**
-         * ストロークプリセットを適用
-         */
-        function applyStrokePreset() {
-            const preset = document.getElementById('strokePreset').value;
-
-            if (preset === 'legacy-standard') {
-                // レガシー標準（4層）- 参考PRTLの標準設定
-                document.getElementById('stroke4_enabled').checked = true;
-                document.getElementById('stroke4_size').value = 78;
-                document.getElementById('stroke4_color').value = '#000000';
-
-                document.getElementById('stroke3_enabled').checked = true;
-                document.getElementById('stroke3_size').value = 68;
-                document.getElementById('stroke3_color').value = '#000000';
-
-                document.getElementById('stroke2_enabled').checked = true;
-                document.getElementById('stroke2_size').value = 38;
-                document.getElementById('stroke2_color').value = '#ffffff';
-
-                document.getElementById('stroke1_enabled').checked = true;
-                document.getElementById('stroke1_size').value = 8;
-                document.getElementById('stroke1_color').value = '#000000';
-
-                document.getElementById('shadow_enabled').checked = false;
-            } else if (preset === 'simple') {
-                // シンプル（2層）
-                document.getElementById('stroke4_enabled').checked = false;
-                document.getElementById('stroke3_enabled').checked = false;
-
-                document.getElementById('stroke2_enabled').checked = true;
-                document.getElementById('stroke2_size').value = 30;
-                document.getElementById('stroke2_color').value = '#000000';
-
-                document.getElementById('stroke1_enabled').checked = true;
-                document.getElementById('stroke1_size').value = 10;
-                document.getElementById('stroke1_color').value = '#ffffff';
-
-                document.getElementById('shadow_enabled').checked = false;
-            } else if (preset === 'none') {
-                // ストロークなし
-                document.getElementById('stroke4_enabled').checked = false;
-                document.getElementById('stroke3_enabled').checked = false;
-                document.getElementById('stroke2_enabled').checked = false;
-                document.getElementById('stroke1_enabled').checked = false;
-                document.getElementById('shadow_enabled').checked = false;
+        // 縦横比スライダーの値表示
+        document.getElementById('prop_scaleX').addEventListener('input', function() {
+            document.getElementById('scaleXValue').textContent = this.value + '%';
+            if (selectedObject) {
+                selectedObject.scaleX = parseInt(this.value);
+                render();
             }
+        });
 
-            updatePreview();
+        // プロパティ変更時のリアルタイム更新
+        const propertyInputs = [
+            'prop_x', 'prop_y', 'prop_fontSize', 'prop_fontFamily',
+            'prop_kerning', 'prop_tracking', 'prop_rotation',
+            'fill_color', 'fill_opacity', 'fill_enabled',
+            'stroke1_enabled', 'stroke1_size', 'stroke1_color',
+            'stroke2_enabled', 'stroke2_size', 'stroke2_color',
+            'stroke3_enabled', 'stroke3_size', 'stroke3_color',
+            'stroke4_enabled', 'stroke4_size', 'stroke4_color',
+            'shadow_enabled', 'shadow_color', 'shadow_opacity', 'shadow_distance', 'shadow_angle'
+        ];
+
+        propertyInputs.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.addEventListener('input', updateSelectedObjectFromProperties);
+                el.addEventListener('change', updateSelectedObjectFromProperties);
+            }
+        });
+
+        function updateSelectedObjectFromProperties() {
+            if (!selectedObject) return;
+
+            selectedObject.x = parseFloat(document.getElementById('prop_x').value) || 0;
+            selectedObject.y = parseFloat(document.getElementById('prop_y').value) || 0;
+            selectedObject.fontSize = parseInt(document.getElementById('prop_fontSize').value) || 72;
+            selectedObject.fontFamily = document.getElementById('prop_fontFamily').value;
+            selectedObject.scaleX = parseInt(document.getElementById('prop_scaleX').value) || 100;
+            selectedObject.kerning = parseInt(document.getElementById('prop_kerning').value) || 0;
+            selectedObject.tracking = parseInt(document.getElementById('prop_tracking').value) || 0;
+            selectedObject.rotation = parseFloat(document.getElementById('prop_rotation').value) || 0;
+
+            selectedObject.fill = {
+                enabled: document.getElementById('fill_enabled').checked,
+                color: document.getElementById('fill_color').value,
+                opacity: parseInt(document.getElementById('fill_opacity').value) || 100
+            };
+
+            selectedObject.strokes = [
+                {
+                    enabled: document.getElementById('stroke1_enabled').checked,
+                    size: parseInt(document.getElementById('stroke1_size').value) || 0,
+                    color: document.getElementById('stroke1_color').value
+                },
+                {
+                    enabled: document.getElementById('stroke2_enabled').checked,
+                    size: parseInt(document.getElementById('stroke2_size').value) || 0,
+                    color: document.getElementById('stroke2_color').value
+                },
+                {
+                    enabled: document.getElementById('stroke3_enabled').checked,
+                    size: parseInt(document.getElementById('stroke3_size').value) || 0,
+                    color: document.getElementById('stroke3_color').value
+                },
+                {
+                    enabled: document.getElementById('stroke4_enabled').checked,
+                    size: parseInt(document.getElementById('stroke4_size').value) || 0,
+                    color: document.getElementById('stroke4_color').value
+                }
+            ];
+
+            selectedObject.shadow = {
+                enabled: document.getElementById('shadow_enabled').checked,
+                color: document.getElementById('shadow_color').value,
+                opacity: parseInt(document.getElementById('shadow_opacity').value) || 50,
+                distance: parseInt(document.getElementById('shadow_distance').value) || 10,
+                angle: parseInt(document.getElementById('shadow_angle').value) || -45
+            };
+
+            render();
         }
 
-        /**
-         * PRTLGeneratorV2 - 完全新規実装版
-         * PRTL仕様書CGPT03.txtに完全準拠した実装
-         */
+        // キャンバスクリックイベント
+        canvas.addEventListener('click', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = (e.clientX - rect.left) * (canvas.width / rect.width);
+            const y = (e.clientY - rect.top) * (canvas.height / rect.height);
+
+            if (currentTool === 'text') {
+                // 新しいテキストオブジェクトを作成
+                const newText = {
+                    text: '',
+                    x: x,
+                    y: y,
+                    fontSize: 72,
+                    fontFamily: 'Yu Gothic UI',
+                    scaleX: 100,
+                    kerning: 0,
+                    tracking: 0,
+                    rotation: 0,
+                    fill: {
+                        enabled: true,
+                        color: '#fdff00',
+                        opacity: 100
+                    },
+                    strokes: [
+                        { enabled: true, size: 8, color: '#000000' },
+                        { enabled: true, size: 38, color: '#ffffff' },
+                        { enabled: true, size: 68, color: '#000000' },
+                        { enabled: true, size: 78, color: '#000000' }
+                    ],
+                    shadow: {
+                        enabled: false,
+                        color: '#000000',
+                        opacity: 50,
+                        distance: 10,
+                        angle: -45
+                    }
+                };
+
+                textObjects.push(newText);
+                selectedObject = newText;
+                updatePropertiesPanel();
+                startTyping();
+            } else if (currentTool === 'select') {
+                // テキストオブジェクトを選択
+                selectObjectAt(x, y);
+            }
+        });
+
+        function selectObjectAt(x, y) {
+            // 後ろから（上から）チェック
+            for (let i = textObjects.length - 1; i >= 0; i--) {
+                const obj = textObjects[i];
+                const metrics = measureText(obj);
+
+                if (x >= obj.x - 10 && x <= obj.x + metrics.width + 10 &&
+                    y >= obj.y - metrics.height && y <= obj.y + 10) {
+                    selectedObject = obj;
+                    updatePropertiesPanel();
+                    render();
+                    return true;
+                }
+            }
+
+            // 何も選択されなかった
+            selectedObject = null;
+            render();
+            return false;
+        }
+
+        function startTyping() {
+            isTyping = true;
+            cursorPosition = selectedObject.text.length;
+
+            // IME入力をフォーカス
+            const imeInput = document.getElementById('imeInput');
+            imeInput.value = selectedObject.text;
+            imeInput.focus();
+            imeInput.select();
+        }
+
+        // IME入力処理
+        document.getElementById('imeInput').addEventListener('input', (e) => {
+            if (selectedObject && isTyping) {
+                selectedObject.text = e.target.value;
+                cursorPosition = e.target.selectionStart;
+                render();
+            }
+        });
+
+        // キーボードイベント
+        document.addEventListener('keydown', (e) => {
+            if (isTyping && selectedObject) {
+                if (e.key === 'Escape') {
+                    isTyping = false;
+                    document.getElementById('imeInput').blur();
+                    render();
+                }
+            } else if (selectedObject && !isTyping) {
+                // 選択モードでのキーボードショートカット
+                if (e.key === 'Delete' || e.key === 'Backspace') {
+                    const index = textObjects.indexOf(selectedObject);
+                    if (index > -1) {
+                        textObjects.splice(index, 1);
+                        selectedObject = null;
+                        render();
+                    }
+                } else if (e.key === 'Enter') {
+                    startTyping();
+                }
+            }
+        });
+
+        function updatePropertiesPanel() {
+            if (!selectedObject) return;
+
+            document.getElementById('prop_x').value = selectedObject.x.toFixed(1);
+            document.getElementById('prop_y').value = selectedObject.y.toFixed(1);
+            document.getElementById('prop_fontSize').value = selectedObject.fontSize;
+            document.getElementById('prop_fontFamily').value = selectedObject.fontFamily;
+            document.getElementById('prop_scaleX').value = selectedObject.scaleX;
+            document.getElementById('scaleXValue').textContent = selectedObject.scaleX + '%';
+            document.getElementById('prop_kerning').value = selectedObject.kerning;
+            document.getElementById('prop_tracking').value = selectedObject.tracking;
+            document.getElementById('prop_rotation').value = selectedObject.rotation;
+
+            document.getElementById('fill_enabled').checked = selectedObject.fill.enabled;
+            document.getElementById('fill_color').value = selectedObject.fill.color;
+            document.getElementById('fill_opacity').value = selectedObject.fill.opacity;
+
+            if (selectedObject.strokes.length >= 4) {
+                document.getElementById('stroke1_enabled').checked = selectedObject.strokes[0].enabled;
+                document.getElementById('stroke1_size').value = selectedObject.strokes[0].size;
+                document.getElementById('stroke1_color').value = selectedObject.strokes[0].color;
+
+                document.getElementById('stroke2_enabled').checked = selectedObject.strokes[1].enabled;
+                document.getElementById('stroke2_size').value = selectedObject.strokes[1].size;
+                document.getElementById('stroke2_color').value = selectedObject.strokes[1].color;
+
+                document.getElementById('stroke3_enabled').checked = selectedObject.strokes[2].enabled;
+                document.getElementById('stroke3_size').value = selectedObject.strokes[2].size;
+                document.getElementById('stroke3_color').value = selectedObject.strokes[2].color;
+
+                document.getElementById('stroke4_enabled').checked = selectedObject.strokes[3].enabled;
+                document.getElementById('stroke4_size').value = selectedObject.strokes[3].size;
+                document.getElementById('stroke4_color').value = selectedObject.strokes[3].color;
+            }
+
+            document.getElementById('shadow_enabled').checked = selectedObject.shadow.enabled;
+            document.getElementById('shadow_color').value = selectedObject.shadow.color;
+            document.getElementById('shadow_opacity').value = selectedObject.shadow.opacity;
+            document.getElementById('shadow_distance').value = selectedObject.shadow.distance;
+            document.getElementById('shadow_angle').value = selectedObject.shadow.angle;
+        }
+
+        function measureText(obj) {
+            ctx.font = `${obj.fontSize}px "${obj.fontFamily}"`;
+            const metrics = ctx.measureText(obj.text || '|');
+            return {
+                width: metrics.width * (obj.scaleX / 100),
+                height: obj.fontSize
+            };
+        }
+
+        function render() {
+            // キャンバスクリア
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // 全テキストオブジェクトを描画
+            textObjects.forEach(obj => {
+                drawTextObject(obj, obj === selectedObject);
+            });
+
+            // カーソル描画（入力中の場合）
+            if (isTyping && selectedObject) {
+                drawCursor();
+            }
+        }
+
+        function drawTextObject(obj, isSelected) {
+            if (!obj.text && !isTyping) return;
+
+            ctx.save();
+
+            // 描画設定
+            ctx.font = `${obj.fontSize}px "${obj.fontFamily}"`;
+            ctx.textBaseline = 'top';
+            ctx.textAlign = 'left';
+
+            // 横幅スケール適用
+            const scaleX = obj.scaleX / 100;
+            ctx.translate(obj.x, obj.y);
+            ctx.rotate(obj.rotation * Math.PI / 180);
+            ctx.scale(scaleX, 1);
+
+            const text = obj.text || '|';
+
+            // シャドウ描画
+            if (obj.shadow && obj.shadow.enabled) {
+                const angle = obj.shadow.angle * Math.PI / 180;
+                const offsetX = Math.cos(angle) * obj.shadow.distance / scaleX;
+                const offsetY = Math.sin(angle) * obj.shadow.distance;
+                const opacity = obj.shadow.opacity / 100;
+
+                const rgb = hexToRgb(obj.shadow.color);
+                ctx.fillStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${opacity})`;
+                ctx.fillText(text, offsetX, offsetY);
+            }
+
+            // ストローク描画（外側から内側へ）
+            if (obj.strokes) {
+                for (let i = obj.strokes.length - 1; i >= 0; i--) {
+                    const stroke = obj.strokes[i];
+                    if (stroke.enabled && stroke.size > 0) {
+                        ctx.strokeStyle = stroke.color;
+                        ctx.lineWidth = stroke.size;
+                        ctx.lineJoin = 'round';
+                        ctx.miterLimit = 2;
+                        ctx.strokeText(text, 0, 0);
+                    }
+                }
+            }
+
+            // フェース（塗り）描画
+            if (obj.fill && obj.fill.enabled) {
+                const opacity = obj.fill.opacity / 100;
+                if (opacity < 1) {
+                    const rgb = hexToRgb(obj.fill.color);
+                    ctx.fillStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${opacity})`;
+                } else {
+                    ctx.fillStyle = obj.fill.color;
+                }
+                ctx.fillText(text, 0, 0);
+            }
+
+            ctx.restore();
+
+            // 選択ボックス描画
+            if (isSelected && !isTyping) {
+                const metrics = measureText(obj);
+                ctx.strokeStyle = '#0066cc';
+                ctx.lineWidth = 2;
+                ctx.setLineDash([4, 4]);
+                ctx.strokeRect(obj.x - 5, obj.y - 5, metrics.width + 10, metrics.height + 10);
+                ctx.setLineDash([]);
+            }
+        }
+
+        function drawCursor() {
+            if (!selectedObject) return;
+
+            ctx.save();
+            ctx.font = `${selectedObject.fontSize}px "${selectedObject.fontFamily}"`;
+            const textBeforeCursor = selectedObject.text.substring(0, cursorPosition);
+            const metrics = ctx.measureText(textBeforeCursor);
+            const cursorX = selectedObject.x + metrics.width * (selectedObject.scaleX / 100);
+            const cursorY = selectedObject.y;
+
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(cursorX, cursorY);
+            ctx.lineTo(cursorX, cursorY + selectedObject.fontSize);
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        function hexToRgb(hex) {
+            const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+            return result ? {
+                r: parseInt(result[1], 16),
+                g: parseInt(result[2], 16),
+                b: parseInt(result[3], 16)
+            } : { r: 0, g: 0, b: 0 };
+        }
+
+        // プロパティセクションの折りたたみ
+        document.querySelectorAll('.property-section-header').forEach(header => {
+            header.addEventListener('click', () => {
+                header.classList.toggle('collapsed');
+                const content = header.nextElementSibling;
+                content.classList.toggle('hidden');
+            });
+        });
+
+        // PRTL書き出し（既存のPRTLGeneratorV2を使用）
+        function exportPRTL() {
+            if (textObjects.length === 0) {
+                alert('テキストオブジェクトがありません');
+                return;
+            }
+
+            // 最初のテキストオブジェクトを使用（複数対応は後で実装）
+            const obj = textObjects[0];
+
+            const config = {
+                width: canvas.width,
+                height: canvas.height,
+                text: obj.text,
+                fontFamily: obj.fontFamily,
+                fontSize: obj.fontSize,
+                scaleX: obj.scaleX,
+                posX: obj.x,
+                posY: obj.y,
+                textAlign: 'left',
+                fillType: 'solid',
+                fillColor: obj.fill.color,
+                stroke4_enabled: obj.strokes[3].enabled,
+                stroke4_size: obj.strokes[3].size,
+                stroke4_color: obj.strokes[3].color,
+                stroke3_enabled: obj.strokes[2].enabled,
+                stroke3_size: obj.strokes[2].size,
+                stroke3_color: obj.strokes[2].color,
+                stroke2_enabled: obj.strokes[1].enabled,
+                stroke2_size: obj.strokes[1].size,
+                stroke2_color: obj.strokes[1].color,
+                stroke1_enabled: obj.strokes[0].enabled,
+                stroke1_size: obj.strokes[0].size,
+                stroke1_color: obj.strokes[0].color,
+                shadow_enabled: obj.shadow.enabled,
+                shadow_offset: obj.shadow.distance,
+                shadow_angle: obj.shadow.angle,
+                shadow_color: obj.shadow.color,
+                shadow_opacity: obj.shadow.opacity
+            };
+
+            const generator = new PRTLGeneratorV2();
+            const prtlXML = generator.generatePRTL(config);
+
+            // UTF-8エンコード
+            const encoder = new TextEncoder();
+            const utf8Array = encoder.encode(prtlXML);
+
+            const blob = new Blob([utf8Array], { type: 'application/octet-stream' });
+            const link = document.createElement('a');
+            link.download = `NLT_${Date.now()}.prtl`;
+            link.href = URL.createObjectURL(blob);
+            link.click();
+
+            console.log('✅ PRTL書き出し完了');
+        }
+
+        // PRTLGeneratorV2クラス（既存のものを再利用）
         class PRTLGeneratorV2 {
             constructor() {
                 this.nextStyleID = 4096;
@@ -515,26 +1015,18 @@
                 this.nextTextDescID = 4096;
             }
 
-            /**
-             * テキストオブジェクトからPRTLを生成
-             */
             generatePRTL(config) {
                 const width = config.width || 1920;
                 const height = config.height || 1080;
 
-                // 各セクションを生成
                 const textDescriptions = this._buildTextDescriptions(config);
                 const shaders = this._buildShaders(config);
                 const styles = this._buildStyles(config);
                 const layers = this._buildLayers(config);
 
-                // 完全なPRTL XMLを構築
                 return this._buildPRTLDocument(width, height, textDescriptions, shaders, styles, layers);
             }
 
-            /**
-             * PRTL XMLドキュメントの構築
-             */
             _buildPRTLDocument(width, height, textDescriptions, shaders, styles, layers) {
                 return `<?xml version="1.0" encoding="UTF-16" ?>` +
                     `<Adobe_Root>` +
@@ -565,9 +1057,6 @@
                     `</Adobe_Root>`;
             }
 
-            /**
-             * Layoutヘッダー部分
-             */
             _buildLayoutHeader(width, height) {
                 return `<LayoutEffectInfo Version="2">` +
                         `<EffectType>0</EffectType>` +
@@ -609,9 +1098,6 @@
                     this._buildTextChainDefaults();
             }
 
-            /**
-             * TextChainDefaults
-             */
             _buildTextChainDefaults() {
                 const defaults = `<leading>0</leading>` +
                     `<boxCanGrow>false</boxCanGrow>` +
@@ -633,9 +1119,6 @@
                 `</TextChainDefaults>`;
             }
 
-            /**
-             * TextDescriptions生成
-             */
             _buildTextDescriptions(config) {
                 const ref = this.nextTextDescID;
                 const fontFamily = config.fontFamily || 'Yu Gothic UI';
@@ -668,20 +1151,15 @@
                 `</TextDescriptions>`;
             }
 
-            /**
-             * Styles生成
-             */
             _buildStyles(config) {
                 const styleID = this.nextStyleID;
                 const textDescRef = this.nextTextDescID;
 
-                // FragmentListを構築（レガシータイトル仕様）
                 let fragments = '';
                 let shaderRefs = {};
-                let nextPainter = 10; // Painter 10から開始
+                let nextPainter = 10;
                 let nextShaderRef = this.nextShaderID;
 
-                // インナーストローク4（最外層）
                 if (config.stroke4_enabled) {
                     fragments += `<Fragment>` +
                         `<size>${config.stroke4_size}</size>` +
@@ -699,7 +1177,6 @@
                     shaderRefs[nextPainter++] = nextShaderRef++;
                 }
 
-                // インナーストローク3
                 if (config.stroke3_enabled) {
                     fragments += `<Fragment>` +
                         `<size>${config.stroke3_size}</size>` +
@@ -717,7 +1194,6 @@
                     shaderRefs[nextPainter++] = nextShaderRef++;
                 }
 
-                // インナーストローク2
                 if (config.stroke2_enabled) {
                     fragments += `<Fragment>` +
                         `<size>${config.stroke2_size}</size>` +
@@ -735,7 +1211,6 @@
                     shaderRefs[nextPainter++] = nextShaderRef++;
                 }
 
-                // インナーストローク1
                 if (config.stroke1_enabled) {
                     fragments += `<Fragment>` +
                         `<size>${config.stroke1_size}</size>` +
@@ -753,7 +1228,6 @@
                     shaderRefs[nextPainter++] = nextShaderRef++;
                 }
 
-                // フェース（塗り本体）- Painter 15
                 fragments += `<Fragment>` +
                     `<size>0</size>` +
                     `<offset>0</offset>` +
@@ -767,9 +1241,8 @@
                     `<placeHolderShaderIndex>4294967295</placeHolderShaderIndex>` +
                     `<painterMix>15 15 15 15 15 15 15 15 15 15 15 15 15 15 15 15 </painterMix>` +
                 `</Fragment>`;
-                shaderRefs[15] = nextShaderRef++; // フェース用シェーダー
+                shaderRefs[15] = nextShaderRef++;
 
-                // シャドウ
                 const shadowOff = config.shadow_enabled ? 'false' : 'true';
                 fragments += `<Fragment>` +
                     `<size>0</size>` +
@@ -785,10 +1258,9 @@
                     `<painterMix>0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 </painterMix>` +
                 `</Fragment>`;
                 if (config.shadow_enabled) {
-                    shaderRefs[0] = nextShaderRef++; // シャドウ用シェーダー
+                    shaderRefs[0] = nextShaderRef++;
                 }
 
-                // ShaderListを構築
                 let shaderList = '';
                 for (let i = 0; i <= 15; i++) {
                     const ref = shaderRefs[i] || 0;
@@ -796,7 +1268,6 @@
                 }
                 shaderList += `<ShaderRef PainterNumber="-1"><shaderRef>0</shaderRef></ShaderRef>`;
 
-                // configにshaderRefsを保存（_buildShadersで使用）
                 config._shaderRefs = shaderRefs;
                 config._nextShaderRef = nextShaderRef;
 
@@ -825,26 +1296,19 @@
                 `</Styles>`;
             }
 
-            /**
-             * Shaders生成（複数フラグメント対応）
-             */
             _buildShaders(config) {
                 let shaders = '<Shaders>';
                 const shaderRefs = config._shaderRefs || {};
 
-                // 各PainterのShaderを生成
                 for (const [painter, shaderRef] of Object.entries(shaderRefs)) {
                     const painterNum = parseInt(painter);
 
                     if (painterNum === 15) {
-                        // フェース（塗り本体）
                         shaders += this._buildFaceShader(shaderRef, config);
                     } else if (painterNum === 0) {
-                        // シャドウ
                         shaders += this._buildShadowShader(shaderRef, config);
                     } else if (painterNum >= 10 && painterNum <= 13) {
-                        // ストローク層
-                        const strokeNum = 14 - painterNum; // 10->4, 11->3, 12->2, 13->1
+                        const strokeNum = 14 - painterNum;
                         const strokeColor = config[`stroke${strokeNum}_color`] || '#000000';
                         shaders += this._buildStrokeShader(shaderRef, strokeColor);
                     }
@@ -854,9 +1318,6 @@
                 return shaders;
             }
 
-            /**
-             * ストローク用Shader生成
-             */
             _buildStrokeShader(shaderRef, color) {
                 const rgb = this._parseColor(color);
 
@@ -898,100 +1359,50 @@
                 `</Shader>`;
             }
 
-            /**
-             * フェース（塗り本体）用Shader生成
-             */
             _buildFaceShader(shaderRef, config) {
-                const fillType = config.fillType || 'solid';
-
-                if (fillType === 'solid') {
-                    const rgb = this._parseColor(config.fillColor || '#ffffff');
-                    let colorSpecs = '';
-                    for (let i = 0; i <= 4; i++) {
-                        colorSpecs += `<ColorSpec index="${i}">` +
-                            `<red>${rgb.r}</red>` +
-                            `<green>${rgb.g}</green>` +
-                            `<blue>${rgb.b}</blue>` +
-                            `<xpar>0</xpar>` +
-                        `</ColorSpec>`;
-                    }
-
-                    return `<Shader Version="4">` +
-                        `<cReference>${shaderRef}</cReference>` +
-                        `<textureRef>0</textureRef>` +
-                        `<colorOption>4</colorOption>` +
-                        `<shaderOn>true</shaderOn>` +
-                        `<glintSize>10</glintSize>` +
-                        `<glintOffset>0</glintOffset>` +
-                        `<rampPosTop>75</rampPosTop>` +
-                        `<rampPosBottom>25</rampPosBottom>` +
-                        `<rampAngle>0</rampAngle>` +
-                        `<bevelBalance>0</bevelBalance>` +
-                        `<rampCycle>0</rampCycle>` +
-                        `<classicStyle>0</classicStyle>` +
-                        `<rampType>0</rampType>` +
-                        colorSpecs +
-                        `<glintAngle>0</glintAngle>` +
-                        `<bevelSize>0</bevelSize>` +
-                        `<bevelDirection>0</bevelDirection>` +
-                        `<bevelPipe>false</bevelPipe>` +
-                        `<bevelAngle>0</bevelAngle>` +
-                        `<bevelShape>1</bevelShape>` +
-                        `<bevelShining>0</bevelShining>` +
-                        `<bevelLight>false</bevelLight>` +
-                        `<bevelMerge>true</bevelMerge>` +
-                        `<sheenOn>false</sheenOn>` +
-                    `</Shader>`;
-                } else if (fillType.startsWith('gradient')) {
-                    const startColor = this._parseColor(config.gradientStart || '#ff0000');
-                    const middleColor = this._parseColor(config.gradientMiddle || '#ffff00');
-                    const endColor = this._parseColor(config.gradientEnd || '#0000ff');
-
-                    let colorSpecs = `<ColorSpec index="0"><red>${startColor.r}</red><green>${startColor.g}</green><blue>${startColor.b}</blue><xpar>0</xpar></ColorSpec>`;
-                    colorSpecs += `<ColorSpec index="1"><red>0</red><green>0</green><blue>0</blue><xpar>0</xpar></ColorSpec>`;
-                    colorSpecs += `<ColorSpec index="2"><red>${middleColor.r}</red><green>${middleColor.g}</green><blue>${middleColor.b}</blue><xpar>0</xpar></ColorSpec>`;
-                    colorSpecs += `<ColorSpec index="3"><red>0</red><green>0</green><blue>0</blue><xpar>0</xpar></ColorSpec>`;
-                    colorSpecs += `<ColorSpec index="4"><red>${endColor.r}</red><green>${endColor.g}</green><blue>${endColor.b}</blue><xpar>0</xpar></ColorSpec>`;
-
-                    return `<Shader Version="4">` +
-                        `<cReference>${shaderRef}</cReference>` +
-                        `<textureRef>0</textureRef>` +
-                        `<colorOption>4</colorOption>` +
-                        `<shaderOn>true</shaderOn>` +
-                        `<glintSize>10</glintSize>` +
-                        `<glintOffset>0</glintOffset>` +
-                        `<rampPosTop>75</rampPosTop>` +
-                        `<rampPosBottom>25</rampPosBottom>` +
-                        `<rampAngle>0</rampAngle>` +
-                        `<bevelBalance>0</bevelBalance>` +
-                        `<rampCycle>0</rampCycle>` +
-                        `<classicStyle>0</classicStyle>` +
-                        `<rampType>0</rampType>` +
-                        colorSpecs +
-                        `<glintAngle>0</glintAngle>` +
-                        `<bevelSize>0</bevelSize>` +
-                        `<bevelDirection>0</bevelDirection>` +
-                        `<bevelPipe>false</bevelPipe>` +
-                        `<bevelAngle>0</bevelAngle>` +
-                        `<bevelShape>1</bevelShape>` +
-                        `<bevelShining>0</bevelShining>` +
-                        `<bevelLight>false</bevelLight>` +
-                        `<bevelMerge>true</bevelMerge>` +
-                        `<sheenOn>false</sheenOn>` +
-                    `</Shader>`;
+                const rgb = this._parseColor(config.fillColor || '#ffffff');
+                let colorSpecs = '';
+                for (let i = 0; i <= 4; i++) {
+                    colorSpecs += `<ColorSpec index="${i}">` +
+                        `<red>${rgb.r}</red>` +
+                        `<green>${rgb.g}</green>` +
+                        `<blue>${rgb.b}</blue>` +
+                        `<xpar>0</xpar>` +
+                    `</ColorSpec>`;
                 }
 
-                // デフォルトは白
-                return this._buildStrokeShader(shaderRef, '#ffffff');
+                return `<Shader Version="4">` +
+                    `<cReference>${shaderRef}</cReference>` +
+                    `<textureRef>0</textureRef>` +
+                    `<colorOption>4</colorOption>` +
+                    `<shaderOn>true</shaderOn>` +
+                    `<glintSize>10</glintSize>` +
+                    `<glintOffset>0</glintOffset>` +
+                    `<rampPosTop>75</rampPosTop>` +
+                    `<rampPosBottom>25</rampPosBottom>` +
+                    `<rampAngle>0</rampAngle>` +
+                    `<bevelBalance>0</bevelBalance>` +
+                    `<rampCycle>0</rampCycle>` +
+                    `<classicStyle>0</classicStyle>` +
+                    `<rampType>0</rampType>` +
+                    colorSpecs +
+                    `<glintAngle>0</glintAngle>` +
+                    `<bevelSize>0</bevelSize>` +
+                    `<bevelDirection>0</bevelDirection>` +
+                    `<bevelPipe>false</bevelPipe>` +
+                    `<bevelAngle>0</bevelAngle>` +
+                    `<bevelShape>1</bevelShape>` +
+                    `<bevelShining>0</bevelShining>` +
+                    `<bevelLight>false</bevelLight>` +
+                    `<bevelMerge>true</bevelMerge>` +
+                    `<sheenOn>false</sheenOn>` +
+                `</Shader>`;
             }
 
-            /**
-             * シャドウ用Shader生成
-             */
             _buildShadowShader(shaderRef, config) {
                 const rgb = this._parseColor(config.shadow_color || '#000000');
                 const opacity = config.shadow_opacity || 50;
-                const xpar = Math.round((100 - opacity) * 255 / 100); // 不透明度をxparに変換
+                const xpar = Math.round((100 - opacity) * 255 / 100);
 
                 let colorSpecs = '';
                 for (let i = 0; i <= 4; i++) {
@@ -1031,169 +1442,15 @@
                 `</Shader>`;
             }
 
-            /**
-             * 単色Shader（仕様書 5.2）
-             */
-            _buildSolidShader(shaderID, config) {
-                const color = this._parseColor(config.fillColor || '#ffffff');
-
-                // ColorSpec 0-4 すべて同じ色（仕様書通り）
-                let colorSpecs = '';
-                for (let i = 0; i <= 4; i++) {
-                    colorSpecs += `<ColorSpec index="${i}">` +
-                        `<red>${color.r}</red>` +
-                        `<green>${color.g}</green>` +
-                        `<blue>${color.b}</blue>` +
-                        `<xpar>0</xpar>` +
-                    `</ColorSpec>`;
-                }
-
-                return `<Shaders>` +
-                    `<Shader Version="4">` +
-                        `<cReference>${shaderID}</cReference>` +
-                        `<textureRef>0</textureRef>` +
-                        `<colorOption>4</colorOption>` +
-                        `<shaderOn>true</shaderOn>` +
-                        `<glintSize>10</glintSize>` +
-                        `<glintOffset>0</glintOffset>` +
-                        `<rampPosTop>75</rampPosTop>` +
-                        `<rampPosBottom>25</rampPosBottom>` +
-                        `<rampAngle>0</rampAngle>` +
-                        `<bevelBalance>0</bevelBalance>` +
-                        `<rampCycle>0</rampCycle>` +
-                        `<classicStyle>0</classicStyle>` +
-                        `<rampType>0</rampType>` +
-                        colorSpecs +
-                        `<glintAngle>0</glintAngle>` +
-                        `<bevelSize>0</bevelSize>` +
-                        `<bevelDirection>0</bevelDirection>` +
-                        `<bevelPipe>false</bevelPipe>` +
-                        `<bevelAngle>0</bevelAngle>` +
-                        `<bevelShape>1</bevelShape>` +
-                        `<bevelShining>0</bevelShining>` +
-                        `<bevelLight>false</bevelLight>` +
-                        `<bevelMerge>true</bevelMerge>` +
-                        `<sheenOn>false</sheenOn>` +
-                    `</Shader>` +
-                `</Shaders>`;
-            }
-
-            /**
-             * グラデーションShader（仕様書 5.3）
-             */
-            _buildGradientShader(shaderID, config) {
-                const startColor = this._parseColor(config.gradientStart || '#ff0000');
-                const middleColor = this._parseColor(config.gradientMiddle || '#ffff00');
-                const endColor = this._parseColor(config.gradientEnd || '#0000ff');
-                const angle = config.gradientAngle || 0;
-                const isRadial = config.fillType === 'gradient-radial';
-
-                // 線形 vs 円形の違い（仕様書通り）
-                const rampPosTop = isRadial ? 85.8696 : 75;
-                const rampPosBottom = isRadial ? 44.5652 : 25;
-
-                // ColorSpec: index0=開始, index2=中間, index4=終端, index1,3=黒
-                const colorSpecs =
-                    `<ColorSpec index="0"><red>${startColor.r}</red><green>${startColor.g}</green><blue>${startColor.b}</blue><xpar>0</xpar></ColorSpec>` +
-                    `<ColorSpec index="1"><red>0</red><green>0</green><blue>0</blue><xpar>0</xpar></ColorSpec>` +
-                    `<ColorSpec index="2"><red>${middleColor.r}</red><green>${middleColor.g}</green><blue>${middleColor.b}</blue><xpar>0</xpar></ColorSpec>` +
-                    `<ColorSpec index="3"><red>0</red><green>0</green><blue>0</blue><xpar>0</xpar></ColorSpec>` +
-                    `<ColorSpec index="4"><red>${endColor.r}</red><green>${endColor.g}</green><blue>${endColor.b}</blue><xpar>0</xpar></ColorSpec>`;
-
-                return `<Shaders>` +
-                    `<Shader Version="4">` +
-                        `<cReference>${shaderID}</cReference>` +
-                        `<textureRef>0</textureRef>` +
-                        `<colorOption>0</colorOption>` +
-                        `<shaderOn>true</shaderOn>` +
-                        `<glintSize>10</glintSize>` +
-                        `<glintOffset>0</glintOffset>` +
-                        `<rampPosTop>${rampPosTop}</rampPosTop>` +
-                        `<rampPosBottom>${rampPosBottom}</rampPosBottom>` +
-                        `<rampAngle>${angle}</rampAngle>` +
-                        `<bevelBalance>0</bevelBalance>` +
-                        `<rampCycle>0</rampCycle>` +
-                        `<classicStyle>0</classicStyle>` +
-                        `<rampType>-1</rampType>` +
-                        colorSpecs +
-                        `<glintAngle>0</glintAngle>` +
-                        `<bevelSize>0</bevelSize>` +
-                        `<bevelDirection>0</bevelDirection>` +
-                        `<bevelPipe>false</bevelPipe>` +
-                        `<bevelAngle>0</bevelAngle>` +
-                        `<bevelShape>1</bevelShape>` +
-                        `<bevelShining>0</bevelShining>` +
-                        `<bevelLight>false</bevelLight>` +
-                        `<bevelMerge>true</bevelMerge>` +
-                        `<sheenOn>false</sheenOn>` +
-                    `</Shader>` +
-                `</Shaders>`;
-            }
-
-            /**
-             * 光沢Shader（仕様書 5.4）
-             */
-            _buildSheenShader(shaderID, config) {
-                const baseColor = this._parseColor(config.sheenBase || '#000000');
-                const highlightColor = this._parseColor(config.sheenHighlight || '#ffffff');
-                const glintSize = config.glintSize || 10;
-                const glintAngle = config.glintAngle || 0;
-
-                // ColorSpec: index0-3=ベース色, index4=ハイライト色
-                const colorSpecs =
-                    `<ColorSpec index="0"><red>${baseColor.r}</red><green>${baseColor.g}</green><blue>${baseColor.b}</blue><xpar>0</xpar></ColorSpec>` +
-                    `<ColorSpec index="1"><red>${baseColor.r}</red><green>${baseColor.g}</green><blue>${baseColor.b}</blue><xpar>0</xpar></ColorSpec>` +
-                    `<ColorSpec index="2"><red>${baseColor.r}</red><green>${baseColor.g}</green><blue>${baseColor.b}</blue><xpar>0</xpar></ColorSpec>` +
-                    `<ColorSpec index="3"><red>${baseColor.r}</red><green>${baseColor.g}</green><blue>${baseColor.b}</blue><xpar>0</xpar></ColorSpec>` +
-                    `<ColorSpec index="4"><red>${highlightColor.r}</red><green>${highlightColor.g}</green><blue>${highlightColor.b}</blue><xpar>0</xpar></ColorSpec>`;
-
-                return `<Shaders>` +
-                    `<Shader Version="4">` +
-                        `<cReference>${shaderID}</cReference>` +
-                        `<textureRef>0</textureRef>` +
-                        `<colorOption>4</colorOption>` +
-                        `<shaderOn>true</shaderOn>` +
-                        `<glintSize>${glintSize}</glintSize>` +
-                        `<glintOffset>0</glintOffset>` +
-                        `<rampPosTop>75</rampPosTop>` +
-                        `<rampPosBottom>25</rampPosBottom>` +
-                        `<rampAngle>0</rampAngle>` +
-                        `<bevelBalance>0</bevelBalance>` +
-                        `<rampCycle>0</rampCycle>` +
-                        `<classicStyle>0</classicStyle>` +
-                        `<rampType>0</rampType>` +
-                        colorSpecs +
-                        `<glintAngle>${glintAngle}</glintAngle>` +
-                        `<bevelSize>0</bevelSize>` +
-                        `<bevelDirection>0</bevelDirection>` +
-                        `<bevelPipe>false</bevelPipe>` +
-                        `<bevelAngle>0</bevelAngle>` +
-                        `<bevelShape>1</bevelShape>` +
-                        `<bevelShining>0</bevelShining>` +
-                        `<bevelLight>false</bevelLight>` +
-                        `<bevelMerge>true</bevelMerge>` +
-                        `<sheenOn>true</sheenOn>` +
-                    `</Shader>` +
-                `</Shaders>`;
-            }
-
-            /**
-             * Layers生成（TextPage + TextChain + TextLine）
-             */
             _buildLayers(config) {
                 const text = config.text || 'サンプル';
                 const posX = config.posX || 960;
                 const posY = config.posY || 540;
-                const textAlign = config.textAlign || 'center';
+                const textAlign = config.textAlign || 'left';
                 const styleRef = this.nextStyleID;
                 const textRef = this.nextTextDescID;
-
-                // txBaseの計算（フォントサイズに基づく）
                 const fontSize = config.fontSize || 72;
-                const txBase = fontSize * 1.2; // ベースライン位置
-
-                // Alignment設定
-                const alignment = textAlign;
+                const txBase = fontSize * 1.2;
 
                 return `<Layers>` +
                     `<Layer>` +
@@ -1204,7 +1461,7 @@
                                     `<Position><x>${posX}</x><y>${posY}</y></Position>` +
                                     `<Size><x>1000</x><y>200</y></Size>` +
                                     `<wordWrap>false</wordWrap>` +
-                                    `<Alignment>${alignment}</Alignment>` +
+                                    `<Alignment>${textAlign}</Alignment>` +
                                 `</ChainProperty>` +
                                 `<ChainTabs></ChainTabs>` +
                                 `<TextLine Version="2" objectID="1" persistentID="1">` +
@@ -1216,7 +1473,7 @@
                                         `<objectLeading>0</objectLeading>` +
                                     `</BaseProperties>` +
                                     `<EnclosingObjectType>block</EnclosingObjectType>` +
-                                    `<Alignment>${alignment}</Alignment>` +
+                                    `<Alignment>${textAlign}</Alignment>` +
                                     `<RTL>false</RTL>` +
                                     `<TRString>${this._escapeXML(text)}</TRString>` +
                                     `<RunLengthEncodedCharacterAttributes>` +
@@ -1237,23 +1494,14 @@
                 `</Layers>`;
             }
 
-            /**
-             * Textures（空）
-             */
             _buildTextures() {
                 return `<Textures></Textures>`;
             }
 
-            /**
-             * Logos（空）
-             */
             _buildLogos() {
                 return `<Logos></Logos>`;
             }
 
-            /**
-             * VLS（空）
-             */
             _buildVLS() {
                 return `<VLS>` +
                     `<FileReference Version="1">` +
@@ -1264,9 +1512,6 @@
                 `</VLS>`;
             }
 
-            /**
-             * ユーティリティ: カラーパース
-             */
             _parseColor(hex) {
                 const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
                 return result ? {
@@ -1276,9 +1521,6 @@
                 } : { r: 255, g: 255, b: 255 };
             }
 
-            /**
-             * ユーティリティ: XMLエスケープ
-             */
             _escapeXML(str) {
                 if (!str) return '';
                 return String(str)
@@ -1290,206 +1532,8 @@
             }
         }
 
-        /**
-         * プレビュー更新
-         */
-        function updatePreview() {
-            const width = parseInt(document.getElementById('canvasWidth').value);
-            const height = parseInt(document.getElementById('canvasHeight').value);
-            const text = document.getElementById('textContent').value;
-            const fontFamily = document.getElementById('fontFamily').value;
-            const fontSize = parseInt(document.getElementById('fontSize').value);
-            const scaleX = parseInt(document.getElementById('scaleX').value);
-            const posX = parseInt(document.getElementById('posX').value);
-            const posY = parseInt(document.getElementById('posY').value);
-            const textAlign = document.getElementById('textAlign').value;
-            const fillType = document.getElementById('fillType').value;
-
-            // キャンバスクリア
-            ctx.fillStyle = '#000';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            // テキスト描画準備
-            ctx.font = `${fontSize}px "${fontFamily}"`;
-            ctx.textBaseline = 'middle';
-
-            // アライメント設定
-            ctx.textAlign = textAlign;
-
-            // 横幅スケール適用
-            ctx.save();
-            ctx.scale(scaleX / 100, 1);
-            const adjustedX = posX * (100 / scaleX);
-
-            // シャドウの描画（最背面）
-            if (document.getElementById('shadow_enabled').checked) {
-                const shadowOffset = parseInt(document.getElementById('shadow_offset').value);
-                const shadowAngle = parseInt(document.getElementById('shadow_angle').value) * Math.PI / 180;
-                const shadowColor = document.getElementById('shadow_color').value;
-                const shadowOpacity = parseInt(document.getElementById('shadow_opacity').value) / 100;
-
-                const shadowX = adjustedX + Math.cos(shadowAngle) * shadowOffset;
-                const shadowY = posY + Math.sin(shadowAngle) * shadowOffset;
-
-                // 色をRGBAに変換して不透明度を適用
-                const rgb = hexToRgb(shadowColor);
-                ctx.fillStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${shadowOpacity})`;
-                ctx.fillText(text, shadowX, shadowY);
-            }
-
-            // ストローク層を外側から内側へ描画
-            const strokes = [
-                { id: 4, enabled: 'stroke4_enabled', size: 'stroke4_size', color: 'stroke4_color' },
-                { id: 3, enabled: 'stroke3_enabled', size: 'stroke3_size', color: 'stroke3_color' },
-                { id: 2, enabled: 'stroke2_enabled', size: 'stroke2_size', color: 'stroke2_color' },
-                { id: 1, enabled: 'stroke1_enabled', size: 'stroke1_size', color: 'stroke1_color' }
-            ];
-
-            for (const stroke of strokes) {
-                if (document.getElementById(stroke.enabled).checked) {
-                    const strokeSize = parseInt(document.getElementById(stroke.size).value);
-                    const strokeColor = document.getElementById(stroke.color).value;
-
-                    ctx.strokeStyle = strokeColor;
-                    ctx.lineWidth = strokeSize;
-                    ctx.lineJoin = 'round';
-                    ctx.miterLimit = 2;
-                    ctx.strokeText(text, adjustedX, posY);
-                }
-            }
-
-            // フェース（本体）の描画（最前面）
-            if (fillType === 'solid') {
-                ctx.fillStyle = document.getElementById('fillColor').value;
-            } else if (fillType === 'gradient-linear') {
-                const angle = parseInt(document.getElementById('gradientAngle').value);
-                const rad = (angle - 90) * Math.PI / 180;
-                const distance = Math.max(width, height);
-                const x1 = adjustedX - Math.cos(rad) * distance / 2;
-                const y1 = posY - Math.sin(rad) * distance / 2;
-                const x2 = adjustedX + Math.cos(rad) * distance / 2;
-                const y2 = posY + Math.sin(rad) * distance / 2;
-
-                const gradient = ctx.createLinearGradient(x1, y1, x2, y2);
-                gradient.addColorStop(0, document.getElementById('gradientStart').value);
-                gradient.addColorStop(0.5, document.getElementById('gradientMiddle').value);
-                gradient.addColorStop(1, document.getElementById('gradientEnd').value);
-                ctx.fillStyle = gradient;
-            } else if (fillType === 'gradient-radial') {
-                const gradient = ctx.createRadialGradient(adjustedX, posY, 0, adjustedX, posY, fontSize * 2);
-                gradient.addColorStop(0, document.getElementById('gradientStart').value);
-                gradient.addColorStop(0.5, document.getElementById('gradientMiddle').value);
-                gradient.addColorStop(1, document.getElementById('gradientEnd').value);
-                ctx.fillStyle = gradient;
-            } else if (fillType === 'sheen') {
-                // 簡易的な光沢表現（実際のPremiereとは異なる）
-                ctx.fillStyle = document.getElementById('sheenBase').value;
-            }
-
-            ctx.fillText(text, adjustedX, posY);
-            ctx.restore();
-        }
-
-        // 色変換ヘルパー関数
-        function hexToRgb(hex) {
-            const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-            return result ? {
-                r: parseInt(result[1], 16),
-                g: parseInt(result[2], 16),
-                b: parseInt(result[3], 16)
-            } : { r: 0, g: 0, b: 0 };
-        }
-
-        /**
-         * PRTL書き出し
-         */
-        function exportPRTL() {
-            const config = {
-                width: parseInt(document.getElementById('canvasWidth').value),
-                height: parseInt(document.getElementById('canvasHeight').value),
-                text: document.getElementById('textContent').value,
-                fontFamily: document.getElementById('fontFamily').value,
-                fontSize: parseInt(document.getElementById('fontSize').value),
-                scaleX: parseInt(document.getElementById('scaleX').value),
-                posX: parseInt(document.getElementById('posX').value),
-                posY: parseInt(document.getElementById('posY').value),
-                textAlign: document.getElementById('textAlign').value,
-                fillType: document.getElementById('fillType').value,
-                fillColor: document.getElementById('fillColor').value,
-                gradientStart: document.getElementById('gradientStart').value,
-                gradientMiddle: document.getElementById('gradientMiddle').value,
-                gradientEnd: document.getElementById('gradientEnd').value,
-                gradientAngle: parseInt(document.getElementById('gradientAngle').value),
-                sheenBase: document.getElementById('sheenBase').value,
-                sheenHighlight: document.getElementById('sheenHighlight').value,
-                glintSize: parseInt(document.getElementById('glintSize').value),
-                glintAngle: parseInt(document.getElementById('glintAngle').value),
-                // ストローク情報
-                stroke4_enabled: document.getElementById('stroke4_enabled').checked,
-                stroke4_size: parseInt(document.getElementById('stroke4_size').value),
-                stroke4_color: document.getElementById('stroke4_color').value,
-                stroke3_enabled: document.getElementById('stroke3_enabled').checked,
-                stroke3_size: parseInt(document.getElementById('stroke3_size').value),
-                stroke3_color: document.getElementById('stroke3_color').value,
-                stroke2_enabled: document.getElementById('stroke2_enabled').checked,
-                stroke2_size: parseInt(document.getElementById('stroke2_size').value),
-                stroke2_color: document.getElementById('stroke2_color').value,
-                stroke1_enabled: document.getElementById('stroke1_enabled').checked,
-                stroke1_size: parseInt(document.getElementById('stroke1_size').value),
-                stroke1_color: document.getElementById('stroke1_color').value,
-                shadow_enabled: document.getElementById('shadow_enabled').checked,
-                shadow_offset: parseInt(document.getElementById('shadow_offset').value),
-                shadow_angle: parseInt(document.getElementById('shadow_angle').value),
-                shadow_color: document.getElementById('shadow_color').value,
-                shadow_opacity: parseInt(document.getElementById('shadow_opacity').value)
-            };
-
-            const generator = new PRTLGeneratorV2();
-            const prtlXML = generator.generatePRTL(config);
-
-            // UTF-8エンコード（BOMなし）
-            const encoder = new TextEncoder();
-            const utf8Array = encoder.encode(prtlXML);
-
-            const blob = new Blob([utf8Array], { type: 'application/octet-stream' });
-            const link = document.createElement('a');
-            link.download = `NLT_${Date.now()}.prtl`;
-            link.href = URL.createObjectURL(blob);
-            link.click();
-
-            console.log('✅ PRTL書き出し完了');
-        }
-
-        /**
-         * PRTL構造テスト（コンソールに出力）
-         */
-        function testPRTL() {
-            const config = {
-                width: 1920,
-                height: 1080,
-                text: 'テスト',
-                fontFamily: 'Yu Gothic UI',
-                fontSize: 72,
-                scaleX: 100,
-                posX: 960,
-                posY: 540,
-                textAlign: 'center',
-                fillType: 'solid',
-                fillColor: '#ffffff'
-            };
-
-            const generator = new PRTLGeneratorV2();
-            const prtlXML = generator.generatePRTL(config);
-
-            console.log('=== PRTL構造テスト ===');
-            console.log(prtlXML);
-            console.log('======================');
-
-            alert('PRTL構造をコンソールに出力しました（F12で確認）');
-        }
-
-        // 初期プレビュー
-        updatePreview();
+        // 初期レンダリング
+        render();
     </script>
 </body>
 </html>
