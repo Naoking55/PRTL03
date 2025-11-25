@@ -1052,14 +1052,16 @@
                     // 1. アウトライン2（外側、後ろに描画）
                     if (enabledStrokes.length > 1 && enabledStrokes[1]) {
                         const stroke1 = enabledStrokes[1];
-                        const strokeSize = Math.round((stroke1.width || 4) * 1.04);
+                        // レガシータイトルとの互換性を向上: 係数を2.0に変更
+                        const strokeSize = Math.round((stroke1.width || 4) * 2.0);
                         fragments += `<Fragment><size>${strokeSize}</size><offset>0</offset><angle>0</angle><ghost>false</ghost><isExtendedShadowFragment>false</isExtendedShadowFragment><eFragmentType>2</eFragmentType><fragmentOff>false</fragmentOff><placeHolder>false</placeHolder><annotation>3</annotation><placeHolderShaderIndex>4294967295</placeHolderShaderIndex><painterMix>13 13 13 13 13 13 13 13 13 13 13 13 13 13 13 13 </painterMix></Fragment>`;
                     }
 
                     // 2. アウトライン1（内側、前に描画）
                     if (enabledStrokes.length > 0 && enabledStrokes[0]) {
                         const stroke0 = enabledStrokes[0];
-                        const strokeSize = Math.round((stroke0.width || 4) * 1.04);
+                        // レガシータイトルとの互換性を向上: 係数を2.0に変更
+                        const strokeSize = Math.round((stroke0.width || 4) * 2.0);
                         fragments += `<Fragment><size>${strokeSize}</size><offset>0</offset><angle>0</angle><ghost>false</ghost><isExtendedShadowFragment>false</isExtendedShadowFragment><eFragmentType>2</eFragmentType><fragmentOff>false</fragmentOff><placeHolder>false</placeHolder><annotation>2</annotation><placeHolderShaderIndex>4294967295</placeHolderShaderIndex><painterMix>12 12 12 12 12 12 12 12 12 12 12 12 12 12 12 12 </painterMix></Fragment>`;
                     }
 
@@ -1081,14 +1083,16 @@
                     // 1. アウトライン2（外側、後ろに描画）
                     if (enabledStrokes.length > 1 && enabledStrokes[1]) {
                         const stroke1 = enabledStrokes[1];
-                        const strokeSize = Math.round((stroke1.width || 4) * 1.04);
+                        // レガシータイトルとの互換性を向上: 係数を2.0に変更
+                        const strokeSize = Math.round((stroke1.width || 4) * 2.0);
                         fragments += `<Fragment><size>${strokeSize}</size><offset>0</offset><angle>0</angle><ghost>false</ghost><isExtendedShadowFragment>false</isExtendedShadowFragment><eFragmentType>2</eFragmentType><fragmentOff>false</fragmentOff><placeHolder>false</placeHolder><annotation>3</annotation><placeHolderShaderIndex>4294967295</placeHolderShaderIndex><painterMix>13 13 13 13 13 13 13 13 13 13 13 13 13 13 13 13 </painterMix></Fragment>`;
                     }
 
                     // 2. アウトライン1（内側、前に描画）
                     if (enabledStrokes.length > 0 && enabledStrokes[0]) {
                         const stroke0 = enabledStrokes[0];
-                        const strokeSize = Math.round((stroke0.width || 4) * 1.04);
+                        // レガシータイトルとの互換性を向上: 係数を2.0に変更
+                        const strokeSize = Math.round((stroke0.width || 4) * 2.0);
                         fragments += `<Fragment><size>${strokeSize}</size><offset>0</offset><angle>0</angle><ghost>false</ghost><isExtendedShadowFragment>false</isExtendedShadowFragment><eFragmentType>2</eFragmentType><fragmentOff>false</fragmentOff><placeHolder>false</placeHolder><annotation>2</annotation><placeHolderShaderIndex>4294967295</placeHolderShaderIndex><painterMix>12 12 12 12 12 12 12 12 12 12 12 12 12 12 12 12 </painterMix></Fragment>`;
                     }
 
@@ -5067,13 +5071,14 @@
                             ctx.restore();
                         } else {
                             // エッジタイプ：内側の全ストローク＋文字本体の形状全体を均等に囲む
-                            // マージンを大きくして隣の文字への干渉を減らす
+                            // マージンを大幅に拡大して隣の文字への干渉を完全に防ぐ
                             const totalStrokeWidth = enabledStrokes.reduce((sum, s) => sum + s.width, 0);
-                            const margin = Math.max(st.width * 6, totalStrokeWidth * 3);
+                            const margin = Math.max(st.width * 10, totalStrokeWidth * 5, 100);
                             const tempCanvas = document.createElement('canvas');
                             const metrics = ctx.measureText(dc);
-                            tempCanvas.width = Math.ceil(metrics.width + charW + margin * 4);
-                            tempCanvas.height = Math.ceil(fontSize * 3 + margin * 4);
+                            // キャンバスサイズを大幅に拡大
+                            tempCanvas.width = Math.ceil(metrics.width + charW + margin * 8);
+                            tempCanvas.height = Math.ceil(fontSize * 4 + margin * 8);
                             const tempCtx = tempCanvas.getContext('2d');
 
                             // フォント設定をコピー
@@ -5141,19 +5146,22 @@
                             const blurAmount = st.blurAmount || 0;
 
                             if (joinType === 'miter') {
-                                // 角(miter): 正方形膨張（上下左右＋対角を同じ距離で）
+                                // 角(miter): 正方形膨張（上下左右＋対角、miter limitを適用して尖りを抑制）
+                                const miterLimit = 2.0; // miter limitを設定（尖りすぎを防ぐ）
                                 for (let step = 1; step <= edgeSteps; step += 1) {
                                     edgeCtx.globalAlpha = 1.0;
-                                    // 上下左右
+                                    // 上下左右（基本方向）
                                     edgeCtx.drawImage(tempCanvas, step, 0);
                                     edgeCtx.drawImage(tempCanvas, -step, 0);
                                     edgeCtx.drawImage(tempCanvas, 0, step);
                                     edgeCtx.drawImage(tempCanvas, 0, -step);
-                                    // 対角（正方形の角を埋める）
-                                    edgeCtx.drawImage(tempCanvas, step, step);
-                                    edgeCtx.drawImage(tempCanvas, step, -step);
-                                    edgeCtx.drawImage(tempCanvas, -step, step);
-                                    edgeCtx.drawImage(tempCanvas, -step, -step);
+                                    // 対角（制限付き：miter limitを超える場合は描画しない）
+                                    if (step <= edgeSteps / miterLimit) {
+                                        edgeCtx.drawImage(tempCanvas, step, step);
+                                        edgeCtx.drawImage(tempCanvas, step, -step);
+                                        edgeCtx.drawImage(tempCanvas, -step, step);
+                                        edgeCtx.drawImage(tempCanvas, -step, -step);
+                                    }
                                 }
                             } else if (joinType === 'bevel') {
                                 // 面取り(bevel): 8方向
