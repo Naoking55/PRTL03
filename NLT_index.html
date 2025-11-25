@@ -177,7 +177,7 @@
             <h2>テキスト</h2>
             <div class="control-group">
                 <label>テキスト内容</label>
-                <textarea id="textContent">サンプルテキスト</textarea>
+                <textarea id="textContent">レガシータイトル</textarea>
             </div>
 
             <div class="control-group">
@@ -236,7 +236,7 @@
             <div id="solidControls">
                 <div class="control-group">
                     <label>塗り色</label>
-                    <input type="color" id="fillColor" value="#ffffff">
+                    <input type="color" id="fillColor" value="#fdff00">
                 </div>
             </div>
 
@@ -283,6 +283,116 @@
                     <label>光沢角度 (度)</label>
                     <input type="range" id="glintAngle" value="0" min="0" max="360" step="1">
                     <div class="value-display" id="glintAngleValue">0°</div>
+                </div>
+            </div>
+
+            <h2>ストローク（フラグメント）</h2>
+            <div class="control-group">
+                <label>プリセット</label>
+                <select id="strokePreset" onchange="applyStrokePreset()">
+                    <option value="custom">カスタム</option>
+                    <option value="legacy-standard" selected>レガシー標準（4層）</option>
+                    <option value="simple">シンプル（2層）</option>
+                    <option value="none">ストロークなし</option>
+                </select>
+            </div>
+
+            <!-- インナーストローク4 -->
+            <div class="control-group">
+                <div class="checkbox-group">
+                    <input type="checkbox" id="stroke4_enabled" checked>
+                    <label>インナーストローク4</label>
+                </div>
+                <div class="color-row">
+                    <div>
+                        <label>サイズ (pt)</label>
+                        <input type="number" id="stroke4_size" value="78" min="0" max="200">
+                    </div>
+                    <div>
+                        <label>色</label>
+                        <input type="color" id="stroke4_color" value="#000000">
+                    </div>
+                </div>
+            </div>
+
+            <!-- インナーストローク3 -->
+            <div class="control-group">
+                <div class="checkbox-group">
+                    <input type="checkbox" id="stroke3_enabled" checked>
+                    <label>インナーストローク3</label>
+                </div>
+                <div class="color-row">
+                    <div>
+                        <label>サイズ (pt)</label>
+                        <input type="number" id="stroke3_size" value="68" min="0" max="200">
+                    </div>
+                    <div>
+                        <label>色</label>
+                        <input type="color" id="stroke3_color" value="#000000">
+                    </div>
+                </div>
+            </div>
+
+            <!-- インナーストローク2 -->
+            <div class="control-group">
+                <div class="checkbox-group">
+                    <input type="checkbox" id="stroke2_enabled" checked>
+                    <label>インナーストローク2</label>
+                </div>
+                <div class="color-row">
+                    <div>
+                        <label>サイズ (pt)</label>
+                        <input type="number" id="stroke2_size" value="38" min="0" max="200">
+                    </div>
+                    <div>
+                        <label>色</label>
+                        <input type="color" id="stroke2_color" value="#ffffff">
+                    </div>
+                </div>
+            </div>
+
+            <!-- インナーストローク1 -->
+            <div class="control-group">
+                <div class="checkbox-group">
+                    <input type="checkbox" id="stroke1_enabled" checked>
+                    <label>インナーストローク1</label>
+                </div>
+                <div class="color-row">
+                    <div>
+                        <label>サイズ (pt)</label>
+                        <input type="number" id="stroke1_size" value="8" min="0" max="200">
+                    </div>
+                    <div>
+                        <label>色</label>
+                        <input type="color" id="stroke1_color" value="#000000">
+                    </div>
+                </div>
+            </div>
+
+            <!-- シャドウ -->
+            <div class="control-group">
+                <div class="checkbox-group">
+                    <input type="checkbox" id="shadow_enabled">
+                    <label>シャドウ</label>
+                </div>
+                <div class="color-row">
+                    <div>
+                        <label>オフセット</label>
+                        <input type="number" id="shadow_offset" value="10" min="0" max="100">
+                    </div>
+                    <div>
+                        <label>角度 (度)</label>
+                        <input type="number" id="shadow_angle" value="-45" min="-180" max="180">
+                    </div>
+                </div>
+                <div class="control-group">
+                    <label>シャドウ色</label>
+                    <input type="color" id="shadow_color" value="#000000">
+                </div>
+                <div class="control-group">
+                    <label>不透明度 (%)</label>
+                    <input type="range" id="shadow_opacity" value="50" min="0" max="100" step="1">
+                    <div class="value-display" id="shadowOpacityValue">50%</div>
                 </div>
             </div>
 
@@ -338,6 +448,61 @@
             canvas.height = parseInt(this.value);
             updatePreview();
         });
+
+        document.getElementById('shadow_opacity').addEventListener('input', function() {
+            document.getElementById('shadowOpacityValue').textContent = this.value + '%';
+        });
+
+        /**
+         * ストロークプリセットを適用
+         */
+        function applyStrokePreset() {
+            const preset = document.getElementById('strokePreset').value;
+
+            if (preset === 'legacy-standard') {
+                // レガシー標準（4層）- 参考PRTLの標準設定
+                document.getElementById('stroke4_enabled').checked = true;
+                document.getElementById('stroke4_size').value = 78;
+                document.getElementById('stroke4_color').value = '#000000';
+
+                document.getElementById('stroke3_enabled').checked = true;
+                document.getElementById('stroke3_size').value = 68;
+                document.getElementById('stroke3_color').value = '#000000';
+
+                document.getElementById('stroke2_enabled').checked = true;
+                document.getElementById('stroke2_size').value = 38;
+                document.getElementById('stroke2_color').value = '#ffffff';
+
+                document.getElementById('stroke1_enabled').checked = true;
+                document.getElementById('stroke1_size').value = 8;
+                document.getElementById('stroke1_color').value = '#000000';
+
+                document.getElementById('shadow_enabled').checked = false;
+            } else if (preset === 'simple') {
+                // シンプル（2層）
+                document.getElementById('stroke4_enabled').checked = false;
+                document.getElementById('stroke3_enabled').checked = false;
+
+                document.getElementById('stroke2_enabled').checked = true;
+                document.getElementById('stroke2_size').value = 30;
+                document.getElementById('stroke2_color').value = '#000000';
+
+                document.getElementById('stroke1_enabled').checked = true;
+                document.getElementById('stroke1_size').value = 10;
+                document.getElementById('stroke1_color').value = '#ffffff';
+
+                document.getElementById('shadow_enabled').checked = false;
+            } else if (preset === 'none') {
+                // ストロークなし
+                document.getElementById('stroke4_enabled').checked = false;
+                document.getElementById('stroke3_enabled').checked = false;
+                document.getElementById('stroke2_enabled').checked = false;
+                document.getElementById('stroke1_enabled').checked = false;
+                document.getElementById('shadow_enabled').checked = false;
+            }
+
+            updatePreview();
+        }
 
         /**
          * PRTLGeneratorV2 - 完全新規実装版
@@ -510,9 +675,86 @@
                 const styleID = this.nextStyleID;
                 const textDescRef = this.nextTextDescID;
 
-                // FragmentList: 仕様書に準拠した構成
-                // 1. 塗り本体 (annotation=65538, painterMix=15)
-                const fragmentFill = `<Fragment>` +
+                // FragmentListを構築（レガシータイトル仕様）
+                let fragments = '';
+                let shaderRefs = {};
+                let nextPainter = 10; // Painter 10から開始
+                let nextShaderRef = this.nextShaderID;
+
+                // インナーストローク4（最外層）
+                if (config.stroke4_enabled) {
+                    fragments += `<Fragment>` +
+                        `<size>${config.stroke4_size}</size>` +
+                        `<offset>0</offset>` +
+                        `<angle>0</angle>` +
+                        `<ghost>false</ghost>` +
+                        `<isExtendedShadowFragment>false</isExtendedShadowFragment>` +
+                        `<eFragmentType>2</eFragmentType>` +
+                        `<fragmentOff>false</fragmentOff>` +
+                        `<placeHolder>false</placeHolder>` +
+                        `<annotation>4</annotation>` +
+                        `<placeHolderShaderIndex>4294967295</placeHolderShaderIndex>` +
+                        `<painterMix>${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} </painterMix>` +
+                    `</Fragment>`;
+                    shaderRefs[nextPainter++] = nextShaderRef++;
+                }
+
+                // インナーストローク3
+                if (config.stroke3_enabled) {
+                    fragments += `<Fragment>` +
+                        `<size>${config.stroke3_size}</size>` +
+                        `<offset>0</offset>` +
+                        `<angle>0</angle>` +
+                        `<ghost>false</ghost>` +
+                        `<isExtendedShadowFragment>false</isExtendedShadowFragment>` +
+                        `<eFragmentType>2</eFragmentType>` +
+                        `<fragmentOff>false</fragmentOff>` +
+                        `<placeHolder>false</placeHolder>` +
+                        `<annotation>3</annotation>` +
+                        `<placeHolderShaderIndex>4294967295</placeHolderShaderIndex>` +
+                        `<painterMix>${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} </painterMix>` +
+                    `</Fragment>`;
+                    shaderRefs[nextPainter++] = nextShaderRef++;
+                }
+
+                // インナーストローク2
+                if (config.stroke2_enabled) {
+                    fragments += `<Fragment>` +
+                        `<size>${config.stroke2_size}</size>` +
+                        `<offset>0</offset>` +
+                        `<angle>0</angle>` +
+                        `<ghost>false</ghost>` +
+                        `<isExtendedShadowFragment>false</isExtendedShadowFragment>` +
+                        `<eFragmentType>2</eFragmentType>` +
+                        `<fragmentOff>false</fragmentOff>` +
+                        `<placeHolder>false</placeHolder>` +
+                        `<annotation>2</annotation>` +
+                        `<placeHolderShaderIndex>4294967295</placeHolderShaderIndex>` +
+                        `<painterMix>${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} </painterMix>` +
+                    `</Fragment>`;
+                    shaderRefs[nextPainter++] = nextShaderRef++;
+                }
+
+                // インナーストローク1
+                if (config.stroke1_enabled) {
+                    fragments += `<Fragment>` +
+                        `<size>${config.stroke1_size}</size>` +
+                        `<offset>0</offset>` +
+                        `<angle>0</angle>` +
+                        `<ghost>false</ghost>` +
+                        `<isExtendedShadowFragment>false</isExtendedShadowFragment>` +
+                        `<eFragmentType>2</eFragmentType>` +
+                        `<fragmentOff>false</fragmentOff>` +
+                        `<placeHolder>false</placeHolder>` +
+                        `<annotation>1</annotation>` +
+                        `<placeHolderShaderIndex>4294967295</placeHolderShaderIndex>` +
+                        `<painterMix>${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} </painterMix>` +
+                    `</Fragment>`;
+                    shaderRefs[nextPainter++] = nextShaderRef++;
+                }
+
+                // フェース（塗り本体）- Painter 15
+                fragments += `<Fragment>` +
                     `<size>0</size>` +
                     `<offset>0</offset>` +
                     `<angle>0</angle>` +
@@ -525,31 +767,58 @@
                     `<placeHolderShaderIndex>4294967295</placeHolderShaderIndex>` +
                     `<painterMix>15 15 15 15 15 15 15 15 15 15 15 15 15 15 15 15 </painterMix>` +
                 `</Fragment>`;
+                shaderRefs[15] = nextShaderRef++; // フェース用シェーダー
 
-                // ShaderList: 仕様書に準拠した割り当て
-                // Painter 15: 塗りShader
-                // Painter 0-14, -1: 未使用はshaderRef=0
-                let shaderList = `<ShaderRef PainterNumber="15"><shaderRef>${this.nextShaderID}</shaderRef></ShaderRef>`;
+                // シャドウ
+                const shadowOff = config.shadow_enabled ? 'false' : 'true';
+                fragments += `<Fragment>` +
+                    `<size>0</size>` +
+                    `<offset>${config.shadow_offset || 10}</offset>` +
+                    `<angle>${config.shadow_angle || -45}</angle>` +
+                    `<ghost>false</ghost>` +
+                    `<isExtendedShadowFragment>true</isExtendedShadowFragment>` +
+                    `<eFragmentType>0</eFragmentType>` +
+                    `<fragmentOff>${shadowOff}</fragmentOff>` +
+                    `<placeHolder>false</placeHolder>` +
+                    `<annotation>65537</annotation>` +
+                    `<placeHolderShaderIndex>4294967295</placeHolderShaderIndex>` +
+                    `<painterMix>0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 </painterMix>` +
+                `</Fragment>`;
+                if (config.shadow_enabled) {
+                    shaderRefs[0] = nextShaderRef++; // シャドウ用シェーダー
+                }
 
-                // 未使用のPainterも明示的に定義
-                for (let i = 0; i <= 14; i++) {
-                    shaderList += `<ShaderRef PainterNumber="${i}"><shaderRef>0</shaderRef></ShaderRef>`;
+                // ShaderListを構築
+                let shaderList = '';
+                for (let i = 0; i <= 15; i++) {
+                    const ref = shaderRefs[i] || 0;
+                    shaderList += `<ShaderRef PainterNumber="${i}"><shaderRef>${ref}</shaderRef></ShaderRef>`;
                 }
                 shaderList += `<ShaderRef PainterNumber="-1"><shaderRef>0</shaderRef></ShaderRef>`;
 
+                // configにshaderRefsを保存（_buildShadersで使用）
+                config._shaderRefs = shaderRefs;
+                config._nextShaderRef = nextShaderRef;
+
                 return `<Styles>` +
                     `<Style ID="${styleID}">` +
-                        `<StyleBase Version="7">` +
+                        `<StyleBase Version="4">` +
                             `<type>50000</type>` +
-                            `<textDescRef>${textDescRef}</textDescRef>` +
-                            `<shadow>false</shadow>` +
-                            `<bevel>false</bevel>` +
-                            `<outline>false</outline>` +
+                            `<positionDominance>0</positionDominance>` +
+                            `<lineGradient>false</lineGradient>` +
+                            `<styleRef>${styleID}</styleRef>` +
+                            `<faceDistortX>0</faceDistortX>` +
+                            `<faceDistortY>0</faceDistortY>` +
+                            `<shadow_softness>30</shadow_softness>` +
+                            `<personality>0</personality>` +
+                            `<linked>false</linked>` +
+                            `<EmbellishmentSizeRule>false</EmbellishmentSizeRule>` +
+                            `<PainterRampType>Basic</PainterRampType>` +
                         `</StyleBase>` +
-                        `<FragmentList>` +
-                            fragmentFill +
+                        `<FragmentList Version="5">` +
+                            fragments +
                         `</FragmentList>` +
-                        `<ShaderList>` +
+                        `<ShaderList Version="1">` +
                             shaderList +
                         `</ShaderList>` +
                     `</Style>` +
@@ -557,21 +826,209 @@
             }
 
             /**
-             * Shaders生成
+             * Shaders生成（複数フラグメント対応）
              */
             _buildShaders(config) {
-                const shaderID = this.nextShaderID;
+                let shaders = '<Shaders>';
+                const shaderRefs = config._shaderRefs || {};
+
+                // 各PainterのShaderを生成
+                for (const [painter, shaderRef] of Object.entries(shaderRefs)) {
+                    const painterNum = parseInt(painter);
+
+                    if (painterNum === 15) {
+                        // フェース（塗り本体）
+                        shaders += this._buildFaceShader(shaderRef, config);
+                    } else if (painterNum === 0) {
+                        // シャドウ
+                        shaders += this._buildShadowShader(shaderRef, config);
+                    } else if (painterNum >= 10 && painterNum <= 13) {
+                        // ストローク層
+                        const strokeNum = 14 - painterNum; // 10->4, 11->3, 12->2, 13->1
+                        const strokeColor = config[`stroke${strokeNum}_color`] || '#000000';
+                        shaders += this._buildStrokeShader(shaderRef, strokeColor);
+                    }
+                }
+
+                shaders += '</Shaders>';
+                return shaders;
+            }
+
+            /**
+             * ストローク用Shader生成
+             */
+            _buildStrokeShader(shaderRef, color) {
+                const rgb = this._parseColor(color);
+
+                let colorSpecs = '';
+                for (let i = 0; i <= 4; i++) {
+                    colorSpecs += `<ColorSpec index="${i}">` +
+                        `<red>${rgb.r}</red>` +
+                        `<green>${rgb.g}</green>` +
+                        `<blue>${rgb.b}</blue>` +
+                        `<xpar>0</xpar>` +
+                    `</ColorSpec>`;
+                }
+
+                return `<Shader Version="4">` +
+                    `<cReference>${shaderRef}</cReference>` +
+                    `<textureRef>0</textureRef>` +
+                    `<colorOption>4</colorOption>` +
+                    `<shaderOn>true</shaderOn>` +
+                    `<glintSize>10</glintSize>` +
+                    `<glintOffset>0</glintOffset>` +
+                    `<rampPosTop>75</rampPosTop>` +
+                    `<rampPosBottom>25</rampPosBottom>` +
+                    `<rampAngle>0</rampAngle>` +
+                    `<bevelBalance>0</bevelBalance>` +
+                    `<rampCycle>0</rampCycle>` +
+                    `<classicStyle>0</classicStyle>` +
+                    `<rampType>0</rampType>` +
+                    colorSpecs +
+                    `<glintAngle>0</glintAngle>` +
+                    `<bevelSize>0</bevelSize>` +
+                    `<bevelDirection>0</bevelDirection>` +
+                    `<bevelPipe>false</bevelPipe>` +
+                    `<bevelAngle>0</bevelAngle>` +
+                    `<bevelShape>1</bevelShape>` +
+                    `<bevelShining>0</bevelShining>` +
+                    `<bevelLight>false</bevelLight>` +
+                    `<bevelMerge>true</bevelMerge>` +
+                    `<sheenOn>false</sheenOn>` +
+                `</Shader>`;
+            }
+
+            /**
+             * フェース（塗り本体）用Shader生成
+             */
+            _buildFaceShader(shaderRef, config) {
                 const fillType = config.fillType || 'solid';
 
                 if (fillType === 'solid') {
-                    return this._buildSolidShader(shaderID, config);
-                } else if (fillType === 'gradient-linear' || fillType === 'gradient-radial') {
-                    return this._buildGradientShader(shaderID, config);
-                } else if (fillType === 'sheen') {
-                    return this._buildSheenShader(shaderID, config);
+                    const rgb = this._parseColor(config.fillColor || '#ffffff');
+                    let colorSpecs = '';
+                    for (let i = 0; i <= 4; i++) {
+                        colorSpecs += `<ColorSpec index="${i}">` +
+                            `<red>${rgb.r}</red>` +
+                            `<green>${rgb.g}</green>` +
+                            `<blue>${rgb.b}</blue>` +
+                            `<xpar>0</xpar>` +
+                        `</ColorSpec>`;
+                    }
+
+                    return `<Shader Version="4">` +
+                        `<cReference>${shaderRef}</cReference>` +
+                        `<textureRef>0</textureRef>` +
+                        `<colorOption>4</colorOption>` +
+                        `<shaderOn>true</shaderOn>` +
+                        `<glintSize>10</glintSize>` +
+                        `<glintOffset>0</glintOffset>` +
+                        `<rampPosTop>75</rampPosTop>` +
+                        `<rampPosBottom>25</rampPosBottom>` +
+                        `<rampAngle>0</rampAngle>` +
+                        `<bevelBalance>0</bevelBalance>` +
+                        `<rampCycle>0</rampCycle>` +
+                        `<classicStyle>0</classicStyle>` +
+                        `<rampType>0</rampType>` +
+                        colorSpecs +
+                        `<glintAngle>0</glintAngle>` +
+                        `<bevelSize>0</bevelSize>` +
+                        `<bevelDirection>0</bevelDirection>` +
+                        `<bevelPipe>false</bevelPipe>` +
+                        `<bevelAngle>0</bevelAngle>` +
+                        `<bevelShape>1</bevelShape>` +
+                        `<bevelShining>0</bevelShining>` +
+                        `<bevelLight>false</bevelLight>` +
+                        `<bevelMerge>true</bevelMerge>` +
+                        `<sheenOn>false</sheenOn>` +
+                    `</Shader>`;
+                } else if (fillType.startsWith('gradient')) {
+                    const startColor = this._parseColor(config.gradientStart || '#ff0000');
+                    const middleColor = this._parseColor(config.gradientMiddle || '#ffff00');
+                    const endColor = this._parseColor(config.gradientEnd || '#0000ff');
+
+                    let colorSpecs = `<ColorSpec index="0"><red>${startColor.r}</red><green>${startColor.g}</green><blue>${startColor.b}</blue><xpar>0</xpar></ColorSpec>`;
+                    colorSpecs += `<ColorSpec index="1"><red>0</red><green>0</green><blue>0</blue><xpar>0</xpar></ColorSpec>`;
+                    colorSpecs += `<ColorSpec index="2"><red>${middleColor.r}</red><green>${middleColor.g}</green><blue>${middleColor.b}</blue><xpar>0</xpar></ColorSpec>`;
+                    colorSpecs += `<ColorSpec index="3"><red>0</red><green>0</green><blue>0</blue><xpar>0</xpar></ColorSpec>`;
+                    colorSpecs += `<ColorSpec index="4"><red>${endColor.r}</red><green>${endColor.g}</green><blue>${endColor.b}</blue><xpar>0</xpar></ColorSpec>`;
+
+                    return `<Shader Version="4">` +
+                        `<cReference>${shaderRef}</cReference>` +
+                        `<textureRef>0</textureRef>` +
+                        `<colorOption>4</colorOption>` +
+                        `<shaderOn>true</shaderOn>` +
+                        `<glintSize>10</glintSize>` +
+                        `<glintOffset>0</glintOffset>` +
+                        `<rampPosTop>75</rampPosTop>` +
+                        `<rampPosBottom>25</rampPosBottom>` +
+                        `<rampAngle>0</rampAngle>` +
+                        `<bevelBalance>0</bevelBalance>` +
+                        `<rampCycle>0</rampCycle>` +
+                        `<classicStyle>0</classicStyle>` +
+                        `<rampType>0</rampType>` +
+                        colorSpecs +
+                        `<glintAngle>0</glintAngle>` +
+                        `<bevelSize>0</bevelSize>` +
+                        `<bevelDirection>0</bevelDirection>` +
+                        `<bevelPipe>false</bevelPipe>` +
+                        `<bevelAngle>0</bevelAngle>` +
+                        `<bevelShape>1</bevelShape>` +
+                        `<bevelShining>0</bevelShining>` +
+                        `<bevelLight>false</bevelLight>` +
+                        `<bevelMerge>true</bevelMerge>` +
+                        `<sheenOn>false</sheenOn>` +
+                    `</Shader>`;
                 }
 
-                return this._buildSolidShader(shaderID, config);
+                // デフォルトは白
+                return this._buildStrokeShader(shaderRef, '#ffffff');
+            }
+
+            /**
+             * シャドウ用Shader生成
+             */
+            _buildShadowShader(shaderRef, config) {
+                const rgb = this._parseColor(config.shadow_color || '#000000');
+                const opacity = config.shadow_opacity || 50;
+                const xpar = Math.round((100 - opacity) * 255 / 100); // 不透明度をxparに変換
+
+                let colorSpecs = '';
+                for (let i = 0; i <= 4; i++) {
+                    colorSpecs += `<ColorSpec index="${i}">` +
+                        `<red>${rgb.r}</red>` +
+                        `<green>${rgb.g}</green>` +
+                        `<blue>${rgb.b}</blue>` +
+                        `<xpar>${i === 0 ? xpar : 0}</xpar>` +
+                    `</ColorSpec>`;
+                }
+
+                return `<Shader Version="4">` +
+                    `<cReference>${shaderRef}</cReference>` +
+                    `<textureRef>0</textureRef>` +
+                    `<colorOption>0</colorOption>` +
+                    `<shaderOn>true</shaderOn>` +
+                    `<glintSize>0</glintSize>` +
+                    `<glintOffset>0</glintOffset>` +
+                    `<rampPosTop>75</rampPosTop>` +
+                    `<rampPosBottom>25</rampPosBottom>` +
+                    `<rampAngle>0</rampAngle>` +
+                    `<bevelBalance>0</bevelBalance>` +
+                    `<rampCycle>0</rampCycle>` +
+                    `<classicStyle>0</classicStyle>` +
+                    `<rampType>0</rampType>` +
+                    colorSpecs +
+                    `<glintAngle>0</glintAngle>` +
+                    `<bevelSize>0</bevelSize>` +
+                    `<bevelDirection>0</bevelDirection>` +
+                    `<bevelPipe>false</bevelPipe>` +
+                    `<bevelAngle>0</bevelAngle>` +
+                    `<bevelShape>1</bevelShape>` +
+                    `<bevelShining>0</bevelShining>` +
+                    `<bevelLight>false</bevelLight>` +
+                    `<bevelMerge>true</bevelMerge>` +
+                    `<sheenOn>false</sheenOn>` +
+                `</Shader>`;
             }
 
             /**
@@ -857,20 +1314,51 @@
             ctx.textBaseline = 'middle';
 
             // アライメント設定
-            if (textAlign === 'left') {
-                ctx.textAlign = 'left';
-            } else if (textAlign === 'center') {
-                ctx.textAlign = 'center';
-            } else if (textAlign === 'right') {
-                ctx.textAlign = 'right';
-            }
+            ctx.textAlign = textAlign;
 
             // 横幅スケール適用
             ctx.save();
             ctx.scale(scaleX / 100, 1);
             const adjustedX = posX * (100 / scaleX);
 
-            // 塗りスタイル適用
+            // シャドウの描画（最背面）
+            if (document.getElementById('shadow_enabled').checked) {
+                const shadowOffset = parseInt(document.getElementById('shadow_offset').value);
+                const shadowAngle = parseInt(document.getElementById('shadow_angle').value) * Math.PI / 180;
+                const shadowColor = document.getElementById('shadow_color').value;
+                const shadowOpacity = parseInt(document.getElementById('shadow_opacity').value) / 100;
+
+                const shadowX = adjustedX + Math.cos(shadowAngle) * shadowOffset;
+                const shadowY = posY + Math.sin(shadowAngle) * shadowOffset;
+
+                // 色をRGBAに変換して不透明度を適用
+                const rgb = hexToRgb(shadowColor);
+                ctx.fillStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${shadowOpacity})`;
+                ctx.fillText(text, shadowX, shadowY);
+            }
+
+            // ストローク層を外側から内側へ描画
+            const strokes = [
+                { id: 4, enabled: 'stroke4_enabled', size: 'stroke4_size', color: 'stroke4_color' },
+                { id: 3, enabled: 'stroke3_enabled', size: 'stroke3_size', color: 'stroke3_color' },
+                { id: 2, enabled: 'stroke2_enabled', size: 'stroke2_size', color: 'stroke2_color' },
+                { id: 1, enabled: 'stroke1_enabled', size: 'stroke1_size', color: 'stroke1_color' }
+            ];
+
+            for (const stroke of strokes) {
+                if (document.getElementById(stroke.enabled).checked) {
+                    const strokeSize = parseInt(document.getElementById(stroke.size).value);
+                    const strokeColor = document.getElementById(stroke.color).value;
+
+                    ctx.strokeStyle = strokeColor;
+                    ctx.lineWidth = strokeSize;
+                    ctx.lineJoin = 'round';
+                    ctx.miterLimit = 2;
+                    ctx.strokeText(text, adjustedX, posY);
+                }
+            }
+
+            // フェース（本体）の描画（最前面）
             if (fillType === 'solid') {
                 ctx.fillStyle = document.getElementById('fillColor').value;
             } else if (fillType === 'gradient-linear') {
@@ -898,9 +1386,18 @@
                 ctx.fillStyle = document.getElementById('sheenBase').value;
             }
 
-            // テキスト描画
             ctx.fillText(text, adjustedX, posY);
             ctx.restore();
+        }
+
+        // 色変換ヘルパー関数
+        function hexToRgb(hex) {
+            const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+            return result ? {
+                r: parseInt(result[1], 16),
+                g: parseInt(result[2], 16),
+                b: parseInt(result[3], 16)
+            } : { r: 0, g: 0, b: 0 };
         }
 
         /**
@@ -926,7 +1423,25 @@
                 sheenBase: document.getElementById('sheenBase').value,
                 sheenHighlight: document.getElementById('sheenHighlight').value,
                 glintSize: parseInt(document.getElementById('glintSize').value),
-                glintAngle: parseInt(document.getElementById('glintAngle').value)
+                glintAngle: parseInt(document.getElementById('glintAngle').value),
+                // ストローク情報
+                stroke4_enabled: document.getElementById('stroke4_enabled').checked,
+                stroke4_size: parseInt(document.getElementById('stroke4_size').value),
+                stroke4_color: document.getElementById('stroke4_color').value,
+                stroke3_enabled: document.getElementById('stroke3_enabled').checked,
+                stroke3_size: parseInt(document.getElementById('stroke3_size').value),
+                stroke3_color: document.getElementById('stroke3_color').value,
+                stroke2_enabled: document.getElementById('stroke2_enabled').checked,
+                stroke2_size: parseInt(document.getElementById('stroke2_size').value),
+                stroke2_color: document.getElementById('stroke2_color').value,
+                stroke1_enabled: document.getElementById('stroke1_enabled').checked,
+                stroke1_size: parseInt(document.getElementById('stroke1_size').value),
+                stroke1_color: document.getElementById('stroke1_color').value,
+                shadow_enabled: document.getElementById('shadow_enabled').checked,
+                shadow_offset: parseInt(document.getElementById('shadow_offset').value),
+                shadow_angle: parseInt(document.getElementById('shadow_angle').value),
+                shadow_color: document.getElementById('shadow_color').value,
+                shadow_opacity: parseInt(document.getElementById('shadow_opacity').value)
             };
 
             const generator = new PRTLGeneratorV2();
