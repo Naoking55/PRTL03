@@ -1072,19 +1072,39 @@
                 const width = obj.width || estimatedWidth;
                 const height = obj.height || fontSize * 1.5;
 
-                // telop editorの座標（中心座標と想定）からPRTL座標（左上基準）への変換
-                // obj.textAlignが'center'の場合は中心座標なので、左上に変換
-                const centerX = obj.x || 0;
-                const centerY = obj.y || 0;
+                // telop editorの座標からPRTL座標（左上基準）への変換
+                // obj.textAlignに応じてobj.xの意味が異なる：
+                // - 'left': obj.xはテキストの左端
+                // - 'center': obj.xはテキストの中心
+                // - 'right': obj.xはテキストの右端
+                const objX = obj.x || 0;
+                const objY = obj.y || 0;
+                const textAlign = obj.textAlign || 'left';
 
-                // Position: テキストボックスの左上座標
-                const posX = centerX - width / 2;
-                const posY = centerY - height / 2;
+                // テキストボックスの左上座標を計算
+                let posX, posY;
+                if (textAlign === 'center') {
+                    posX = objX - width / 2;
+                } else if (textAlign === 'right') {
+                    posX = objX - width;
+                } else { // 'left'
+                    posX = objX;
+                }
+                posY = objY - height / 2; // Y座標は常に中心基準
 
                 // BaseProperties: ベースライン位置
-                // txBaseはベースラインのY座標（中心Y + フォントサイズの一部）
-                const txBase = centerY + fontSize * 0.2; // ベースラインは中心より少し下
-                const xPos = posX; // 左端のX座標
+                // txBaseはベースラインのY座標（テキストボックス上端からのオフセット）
+                const txBase = objY + fontSize * 0.2; // ベースラインは中心より少し下
+
+                // XPosはテキスト描画開始位置（Alignmentに応じて異なる）
+                let xPos;
+                if (textAlign === 'center') {
+                    xPos = posX + width / 2; // 中央揃えの場合は中心から開始
+                } else if (textAlign === 'right') {
+                    xPos = posX + width; // 右揃えの場合は右端から開始
+                } else { // 'left'
+                    xPos = posX; // 左揃えの場合は左端から開始
+                }
 
                 let xml = '<TextChain>';
                 xml += `<ChainProperty Version="9">`;
@@ -1114,7 +1134,7 @@
                 xml += `</BaseProperties>`;
 
                 xml += `<EnclosingObjectType>block</EnclosingObjectType>`;
-                xml += `<Alignment>left</Alignment>`;
+                xml += `<Alignment>${textAlign}</Alignment>`;
                 xml += `<RTL>false</RTL>`;
                 xml += `<TRString>${this._escapeXML(text)}</TRString>`;
 
