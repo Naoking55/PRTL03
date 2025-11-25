@@ -905,10 +905,9 @@
             }
 
             _buildPRTLXML(width, height, objects) {
-                const fonts = this._collectUniqueFonts(objects);
                 const styles = this._buildStyles(objects);
                 const shaders = this._buildShaders(objects);
-                const textDescriptions = this._buildTextDescriptions(fonts);
+                const textDescriptions = this._buildTextDescriptions(objects);
                 const textures = this._buildTextures();
                 const logos = this._buildLogos();
                 const layers = this._buildLayers(objects);
@@ -928,13 +927,27 @@
                 return Array.from(fontSet);
             }
 
-            _buildTextDescriptions(fonts) {
-                if (fonts.length === 0) fonts = ['Yu Gothic UI'];
+            _buildTextDescriptions(objects) {
                 let xml = '<TextDescriptions Version="4">';
-                fonts.forEach((fontFamily, index) => {
-                    const ref = this.idCounter + index;
-                    xml += `<TextDescription Reference="${ref}"><TypeSpec><size>616</size><txHeight>75</txHeight><txKern>0</txKern><baselineShift>0</baselineShift><leading>0</leading><txSCaps>75</txSCaps><txSCapsOn>false</txSCapsOn><txSlant>0</txSlant><txUnderline>false</txUnderline><txWidth>67.5</txWidth><linked>false</linked><fiBold>0</fiBold><fiItalic>0</fiItalic><fifullName>${this._escapeXML(fontFamily)}</fifullName><fifontFamilyName>${this._escapeXML(fontFamily)}</fifontFamilyName><fifontStyle>Regular</fifontStyle><fifontType>5</fifontType><ficategory>1</ficategory></TypeSpec></TextDescription>`;
+                // オブジェクトごとにTextDescriptionを生成（scaleXを反映）
+                objects.forEach((obj, index) => {
+                    if (obj.type === 'text' && obj.chars && obj.chars.length > 0) {
+                        const ref = this.idCounter + index;
+                        const firstChar = obj.chars[0];
+                        const fontFamily = firstChar.fontFamily || 'Yu Gothic UI';
+                        const fontSize = firstChar.fontSize || 72;
+                        const scaleX = firstChar.scaleX || 100; // 横幅スケール（デフォルト100%）
+                        const bold = firstChar.bold ? 1 : 0;
+                        const italic = firstChar.italic ? 1 : 0;
+
+                        // txWidthはscaleXをそのまま使用（100=等幅、50=半分の幅）
+                        xml += `<TextDescription Reference="${ref}"><TypeSpec><size>${fontSize * 8}</size><txHeight>${fontSize}</txHeight><txKern>0</txKern><baselineShift>0</baselineShift><leading>0</leading><txSCaps>75</txSCaps><txSCapsOn>false</txSCapsOn><txSlant>0</txSlant><txUnderline>false</txUnderline><txWidth>${scaleX}</txWidth><linked>false</linked><fiBold>${bold}</fiBold><fiItalic>${italic}</fiItalic><fifullName>${this._escapeXML(fontFamily)}</fifullName><fifontFamilyName>${this._escapeXML(fontFamily)}</fifontFamilyName><fifontStyle>Regular</fifontStyle><fifontType>5</fifontType><ficategory>1</ficategory></TypeSpec></TextDescription>`;
+                    }
                 });
+                // フォールバック用のデフォルトTextDescription
+                if (objects.length === 0 || objects.filter(o => o.type === 'text').length === 0) {
+                    xml += `<TextDescription Reference="${this.idCounter}"><TypeSpec><size>616</size><txHeight>75</txHeight><txKern>0</txKern><baselineShift>0</baselineShift><leading>0</leading><txSCaps>75</txSCaps><txSCapsOn>false</txSCapsOn><txSlant>0</txSlant><txUnderline>false</txUnderline><txWidth>100</txWidth><linked>false</linked><fiBold>0</fiBold><fiItalic>0</fiItalic><fifullName>Yu Gothic UI</fifullName><fifontFamilyName>Yu Gothic UI</fifontFamilyName><fifontStyle>Regular</fifontStyle><fifontType>5</fifontType><ficategory>1</ficategory></TypeSpec></TextDescription>`;
+                }
                 xml += '</TextDescriptions>';
                 return xml;
             }
@@ -961,7 +974,8 @@
                     if (stroke.enabled) {
                         const annotation = strokes.length - i;
                         const painterNum = 10 + (strokes.length - i - 1);
-                        fragments += `<Fragment><size>${stroke.width * 2}</size><offset>0</offset><angle>0</angle><ghost>false</ghost><isExtendedShadowFragment>false</isExtendedShadowFragment><eFragmentType>2</eFragmentType><fragmentOff>${!stroke.enabled}</fragmentOff><placeHolder>false</placeHolder><annotation>${annotation}</annotation><placeHolderShaderIndex>4294967295</placeHolderShaderIndex><painterMix>${painterNum} ${painterNum} ${painterNum} ${painterNum} ${painterNum} ${painterNum} ${painterNum} ${painterNum} ${painterNum} ${painterNum} ${painterNum} ${painterNum} ${painterNum} ${painterNum} ${painterNum} ${painterNum} </painterMix></Fragment>`;
+                        // ストローク幅をそのまま使用（係数なし）
+                        fragments += `<Fragment><size>${stroke.width}</size><offset>0</offset><angle>0</angle><ghost>false</ghost><isExtendedShadowFragment>false</isExtendedShadowFragment><eFragmentType>2</eFragmentType><fragmentOff>${!stroke.enabled}</fragmentOff><placeHolder>false</placeHolder><annotation>${annotation}</annotation><placeHolderShaderIndex>4294967295</placeHolderShaderIndex><painterMix>${painterNum} ${painterNum} ${painterNum} ${painterNum} ${painterNum} ${painterNum} ${painterNum} ${painterNum} ${painterNum} ${painterNum} ${painterNum} ${painterNum} ${painterNum} ${painterNum} ${painterNum} ${painterNum} </painterMix></Fragment>`;
                     }
                 });
 
@@ -1049,21 +1063,33 @@
 
             _buildTextChain(obj, index) {
                 const styleRef = this.styleCounter + index;
-                const textDescRef = this.idCounter;
+                const textDescRef = this.idCounter + index; // オブジェクトごとのTextDescriptionを参照
                 const text = obj.chars.map(c => c.char).join('');
                 const textLength = text.length;
 
-                const x = obj.x || 0;
-                const y = obj.y || 0;
                 const fontSize = obj.chars[0]?.fontSize || 48;
                 const estimatedWidth = textLength * fontSize * 0.8;
                 const width = obj.width || estimatedWidth;
                 const height = obj.height || fontSize * 1.5;
 
+                // telop editorの座標（中心座標と想定）からPRTL座標（左上基準）への変換
+                // obj.textAlignが'center'の場合は中心座標なので、左上に変換
+                const centerX = obj.x || 0;
+                const centerY = obj.y || 0;
+
+                // Position: テキストボックスの左上座標
+                const posX = centerX - width / 2;
+                const posY = centerY - height / 2;
+
+                // BaseProperties: ベースライン位置
+                // txBaseはベースラインのY座標（中心Y + フォントサイズの一部）
+                const txBase = centerY + fontSize * 0.2; // ベースラインは中心より少し下
+                const xPos = posX; // 左端のX座標
+
                 let xml = '<TextChain>';
                 xml += `<ChainProperty Version="9">`;
                 xml += `<wordWrap>false</wordWrap>`;
-                xml += `<Position><x>${x}</x><y>${y}</y></Position>`;
+                xml += `<Position><x>${posX}</x><y>${posY}</y></Position>`;
                 xml += `<Size><x>${width}</x><y>${height}</y></Size>`;
                 xml += `<leading>0</leading>`;
                 xml += `<lockedLinesX>true</lockedLinesX>`;
@@ -1079,10 +1105,9 @@
                 const persistentID = index + 3;
                 xml += `<TextLine Version="2" objectID="${objectID}" persistentID="${persistentID}">`;
 
-                const txBase = fontSize * 1.2;
                 xml += `<BaseProperties Version="5">`;
                 xml += `<txBase>${txBase}</txBase>`;
-                xml += `<XPos>${x}</XPos>`;
+                xml += `<XPos>${xPos}</XPos>`;
                 xml += `<angle>${obj.rotation || 0}</angle>`;
                 xml += `<verticalText>false</verticalText>`;
                 xml += `<objectLeading>0</objectLeading>`;
