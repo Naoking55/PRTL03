@@ -1,0 +1,980 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NLT - Neo Legacy Title Generator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #1e1e1e;
+            color: #fff;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            gap: 20px;
+        }
+        .panel {
+            background: #2d2d2d;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        h1 {
+            font-size: 24px;
+            margin-bottom: 20px;
+            color: #4a9eff;
+        }
+        h2 {
+            font-size: 16px;
+            margin: 20px 0 10px;
+            color: #aaa;
+            border-bottom: 1px solid #444;
+            padding-bottom: 5px;
+        }
+        .control-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 13px;
+            color: #aaa;
+        }
+        input[type="text"],
+        input[type="number"],
+        select,
+        textarea {
+            width: 100%;
+            padding: 8px;
+            background: #1e1e1e;
+            border: 1px solid #444;
+            border-radius: 4px;
+            color: #fff;
+            font-size: 14px;
+        }
+        textarea {
+            resize: vertical;
+            min-height: 80px;
+            font-family: inherit;
+        }
+        input[type="color"] {
+            width: 100%;
+            height: 40px;
+            border: 1px solid #444;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        input[type="range"] {
+            width: 100%;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background: #4a9eff;
+            border: none;
+            border-radius: 4px;
+            color: #fff;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        button:hover {
+            background: #3a8eef;
+        }
+        button:active {
+            transform: scale(0.98);
+        }
+        .btn-secondary {
+            background: #555;
+            margin-top: 10px;
+        }
+        .btn-secondary:hover {
+            background: #666;
+        }
+        #canvas {
+            border: 1px solid #444;
+            border-radius: 4px;
+            max-width: 100%;
+            display: block;
+        }
+        .canvas-wrapper {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 600px;
+            background: #1e1e1e;
+            border-radius: 4px;
+        }
+        .color-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .checkbox-group input[type="checkbox"] {
+            width: auto;
+        }
+        .value-display {
+            font-size: 12px;
+            color: #888;
+            margin-top: 2px;
+        }
+        .gradient-stops {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .gradient-stop {
+            display: grid;
+            grid-template-columns: 60px 1fr auto;
+            gap: 10px;
+            align-items: center;
+        }
+        .gradient-stop input[type="number"] {
+            width: 100%;
+        }
+        .resolution-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 左パネル: コントロール -->
+        <div class="panel">
+            <h1>NLT Generator</h1>
+
+            <h2>解像度</h2>
+            <div class="resolution-group">
+                <div class="control-group">
+                    <label>幅</label>
+                    <input type="number" id="canvasWidth" value="1920" min="1">
+                </div>
+                <div class="control-group">
+                    <label>高さ</label>
+                    <input type="number" id="canvasHeight" value="1080" min="1">
+                </div>
+            </div>
+
+            <h2>テキスト</h2>
+            <div class="control-group">
+                <label>テキスト内容</label>
+                <textarea id="textContent">サンプルテキスト</textarea>
+            </div>
+
+            <div class="control-group">
+                <label>フォント</label>
+                <select id="fontFamily">
+                    <option value="Yu Gothic UI">Yu Gothic UI</option>
+                    <option value="Arial">Arial</option>
+                    <option value="Meiryo">Meiryo</option>
+                    <option value="MS Gothic">MS Gothic</option>
+                    <option value="Hiragino Sans">Hiragino Sans</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label>フォントサイズ (pt)</label>
+                <input type="number" id="fontSize" value="72" min="1" max="500">
+            </div>
+
+            <div class="control-group">
+                <label>横幅スケール (%)</label>
+                <input type="range" id="scaleX" value="100" min="10" max="200" step="1">
+                <div class="value-display" id="scaleXValue">100%</div>
+            </div>
+
+            <h2>位置とアライメント</h2>
+            <div class="control-group">
+                <label>水平位置</label>
+                <input type="number" id="posX" value="960" step="1">
+            </div>
+
+            <div class="control-group">
+                <label>垂直位置</label>
+                <input type="number" id="posY" value="540" step="1">
+            </div>
+
+            <div class="control-group">
+                <label>テキストアライメント</label>
+                <select id="textAlign">
+                    <option value="left">左揃え (left)</option>
+                    <option value="center" selected>中央揃え (center)</option>
+                    <option value="right">右揃え (right)</option>
+                </select>
+            </div>
+
+            <h2>塗りスタイル</h2>
+            <div class="control-group">
+                <label>塗りタイプ</label>
+                <select id="fillType">
+                    <option value="solid" selected>単色 (Solid)</option>
+                    <option value="gradient-linear">線形グラデーション (Linear)</option>
+                    <option value="gradient-radial">円形グラデーション (Radial)</option>
+                    <option value="sheen">光沢 (Sheen)</option>
+                </select>
+            </div>
+
+            <div id="solidControls">
+                <div class="control-group">
+                    <label>塗り色</label>
+                    <input type="color" id="fillColor" value="#ffffff">
+                </div>
+            </div>
+
+            <div id="gradientControls" style="display: none;">
+                <div class="gradient-stops">
+                    <div class="gradient-stop">
+                        <label>開始</label>
+                        <input type="color" id="gradientStart" value="#ff0000">
+                        <span>0%</span>
+                    </div>
+                    <div class="gradient-stop">
+                        <label>中間</label>
+                        <input type="color" id="gradientMiddle" value="#ffff00">
+                        <span>50%</span>
+                    </div>
+                    <div class="gradient-stop">
+                        <label>終端</label>
+                        <input type="color" id="gradientEnd" value="#0000ff">
+                        <span>100%</span>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <label>グラデーション角度 (度)</label>
+                    <input type="range" id="gradientAngle" value="0" min="0" max="360" step="1">
+                    <div class="value-display" id="gradientAngleValue">0°</div>
+                </div>
+            </div>
+
+            <div id="sheenControls" style="display: none;">
+                <div class="control-group">
+                    <label>ベース色</label>
+                    <input type="color" id="sheenBase" value="#000000">
+                </div>
+                <div class="control-group">
+                    <label>ハイライト色</label>
+                    <input type="color" id="sheenHighlight" value="#ffffff">
+                </div>
+                <div class="control-group">
+                    <label>光沢サイズ (0-100)</label>
+                    <input type="range" id="glintSize" value="10" min="0" max="100" step="1">
+                    <div class="value-display" id="glintSizeValue">10</div>
+                </div>
+                <div class="control-group">
+                    <label>光沢角度 (度)</label>
+                    <input type="range" id="glintAngle" value="0" min="0" max="360" step="1">
+                    <div class="value-display" id="glintAngleValue">0°</div>
+                </div>
+            </div>
+
+            <button onclick="updatePreview()">プレビュー更新</button>
+            <button onclick="exportPRTL()">PRTL書き出し</button>
+            <button class="btn-secondary" onclick="testPRTL()">PRTL構造テスト</button>
+        </div>
+
+        <!-- 右パネル: プレビュー -->
+        <div class="panel">
+            <h1>プレビュー</h1>
+            <div class="canvas-wrapper">
+                <canvas id="canvas" width="1920" height="1080"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // グローバル変数
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        // UIイベントリスナー
+        document.getElementById('fillType').addEventListener('change', function() {
+            const fillType = this.value;
+            document.getElementById('solidControls').style.display = fillType === 'solid' ? 'block' : 'none';
+            document.getElementById('gradientControls').style.display = fillType.startsWith('gradient') ? 'block' : 'none';
+            document.getElementById('sheenControls').style.display = fillType === 'sheen' ? 'block' : 'none';
+        });
+
+        document.getElementById('scaleX').addEventListener('input', function() {
+            document.getElementById('scaleXValue').textContent = this.value + '%';
+        });
+
+        document.getElementById('gradientAngle').addEventListener('input', function() {
+            document.getElementById('gradientAngleValue').textContent = this.value + '°';
+        });
+
+        document.getElementById('glintSize').addEventListener('input', function() {
+            document.getElementById('glintSizeValue').textContent = this.value;
+        });
+
+        document.getElementById('glintAngle').addEventListener('input', function() {
+            document.getElementById('glintAngleValue').textContent = this.value + '°';
+        });
+
+        document.getElementById('canvasWidth').addEventListener('change', function() {
+            canvas.width = parseInt(this.value);
+            updatePreview();
+        });
+
+        document.getElementById('canvasHeight').addEventListener('change', function() {
+            canvas.height = parseInt(this.value);
+            updatePreview();
+        });
+
+        /**
+         * PRTLGeneratorV2 - 完全新規実装版
+         * PRTL仕様書CGPT03.txtに完全準拠した実装
+         */
+        class PRTLGeneratorV2 {
+            constructor() {
+                this.nextStyleID = 4096;
+                this.nextShaderID = 4096;
+                this.nextTextDescID = 4096;
+            }
+
+            /**
+             * テキストオブジェクトからPRTLを生成
+             */
+            generatePRTL(config) {
+                const width = config.width || 1920;
+                const height = config.height || 1080;
+
+                // 各セクションを生成
+                const textDescriptions = this._buildTextDescriptions(config);
+                const shaders = this._buildShaders(config);
+                const styles = this._buildStyles(config);
+                const layers = this._buildLayers(config);
+
+                // 完全なPRTL XMLを構築
+                return this._buildPRTLDocument(width, height, textDescriptions, shaders, styles, layers);
+            }
+
+            /**
+             * PRTL XMLドキュメントの構築
+             */
+            _buildPRTLDocument(width, height, textDescriptions, shaders, styles, layers) {
+                return `<?xml version="1.0" encoding="UTF-16" ?>` +
+                    `<Adobe_Root>` +
+                        `<Adobe_Title>` +
+                            `<Version>20080702</Version>` +
+                            `<Motion_Settings>` +
+                                `<Play_Forward>true</Play_Forward>` +
+                                `<Start_on_Screen>false</Start_on_Screen>` +
+                                `<Pre_Roll>0</Pre_Roll>` +
+                                `<Ease_In>0</Ease_In>` +
+                                `<End_off_Screen>false</End_off_Screen>` +
+                                `<Post_Roll>0</Post_Roll>` +
+                                `<Ease_Out>0</Ease_Out>` +
+                            `</Motion_Settings>` +
+                        `</Adobe_Title>` +
+                        `<InscriberLayouts Version="1.0">` +
+                            `<Layout>` +
+                                this._buildLayoutHeader(width, height) +
+                                textDescriptions +
+                                styles +
+                                shaders +
+                                this._buildTextures() +
+                                this._buildLogos() +
+                                layers +
+                                this._buildVLS() +
+                            `</Layout>` +
+                        `</InscriberLayouts>` +
+                    `</Adobe_Root>`;
+            }
+
+            /**
+             * Layoutヘッダー部分
+             */
+            _buildLayoutHeader(width, height) {
+                return `<LayoutEffectInfo Version="2">` +
+                        `<EffectType>0</EffectType>` +
+                        `<Indic>false</Indic>` +
+                        `<Ligatures>false</Ligatures>` +
+                        `<HindiDigits>false</HindiDigits>` +
+                    `</LayoutEffectInfo>` +
+                    `<LayoutDimension Version="2">` +
+                        `<pXPIXELS>${width}</pXPIXELS>` +
+                        `<pYLINES>${height}</pYLINES>` +
+                        `<pSCREENAR>1</pSCREENAR>` +
+                        `<growthDirection>growRightDown</growthDirection>` +
+                    `</LayoutDimension>` +
+                    `<LayoutAttributes>` +
+                        `<SafeTitleArea>` +
+                            `<left>0.1</left><top>0.1</top><right>0.9</right><bottom>0.9</bottom>` +
+                        `</SafeTitleArea>` +
+                        `<SafeActionArea>` +
+                            `<left>0.05</left><top>0.05</top><right>0.95</right><bottom>0.95</bottom>` +
+                        `</SafeActionArea>` +
+                    `</LayoutAttributes>` +
+                    `<Background Version="4">` +
+                        `<ShaderReference>4098</ShaderReference>` +
+                        `<On>false</On>` +
+                        `<paintingRange>normalLayout</paintingRange>` +
+                    `</Background>` +
+                    `<DefaultStyle><Reference>${this.nextStyleID}</Reference></DefaultStyle>` +
+                    `<DefaultTextDescription><Reference>${this.nextTextDescID}</Reference></DefaultTextDescription>` +
+                    `<GraphicObjectDefaults>` +
+                        `<endCapType>square</endCapType>` +
+                        `<joinTypeClosed>round</joinTypeClosed>` +
+                        `<joinTypeOpen>round</joinTypeOpen>` +
+                        `<lineWidth>5</lineWidth>` +
+                        `<miterLimit>5</miterLimit>` +
+                        `<windBeziers>false</windBeziers>` +
+                        `<roundCornerFillets>37.5 37.5 37.5 37.5 37.5 37.5 37.5 37.5 </roundCornerFillets>` +
+                        `<clippedCornerFillets>37.5 37.5 37.5 37.5 37.5 37.5 37.5 37.5 </clippedCornerFillets>` +
+                    `</GraphicObjectDefaults>` +
+                    this._buildTextChainDefaults();
+            }
+
+            /**
+             * TextChainDefaults
+             */
+            _buildTextChainDefaults() {
+                const defaults = `<leading>0</leading>` +
+                    `<boxCanGrow>false</boxCanGrow>` +
+                    `<wordWrap>true</wordWrap>` +
+                    `<lockedLinesX>false</lockedLinesX>` +
+                    `<lockedLinesY>false</lockedLinesY>` +
+                    `<Alignment>left</Alignment>` +
+                    `<tabModeStyle>Word</tabModeStyle>` +
+                    `<implicitTabSpacing>100</implicitTabSpacing>` +
+                    `<implicitTabType>left</implicitTabType>` +
+                    `<rtl>false</rtl>` +
+                    `<tabs></tabs>`;
+
+                return `<TextChainDefaults>` +
+                    `<normal>${defaults}</normal>` +
+                    `<boxNormal>${defaults.replace('<wordWrap>true</wordWrap>', '<wordWrap>true</wordWrap>').replace('<lockedLinesX>false</lockedLinesX>', '<lockedLinesX>true</lockedLinesX>').replace('<lockedLinesY>false</lockedLinesY>', '<lockedLinesY>true</lockedLinesY>')}</boxNormal>` +
+                    `<blockNormal>${defaults.replace('<wordWrap>true</wordWrap>', '<wordWrap>false</wordWrap>').replace('<lockedLinesX>false</lockedLinesX>', '<lockedLinesX>true</lockedLinesX>').replace('<lockedLinesY>false</lockedLinesY>', '<lockedLinesY>true</lockedLinesY>')}</blockNormal>` +
+                    `<spline>${defaults}</spline>` +
+                `</TextChainDefaults>`;
+            }
+
+            /**
+             * TextDescriptions生成
+             */
+            _buildTextDescriptions(config) {
+                const ref = this.nextTextDescID;
+                const fontFamily = config.fontFamily || 'Yu Gothic UI';
+                const fontSize = config.fontSize || 72;
+                const scaleX = config.scaleX || 100;
+
+                return `<TextDescriptions Version="4">` +
+                    `<TextDescription Reference="${ref}">` +
+                        `<TypeSpec>` +
+                            `<size>${fontSize * 8}</size>` +
+                            `<txHeight>${fontSize}</txHeight>` +
+                            `<txKern>0</txKern>` +
+                            `<baselineShift>0</baselineShift>` +
+                            `<leading>0</leading>` +
+                            `<txSCaps>${fontSize}</txSCaps>` +
+                            `<txSCapsOn>false</txSCapsOn>` +
+                            `<txSlant>0</txSlant>` +
+                            `<txUnderline>false</txUnderline>` +
+                            `<txWidth>${scaleX}</txWidth>` +
+                            `<linked>false</linked>` +
+                            `<fiBold>0</fiBold>` +
+                            `<fiItalic>0</fiItalic>` +
+                            `<fifullName>${this._escapeXML(fontFamily)}</fifullName>` +
+                            `<fifontFamilyName>${this._escapeXML(fontFamily)}</fifontFamilyName>` +
+                            `<fifontStyle>Regular</fifontStyle>` +
+                            `<fifontType>5</fifontType>` +
+                            `<ficategory>1</ficategory>` +
+                        `</TypeSpec>` +
+                    `</TextDescription>` +
+                `</TextDescriptions>`;
+            }
+
+            /**
+             * Styles生成
+             */
+            _buildStyles(config) {
+                const styleID = this.nextStyleID;
+                const textDescRef = this.nextTextDescID;
+
+                // FragmentList: 仕様書に準拠した構成
+                // 1. 塗り本体 (annotation=65538, painterMix=15)
+                const fragmentFill = `<Fragment>` +
+                    `<size>0</size>` +
+                    `<offset>0</offset>` +
+                    `<angle>0</angle>` +
+                    `<ghost>false</ghost>` +
+                    `<isExtendedShadowFragment>false</isExtendedShadowFragment>` +
+                    `<eFragmentType>0</eFragmentType>` +
+                    `<fragmentOff>false</fragmentOff>` +
+                    `<placeHolder>false</placeHolder>` +
+                    `<annotation>65538</annotation>` +
+                    `<placeHolderShaderIndex>4294967295</placeHolderShaderIndex>` +
+                    `<painterMix>15 15 15 15 15 15 15 15 15 15 15 15 15 15 15 15 </painterMix>` +
+                `</Fragment>`;
+
+                // ShaderList: 仕様書に準拠した割り当て
+                // Painter 15: 塗りShader
+                // Painter 0-14, -1: 未使用はshaderRef=0
+                let shaderList = `<ShaderRef PainterNumber="15"><shaderRef>${this.nextShaderID}</shaderRef></ShaderRef>`;
+
+                // 未使用のPainterも明示的に定義
+                for (let i = 0; i <= 14; i++) {
+                    shaderList += `<ShaderRef PainterNumber="${i}"><shaderRef>0</shaderRef></ShaderRef>`;
+                }
+                shaderList += `<ShaderRef PainterNumber="-1"><shaderRef>0</shaderRef></ShaderRef>`;
+
+                return `<Styles>` +
+                    `<Style ID="${styleID}">` +
+                        `<StyleBase Version="7">` +
+                            `<type>50000</type>` +
+                            `<textDescRef>${textDescRef}</textDescRef>` +
+                            `<shadow>false</shadow>` +
+                            `<bevel>false</bevel>` +
+                            `<outline>false</outline>` +
+                        `</StyleBase>` +
+                        `<FragmentList>` +
+                            fragmentFill +
+                        `</FragmentList>` +
+                        `<ShaderList>` +
+                            shaderList +
+                        `</ShaderList>` +
+                    `</Style>` +
+                `</Styles>`;
+            }
+
+            /**
+             * Shaders生成
+             */
+            _buildShaders(config) {
+                const shaderID = this.nextShaderID;
+                const fillType = config.fillType || 'solid';
+
+                if (fillType === 'solid') {
+                    return this._buildSolidShader(shaderID, config);
+                } else if (fillType === 'gradient-linear' || fillType === 'gradient-radial') {
+                    return this._buildGradientShader(shaderID, config);
+                } else if (fillType === 'sheen') {
+                    return this._buildSheenShader(shaderID, config);
+                }
+
+                return this._buildSolidShader(shaderID, config);
+            }
+
+            /**
+             * 単色Shader（仕様書 5.2）
+             */
+            _buildSolidShader(shaderID, config) {
+                const color = this._parseColor(config.fillColor || '#ffffff');
+
+                // ColorSpec 0-4 すべて同じ色（仕様書通り）
+                let colorSpecs = '';
+                for (let i = 0; i <= 4; i++) {
+                    colorSpecs += `<ColorSpec index="${i}">` +
+                        `<red>${color.r}</red>` +
+                        `<green>${color.g}</green>` +
+                        `<blue>${color.b}</blue>` +
+                        `<xpar>0</xpar>` +
+                    `</ColorSpec>`;
+                }
+
+                return `<Shaders>` +
+                    `<Shader Version="4">` +
+                        `<cReference>${shaderID}</cReference>` +
+                        `<textureRef>0</textureRef>` +
+                        `<colorOption>4</colorOption>` +
+                        `<shaderOn>true</shaderOn>` +
+                        `<glintSize>10</glintSize>` +
+                        `<glintOffset>0</glintOffset>` +
+                        `<rampPosTop>75</rampPosTop>` +
+                        `<rampPosBottom>25</rampPosBottom>` +
+                        `<rampAngle>0</rampAngle>` +
+                        `<bevelBalance>0</bevelBalance>` +
+                        `<rampCycle>0</rampCycle>` +
+                        `<classicStyle>0</classicStyle>` +
+                        `<rampType>0</rampType>` +
+                        colorSpecs +
+                        `<glintAngle>0</glintAngle>` +
+                        `<bevelSize>0</bevelSize>` +
+                        `<bevelDirection>0</bevelDirection>` +
+                        `<bevelPipe>false</bevelPipe>` +
+                        `<bevelAngle>0</bevelAngle>` +
+                        `<bevelShape>1</bevelShape>` +
+                        `<bevelShining>0</bevelShining>` +
+                        `<bevelLight>false</bevelLight>` +
+                        `<bevelMerge>true</bevelMerge>` +
+                        `<sheenOn>false</sheenOn>` +
+                    `</Shader>` +
+                `</Shaders>`;
+            }
+
+            /**
+             * グラデーションShader（仕様書 5.3）
+             */
+            _buildGradientShader(shaderID, config) {
+                const startColor = this._parseColor(config.gradientStart || '#ff0000');
+                const middleColor = this._parseColor(config.gradientMiddle || '#ffff00');
+                const endColor = this._parseColor(config.gradientEnd || '#0000ff');
+                const angle = config.gradientAngle || 0;
+                const isRadial = config.fillType === 'gradient-radial';
+
+                // 線形 vs 円形の違い（仕様書通り）
+                const rampPosTop = isRadial ? 85.8696 : 75;
+                const rampPosBottom = isRadial ? 44.5652 : 25;
+
+                // ColorSpec: index0=開始, index2=中間, index4=終端, index1,3=黒
+                const colorSpecs =
+                    `<ColorSpec index="0"><red>${startColor.r}</red><green>${startColor.g}</green><blue>${startColor.b}</blue><xpar>0</xpar></ColorSpec>` +
+                    `<ColorSpec index="1"><red>0</red><green>0</green><blue>0</blue><xpar>0</xpar></ColorSpec>` +
+                    `<ColorSpec index="2"><red>${middleColor.r}</red><green>${middleColor.g}</green><blue>${middleColor.b}</blue><xpar>0</xpar></ColorSpec>` +
+                    `<ColorSpec index="3"><red>0</red><green>0</green><blue>0</blue><xpar>0</xpar></ColorSpec>` +
+                    `<ColorSpec index="4"><red>${endColor.r}</red><green>${endColor.g}</green><blue>${endColor.b}</blue><xpar>0</xpar></ColorSpec>`;
+
+                return `<Shaders>` +
+                    `<Shader Version="4">` +
+                        `<cReference>${shaderID}</cReference>` +
+                        `<textureRef>0</textureRef>` +
+                        `<colorOption>0</colorOption>` +
+                        `<shaderOn>true</shaderOn>` +
+                        `<glintSize>10</glintSize>` +
+                        `<glintOffset>0</glintOffset>` +
+                        `<rampPosTop>${rampPosTop}</rampPosTop>` +
+                        `<rampPosBottom>${rampPosBottom}</rampPosBottom>` +
+                        `<rampAngle>${angle}</rampAngle>` +
+                        `<bevelBalance>0</bevelBalance>` +
+                        `<rampCycle>0</rampCycle>` +
+                        `<classicStyle>0</classicStyle>` +
+                        `<rampType>-1</rampType>` +
+                        colorSpecs +
+                        `<glintAngle>0</glintAngle>` +
+                        `<bevelSize>0</bevelSize>` +
+                        `<bevelDirection>0</bevelDirection>` +
+                        `<bevelPipe>false</bevelPipe>` +
+                        `<bevelAngle>0</bevelAngle>` +
+                        `<bevelShape>1</bevelShape>` +
+                        `<bevelShining>0</bevelShining>` +
+                        `<bevelLight>false</bevelLight>` +
+                        `<bevelMerge>true</bevelMerge>` +
+                        `<sheenOn>false</sheenOn>` +
+                    `</Shader>` +
+                `</Shaders>`;
+            }
+
+            /**
+             * 光沢Shader（仕様書 5.4）
+             */
+            _buildSheenShader(shaderID, config) {
+                const baseColor = this._parseColor(config.sheenBase || '#000000');
+                const highlightColor = this._parseColor(config.sheenHighlight || '#ffffff');
+                const glintSize = config.glintSize || 10;
+                const glintAngle = config.glintAngle || 0;
+
+                // ColorSpec: index0-3=ベース色, index4=ハイライト色
+                const colorSpecs =
+                    `<ColorSpec index="0"><red>${baseColor.r}</red><green>${baseColor.g}</green><blue>${baseColor.b}</blue><xpar>0</xpar></ColorSpec>` +
+                    `<ColorSpec index="1"><red>${baseColor.r}</red><green>${baseColor.g}</green><blue>${baseColor.b}</blue><xpar>0</xpar></ColorSpec>` +
+                    `<ColorSpec index="2"><red>${baseColor.r}</red><green>${baseColor.g}</green><blue>${baseColor.b}</blue><xpar>0</xpar></ColorSpec>` +
+                    `<ColorSpec index="3"><red>${baseColor.r}</red><green>${baseColor.g}</green><blue>${baseColor.b}</blue><xpar>0</xpar></ColorSpec>` +
+                    `<ColorSpec index="4"><red>${highlightColor.r}</red><green>${highlightColor.g}</green><blue>${highlightColor.b}</blue><xpar>0</xpar></ColorSpec>`;
+
+                return `<Shaders>` +
+                    `<Shader Version="4">` +
+                        `<cReference>${shaderID}</cReference>` +
+                        `<textureRef>0</textureRef>` +
+                        `<colorOption>4</colorOption>` +
+                        `<shaderOn>true</shaderOn>` +
+                        `<glintSize>${glintSize}</glintSize>` +
+                        `<glintOffset>0</glintOffset>` +
+                        `<rampPosTop>75</rampPosTop>` +
+                        `<rampPosBottom>25</rampPosBottom>` +
+                        `<rampAngle>0</rampAngle>` +
+                        `<bevelBalance>0</bevelBalance>` +
+                        `<rampCycle>0</rampCycle>` +
+                        `<classicStyle>0</classicStyle>` +
+                        `<rampType>0</rampType>` +
+                        colorSpecs +
+                        `<glintAngle>${glintAngle}</glintAngle>` +
+                        `<bevelSize>0</bevelSize>` +
+                        `<bevelDirection>0</bevelDirection>` +
+                        `<bevelPipe>false</bevelPipe>` +
+                        `<bevelAngle>0</bevelAngle>` +
+                        `<bevelShape>1</bevelShape>` +
+                        `<bevelShining>0</bevelShining>` +
+                        `<bevelLight>false</bevelLight>` +
+                        `<bevelMerge>true</bevelMerge>` +
+                        `<sheenOn>true</sheenOn>` +
+                    `</Shader>` +
+                `</Shaders>`;
+            }
+
+            /**
+             * Layers生成（TextPage + TextChain + TextLine）
+             */
+            _buildLayers(config) {
+                const text = config.text || 'サンプル';
+                const posX = config.posX || 960;
+                const posY = config.posY || 540;
+                const textAlign = config.textAlign || 'center';
+                const styleRef = this.nextStyleID;
+                const textRef = this.nextTextDescID;
+
+                // txBaseの計算（フォントサイズに基づく）
+                const fontSize = config.fontSize || 72;
+                const txBase = fontSize * 1.2; // ベースライン位置
+
+                // Alignment設定
+                const alignment = textAlign;
+
+                return `<Layers>` +
+                    `<Layer>` +
+                        `<DrawPage></DrawPage>` +
+                        `<TextPage>` +
+                            `<TextChain>` +
+                                `<ChainProperty>` +
+                                    `<Position><x>${posX}</x><y>${posY}</y></Position>` +
+                                    `<Size><x>1000</x><y>200</y></Size>` +
+                                    `<wordWrap>false</wordWrap>` +
+                                    `<Alignment>${alignment}</Alignment>` +
+                                `</ChainProperty>` +
+                                `<ChainTabs></ChainTabs>` +
+                                `<TextLine Version="2" objectID="1" persistentID="1">` +
+                                    `<BaseProperties Version="5">` +
+                                        `<txBase>${txBase}</txBase>` +
+                                        `<XPos>${posX}</XPos>` +
+                                        `<angle>0</angle>` +
+                                        `<verticalText>false</verticalText>` +
+                                        `<objectLeading>0</objectLeading>` +
+                                    `</BaseProperties>` +
+                                    `<EnclosingObjectType>block</EnclosingObjectType>` +
+                                    `<Alignment>${alignment}</Alignment>` +
+                                    `<RTL>false</RTL>` +
+                                    `<TRString>${this._escapeXML(text)}</TRString>` +
+                                    `<RunLengthEncodedCharacterAttributes>` +
+                                        `<CharacterAttributes ` +
+                                            `RunCount="${text.length}" ` +
+                                            `StyleRef="${styleRef}" ` +
+                                            `TextRef="${textRef}" ` +
+                                            `TXKerning="0" ` +
+                                            `TXPostKerning="0" ` +
+                                            `BaselineShifting="0" />` +
+                                    `</RunLengthEncodedCharacterAttributes>` +
+                                    `<tagName></tagName>` +
+                                `</TextLine>` +
+                            `</TextChain>` +
+                        `</TextPage>` +
+                        `<MergeGroups></MergeGroups>` +
+                    `</Layer>` +
+                `</Layers>`;
+            }
+
+            /**
+             * Textures（空）
+             */
+            _buildTextures() {
+                return `<Textures></Textures>`;
+            }
+
+            /**
+             * Logos（空）
+             */
+            _buildLogos() {
+                return `<Logos></Logos>`;
+            }
+
+            /**
+             * VLS（空）
+             */
+            _buildVLS() {
+                return `<VLS>` +
+                    `<FileReference Version="1">` +
+                        `<fileString></fileString>` +
+                        `<seClass>2</seClass>` +
+                        `<seCode>1000</seCode>` +
+                    `</FileReference>` +
+                `</VLS>`;
+            }
+
+            /**
+             * ユーティリティ: カラーパース
+             */
+            _parseColor(hex) {
+                const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+                return result ? {
+                    r: parseInt(result[1], 16),
+                    g: parseInt(result[2], 16),
+                    b: parseInt(result[3], 16)
+                } : { r: 255, g: 255, b: 255 };
+            }
+
+            /**
+             * ユーティリティ: XMLエスケープ
+             */
+            _escapeXML(str) {
+                if (!str) return '';
+                return String(str)
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&apos;');
+            }
+        }
+
+        /**
+         * プレビュー更新
+         */
+        function updatePreview() {
+            const width = parseInt(document.getElementById('canvasWidth').value);
+            const height = parseInt(document.getElementById('canvasHeight').value);
+            const text = document.getElementById('textContent').value;
+            const fontFamily = document.getElementById('fontFamily').value;
+            const fontSize = parseInt(document.getElementById('fontSize').value);
+            const scaleX = parseInt(document.getElementById('scaleX').value);
+            const posX = parseInt(document.getElementById('posX').value);
+            const posY = parseInt(document.getElementById('posY').value);
+            const textAlign = document.getElementById('textAlign').value;
+            const fillType = document.getElementById('fillType').value;
+
+            // キャンバスクリア
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // テキスト描画準備
+            ctx.font = `${fontSize}px "${fontFamily}"`;
+            ctx.textBaseline = 'middle';
+
+            // アライメント設定
+            if (textAlign === 'left') {
+                ctx.textAlign = 'left';
+            } else if (textAlign === 'center') {
+                ctx.textAlign = 'center';
+            } else if (textAlign === 'right') {
+                ctx.textAlign = 'right';
+            }
+
+            // 横幅スケール適用
+            ctx.save();
+            ctx.scale(scaleX / 100, 1);
+            const adjustedX = posX * (100 / scaleX);
+
+            // 塗りスタイル適用
+            if (fillType === 'solid') {
+                ctx.fillStyle = document.getElementById('fillColor').value;
+            } else if (fillType === 'gradient-linear') {
+                const angle = parseInt(document.getElementById('gradientAngle').value);
+                const rad = (angle - 90) * Math.PI / 180;
+                const distance = Math.max(width, height);
+                const x1 = adjustedX - Math.cos(rad) * distance / 2;
+                const y1 = posY - Math.sin(rad) * distance / 2;
+                const x2 = adjustedX + Math.cos(rad) * distance / 2;
+                const y2 = posY + Math.sin(rad) * distance / 2;
+
+                const gradient = ctx.createLinearGradient(x1, y1, x2, y2);
+                gradient.addColorStop(0, document.getElementById('gradientStart').value);
+                gradient.addColorStop(0.5, document.getElementById('gradientMiddle').value);
+                gradient.addColorStop(1, document.getElementById('gradientEnd').value);
+                ctx.fillStyle = gradient;
+            } else if (fillType === 'gradient-radial') {
+                const gradient = ctx.createRadialGradient(adjustedX, posY, 0, adjustedX, posY, fontSize * 2);
+                gradient.addColorStop(0, document.getElementById('gradientStart').value);
+                gradient.addColorStop(0.5, document.getElementById('gradientMiddle').value);
+                gradient.addColorStop(1, document.getElementById('gradientEnd').value);
+                ctx.fillStyle = gradient;
+            } else if (fillType === 'sheen') {
+                // 簡易的な光沢表現（実際のPremiereとは異なる）
+                ctx.fillStyle = document.getElementById('sheenBase').value;
+            }
+
+            // テキスト描画
+            ctx.fillText(text, adjustedX, posY);
+            ctx.restore();
+        }
+
+        /**
+         * PRTL書き出し
+         */
+        function exportPRTL() {
+            const config = {
+                width: parseInt(document.getElementById('canvasWidth').value),
+                height: parseInt(document.getElementById('canvasHeight').value),
+                text: document.getElementById('textContent').value,
+                fontFamily: document.getElementById('fontFamily').value,
+                fontSize: parseInt(document.getElementById('fontSize').value),
+                scaleX: parseInt(document.getElementById('scaleX').value),
+                posX: parseInt(document.getElementById('posX').value),
+                posY: parseInt(document.getElementById('posY').value),
+                textAlign: document.getElementById('textAlign').value,
+                fillType: document.getElementById('fillType').value,
+                fillColor: document.getElementById('fillColor').value,
+                gradientStart: document.getElementById('gradientStart').value,
+                gradientMiddle: document.getElementById('gradientMiddle').value,
+                gradientEnd: document.getElementById('gradientEnd').value,
+                gradientAngle: parseInt(document.getElementById('gradientAngle').value),
+                sheenBase: document.getElementById('sheenBase').value,
+                sheenHighlight: document.getElementById('sheenHighlight').value,
+                glintSize: parseInt(document.getElementById('glintSize').value),
+                glintAngle: parseInt(document.getElementById('glintAngle').value)
+            };
+
+            const generator = new PRTLGeneratorV2();
+            const prtlXML = generator.generatePRTL(config);
+
+            // UTF-8エンコード（BOMなし）
+            const encoder = new TextEncoder();
+            const utf8Array = encoder.encode(prtlXML);
+
+            const blob = new Blob([utf8Array], { type: 'application/octet-stream' });
+            const link = document.createElement('a');
+            link.download = `NLT_${Date.now()}.prtl`;
+            link.href = URL.createObjectURL(blob);
+            link.click();
+
+            console.log('✅ PRTL書き出し完了');
+        }
+
+        /**
+         * PRTL構造テスト（コンソールに出力）
+         */
+        function testPRTL() {
+            const config = {
+                width: 1920,
+                height: 1080,
+                text: 'テスト',
+                fontFamily: 'Yu Gothic UI',
+                fontSize: 72,
+                scaleX: 100,
+                posX: 960,
+                posY: 540,
+                textAlign: 'center',
+                fillType: 'solid',
+                fillColor: '#ffffff'
+            };
+
+            const generator = new PRTLGeneratorV2();
+            const prtlXML = generator.generatePRTL(config);
+
+            console.log('=== PRTL構造テスト ===');
+            console.log(prtlXML);
+            console.log('======================');
+
+            alert('PRTL構造をコンソールに出力しました（F12で確認）');
+        }
+
+        // 初期プレビュー
+        updatePreview();
+    </script>
+</body>
+</html>
