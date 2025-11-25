@@ -1052,16 +1052,16 @@
                     // 1. アウトライン2（外側、後ろに描画）
                     if (enabledStrokes.length > 1 && enabledStrokes[1]) {
                         const stroke1 = enabledStrokes[1];
-                        // レガシータイトルとの互換性を向上: 係数を2.0に変更
-                        const strokeSize = Math.round((stroke1.width || 4) * 2.0);
+                        // レガシータイトルとの互換性を向上: 係数を小さくして細く
+                        const strokeSize = Math.round((stroke1.width || 4) * 0.5);
                         fragments += `<Fragment><size>${strokeSize}</size><offset>0</offset><angle>0</angle><ghost>false</ghost><isExtendedShadowFragment>false</isExtendedShadowFragment><eFragmentType>2</eFragmentType><fragmentOff>false</fragmentOff><placeHolder>false</placeHolder><annotation>3</annotation><placeHolderShaderIndex>4294967295</placeHolderShaderIndex><painterMix>13 13 13 13 13 13 13 13 13 13 13 13 13 13 13 13 </painterMix></Fragment>`;
                     }
 
                     // 2. アウトライン1（内側、前に描画）
                     if (enabledStrokes.length > 0 && enabledStrokes[0]) {
                         const stroke0 = enabledStrokes[0];
-                        // レガシータイトルとの互換性を向上: 係数を2.0に変更
-                        const strokeSize = Math.round((stroke0.width || 4) * 2.0);
+                        // レガシータイトルとの互換性を向上: 係数を小さくして細く
+                        const strokeSize = Math.round((stroke0.width || 4) * 0.5);
                         fragments += `<Fragment><size>${strokeSize}</size><offset>0</offset><angle>0</angle><ghost>false</ghost><isExtendedShadowFragment>false</isExtendedShadowFragment><eFragmentType>2</eFragmentType><fragmentOff>false</fragmentOff><placeHolder>false</placeHolder><annotation>2</annotation><placeHolderShaderIndex>4294967295</placeHolderShaderIndex><painterMix>12 12 12 12 12 12 12 12 12 12 12 12 12 12 12 12 </painterMix></Fragment>`;
                     }
 
@@ -1083,16 +1083,16 @@
                     // 1. アウトライン2（外側、後ろに描画）
                     if (enabledStrokes.length > 1 && enabledStrokes[1]) {
                         const stroke1 = enabledStrokes[1];
-                        // レガシータイトルとの互換性を向上: 係数を2.0に変更
-                        const strokeSize = Math.round((stroke1.width || 4) * 2.0);
+                        // レガシータイトルとの互換性を向上: 係数を小さくして細く
+                        const strokeSize = Math.round((stroke1.width || 4) * 0.5);
                         fragments += `<Fragment><size>${strokeSize}</size><offset>0</offset><angle>0</angle><ghost>false</ghost><isExtendedShadowFragment>false</isExtendedShadowFragment><eFragmentType>2</eFragmentType><fragmentOff>false</fragmentOff><placeHolder>false</placeHolder><annotation>3</annotation><placeHolderShaderIndex>4294967295</placeHolderShaderIndex><painterMix>13 13 13 13 13 13 13 13 13 13 13 13 13 13 13 13 </painterMix></Fragment>`;
                     }
 
                     // 2. アウトライン1（内側、前に描画）
                     if (enabledStrokes.length > 0 && enabledStrokes[0]) {
                         const stroke0 = enabledStrokes[0];
-                        // レガシータイトルとの互換性を向上: 係数を2.0に変更
-                        const strokeSize = Math.round((stroke0.width || 4) * 2.0);
+                        // レガシータイトルとの互換性を向上: 係数を小さくして細く
+                        const strokeSize = Math.round((stroke0.width || 4) * 0.5);
                         fragments += `<Fragment><size>${strokeSize}</size><offset>0</offset><angle>0</angle><ghost>false</ghost><isExtendedShadowFragment>false</isExtendedShadowFragment><eFragmentType>2</eFragmentType><fragmentOff>false</fragmentOff><placeHolder>false</placeHolder><annotation>2</annotation><placeHolderShaderIndex>4294967295</placeHolderShaderIndex><painterMix>12 12 12 12 12 12 12 12 12 12 12 12 12 12 12 12 </painterMix></Fragment>`;
                     }
 
