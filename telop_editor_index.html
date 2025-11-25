@@ -1046,27 +1046,61 @@
 
                 // ベベル無し（パターンA）の場合
                 if (!bevelEnabled) {
-                    // 1. 塗り (annotation 65538, painterMix 15) - 塗りが有効な場合のみ追加
+                    // 有効なストロークを取得
+                    const enabledStrokes = strokes.filter(s => s.enabled);
+
+                    // 1. アウトライン2（外側、後ろに描画）
+                    if (enabledStrokes.length > 1 && enabledStrokes[1]) {
+                        const stroke1 = enabledStrokes[1];
+                        const strokeSize = Math.round((stroke1.width || 4) * 1.04);
+                        fragments += `<Fragment><size>${strokeSize}</size><offset>0</offset><angle>0</angle><ghost>false</ghost><isExtendedShadowFragment>false</isExtendedShadowFragment><eFragmentType>2</eFragmentType><fragmentOff>false</fragmentOff><placeHolder>false</placeHolder><annotation>3</annotation><placeHolderShaderIndex>4294967295</placeHolderShaderIndex><painterMix>13 13 13 13 13 13 13 13 13 13 13 13 13 13 13 13 </painterMix></Fragment>`;
+                    }
+
+                    // 2. アウトライン1（内側、前に描画）
+                    if (enabledStrokes.length > 0 && enabledStrokes[0]) {
+                        const stroke0 = enabledStrokes[0];
+                        const strokeSize = Math.round((stroke0.width || 4) * 1.04);
+                        fragments += `<Fragment><size>${strokeSize}</size><offset>0</offset><angle>0</angle><ghost>false</ghost><isExtendedShadowFragment>false</isExtendedShadowFragment><eFragmentType>2</eFragmentType><fragmentOff>false</fragmentOff><placeHolder>false</placeHolder><annotation>2</annotation><placeHolderShaderIndex>4294967295</placeHolderShaderIndex><painterMix>12 12 12 12 12 12 12 12 12 12 12 12 12 12 12 12 </painterMix></Fragment>`;
+                    }
+
+                    // 3. 塗り (annotation 65538, painterMix 15) - 塗りが有効な場合のみ追加
                     if (hasFill) {
                         fragments += `<Fragment><size>${fillSize}</size><offset>0</offset><angle>0</angle><ghost>false</ghost><isExtendedShadowFragment>false</isExtendedShadowFragment><eFragmentType>0</eFragmentType><fragmentOff>false</fragmentOff><placeHolder>false</placeHolder><annotation>65538</annotation><placeHolderShaderIndex>4294967295</placeHolderShaderIndex><painterMix>15 15 15 15 15 15 15 15 15 15 15 15 15 15 15 15 </painterMix></Fragment>`;
                     }
 
-                    // 2. 影 (annotation 65537, painterMix 0)
+                    // 4. 影 (annotation 65537, painterMix 0)
                     const shadowEnabled = firstChar.shadowEnabled || obj.shadowEnabled || false;
                     const shadowDistance = firstChar.shadowDistance || obj.shadowDistance || 10;
                     const shadowAngle = firstChar.shadowAngle || obj.shadowAngle || -45;
                     fragments += `<Fragment><size>0</size><offset>${shadowDistance}</offset><angle>${shadowAngle}</angle><ghost>false</ghost><isExtendedShadowFragment>true</isExtendedShadowFragment><eFragmentType>0</eFragmentType><fragmentOff>${!shadowEnabled}</fragmentOff><placeHolder>false</placeHolder><annotation>65537</annotation><placeHolderShaderIndex>4294967295</placeHolderShaderIndex><painterMix>0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 </painterMix></Fragment>`;
                 } else {
                     // ベベル有り（パターンB）の場合
-                    // 1. 塗り (annotation 65538, painterMix 15)
+                    // 有効なストロークを取得
+                    const enabledStrokes = strokes.filter(s => s.enabled);
+
+                    // 1. アウトライン2（外側、後ろに描画）
+                    if (enabledStrokes.length > 1 && enabledStrokes[1]) {
+                        const stroke1 = enabledStrokes[1];
+                        const strokeSize = Math.round((stroke1.width || 4) * 1.04);
+                        fragments += `<Fragment><size>${strokeSize}</size><offset>0</offset><angle>0</angle><ghost>false</ghost><isExtendedShadowFragment>false</isExtendedShadowFragment><eFragmentType>2</eFragmentType><fragmentOff>false</fragmentOff><placeHolder>false</placeHolder><annotation>3</annotation><placeHolderShaderIndex>4294967295</placeHolderShaderIndex><painterMix>13 13 13 13 13 13 13 13 13 13 13 13 13 13 13 13 </painterMix></Fragment>`;
+                    }
+
+                    // 2. アウトライン1（内側、前に描画）
+                    if (enabledStrokes.length > 0 && enabledStrokes[0]) {
+                        const stroke0 = enabledStrokes[0];
+                        const strokeSize = Math.round((stroke0.width || 4) * 1.04);
+                        fragments += `<Fragment><size>${strokeSize}</size><offset>0</offset><angle>0</angle><ghost>false</ghost><isExtendedShadowFragment>false</isExtendedShadowFragment><eFragmentType>2</eFragmentType><fragmentOff>false</fragmentOff><placeHolder>false</placeHolder><annotation>2</annotation><placeHolderShaderIndex>4294967295</placeHolderShaderIndex><painterMix>12 12 12 12 12 12 12 12 12 12 12 12 12 12 12 12 </painterMix></Fragment>`;
+                    }
+
+                    // 3. 塗り (annotation 65538, painterMix 15)
                     if (hasFill) {
                         fragments += `<Fragment><size>${fillSize}</size><offset>0</offset><angle>0</angle><ghost>false</ghost><isExtendedShadowFragment>false</isExtendedShadowFragment><eFragmentType>0</eFragmentType><fragmentOff>false</fragmentOff><placeHolder>false</placeHolder><annotation>65538</annotation><placeHolderShaderIndex>4294967295</placeHolderShaderIndex><painterMix>15 15 15 15 15 15 15 15 15 15 15 15 15 15 15 15 </painterMix></Fragment>`;
                     }
 
-                    // 2. ベベル (annotation 65540, eFragmentType 1, painterMix 0〜14)
+                    // 4. ベベル (annotation 65540, eFragmentType 1, painterMix 0〜14)
                     fragments += `<Fragment><size>${bevelSize}</size><offset>0</offset><angle>0</angle><ghost>false</ghost><isExtendedShadowFragment>false</isExtendedShadowFragment><eFragmentType>1</eFragmentType><fragmentOff>false</fragmentOff><placeHolder>false</placeHolder><annotation>65540</annotation><placeHolderShaderIndex>4294967295</placeHolderShaderIndex><painterMix>0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 14 </painterMix></Fragment>`;
 
-                    // 3. 影 (annotation 65537, painterMix 0)
+                    // 5. 影 (annotation 65537, painterMix 0)
                     const shadowEnabled = firstChar.shadowEnabled || obj.shadowEnabled || false;
                     const shadowDistance = firstChar.shadowDistance || obj.shadowDistance || 10;
                     const shadowAngle = firstChar.shadowAngle || obj.shadowAngle || -45;
@@ -9280,26 +9314,12 @@
                     throw new Error('XMLパースエラー: ' + parserError.textContent);
                 }
 
-                // <subtitle> タグを探す
-                const subtitleElements = xmlDoc.querySelectorAll('subtitle');
+                console.log('XMLドキュメントのルート要素:', xmlDoc.documentElement?.tagName);
 
-                if (subtitleElements.length === 0) {
-                    // 別の形式を試す（例：<text> タグ）
-                    const textElements = xmlDoc.querySelectorAll('text');
-                    textElements.forEach(el => {
-                        const startAttr = el.getAttribute('start') || el.getAttribute('in');
-                        const endAttr = el.getAttribute('end') || el.getAttribute('out');
-                        const text = el.textContent || el.getAttribute('value') || '';
-
-                        if (startAttr && endAttr) {
-                            subtitles.push({
-                                start: parseFloat(startAttr),
-                                end: parseFloat(endAttr),
-                                text: text.trim()
-                            });
-                        }
-                    });
-                } else {
+                // パターン1: <subtitle> タグ（汎用）
+                let subtitleElements = xmlDoc.querySelectorAll('subtitle');
+                if (subtitleElements.length > 0) {
+                    console.log(`パターン1: <subtitle>タグを${subtitleElements.length}個発見`);
                     subtitleElements.forEach(el => {
                         const startAttr = el.getAttribute('start') || el.getAttribute('in');
                         const endAttr = el.getAttribute('end') || el.getAttribute('out');
@@ -9315,10 +9335,188 @@
                     });
                 }
 
+                // パターン2: <text> タグ（汎用）
                 if (subtitles.length === 0) {
-                    throw new Error('XML内に字幕データが見つかりませんでした');
+                    const textElements = xmlDoc.querySelectorAll('text');
+                    if (textElements.length > 0) {
+                        console.log(`パターン2: <text>タグを${textElements.length}個発見`);
+                        textElements.forEach(el => {
+                            const startAttr = el.getAttribute('start') || el.getAttribute('in');
+                            const endAttr = el.getAttribute('end') || el.getAttribute('out');
+                            const text = el.textContent || el.getAttribute('value') || '';
+
+                            if (startAttr && endAttr) {
+                                subtitles.push({
+                                    start: parseFloat(startAttr),
+                                    end: parseFloat(endAttr),
+                                    text: text.trim()
+                                });
+                            }
+                        });
+                    }
                 }
 
+                // パターン3: Premiere Pro FCPXML形式の<clip>
+                if (subtitles.length === 0) {
+                    const clipElements = xmlDoc.querySelectorAll('clip');
+                    if (clipElements.length > 0) {
+                        console.log(`パターン3: <clip>タグを${clipElements.length}個発見`);
+                        clipElements.forEach(el => {
+                            const name = el.getAttribute('name');
+                            const start = el.getAttribute('start');
+                            const duration = el.getAttribute('duration');
+
+                            if (name && start && duration) {
+                                subtitles.push({
+                                    start: parseFloat(start.replace('s', '')),
+                                    end: parseFloat(start.replace('s', '')) + parseFloat(duration.replace('s', '')),
+                                    text: name.trim()
+                                });
+                            }
+                        });
+                    }
+                }
+
+                // パターン4: Premiere Pro Legacy XML形式の<clipitem>
+                if (subtitles.length === 0) {
+                    const clipItems = xmlDoc.querySelectorAll('clipitem');
+                    if (clipItems.length > 0) {
+                        console.log(`パターン4: <clipitem>タグを${clipItems.length}個発見`);
+                        clipItems.forEach(el => {
+                            const startEl = el.querySelector('start');
+                            const endEl = el.querySelector('end');
+                            const nameEl = el.querySelector('name');
+
+                            if (startEl && endEl && nameEl) {
+                                const startFrames = parseInt(startEl.textContent);
+                                const endFrames = parseInt(endEl.textContent);
+
+                                // フレームレート検出（timebaseタグから）
+                                let fps = 30; // デフォルト
+                                const timebaseEl = el.querySelector('rate > timebase');
+                                if (timebaseEl) {
+                                    fps = parseFloat(timebaseEl.textContent) || 30;
+                                }
+
+                                subtitles.push({
+                                    start: startFrames / fps,
+                                    end: endFrames / fps,
+                                    text: nameEl.textContent.trim()
+                                });
+                            }
+                        });
+                    }
+                }
+
+                // パターン5: After Effects XML形式の<marker>
+                if (subtitles.length === 0) {
+                    const markers = xmlDoc.querySelectorAll('marker');
+                    if (markers.length > 0) {
+                        console.log(`パターン5: <marker>タグを${markers.length}個発見`);
+                        markers.forEach(el => {
+                            const time = el.getAttribute('time');
+                            const duration = el.getAttribute('duration') || '1';
+                            const comment = el.getAttribute('comment') || el.textContent || '';
+
+                            if (time) {
+                                subtitles.push({
+                                    start: parseFloat(time),
+                                    end: parseFloat(time) + parseFloat(duration),
+                                    text: comment.trim()
+                                });
+                            }
+                        });
+                    }
+                }
+
+                // パターン6: 汎用的な時間ベースのタグ（name, time, durationなど）
+                if (subtitles.length === 0) {
+                    console.log('パターン6: 汎用的な時間ベース要素を検索中...');
+                    const allElements = xmlDoc.querySelectorAll('*');
+                    allElements.forEach(el => {
+                        // 時間情報を持つ要素を探す
+                        const hasTimeInfo = el.hasAttribute('time') ||
+                                           el.hasAttribute('start') ||
+                                           el.hasAttribute('in') ||
+                                           el.querySelector('start, time, in');
+
+                        if (hasTimeInfo && el.textContent && el.textContent.trim().length > 0) {
+                            let start = 0, end = 1;
+
+                            // start/time/in属性から開始時間を取得
+                            if (el.hasAttribute('time')) {
+                                start = parseFloat(el.getAttribute('time'));
+                            } else if (el.hasAttribute('start')) {
+                                start = parseFloat(el.getAttribute('start'));
+                            } else if (el.hasAttribute('in')) {
+                                start = parseFloat(el.getAttribute('in'));
+                            } else {
+                                const startEl = el.querySelector('start, time, in');
+                                if (startEl) {
+                                    start = parseFloat(startEl.textContent);
+                                }
+                            }
+
+                            // end/duration/out属性から終了時間を取得
+                            if (el.hasAttribute('duration')) {
+                                end = start + parseFloat(el.getAttribute('duration'));
+                            } else if (el.hasAttribute('end')) {
+                                end = parseFloat(el.getAttribute('end'));
+                            } else if (el.hasAttribute('out')) {
+                                end = parseFloat(el.getAttribute('out'));
+                            } else {
+                                const endEl = el.querySelector('end, out');
+                                const durationEl = el.querySelector('duration');
+                                if (endEl) {
+                                    end = parseFloat(endEl.textContent);
+                                } else if (durationEl) {
+                                    end = start + parseFloat(durationEl.textContent);
+                                } else {
+                                    end = start + 1; // デフォルト1秒
+                                }
+                            }
+
+                            // テキスト内容を取得（子要素を除外）
+                            let text = '';
+                            if (el.childNodes.length === 1 && el.childNodes[0].nodeType === Node.TEXT_NODE) {
+                                text = el.textContent.trim();
+                            } else {
+                                // name属性またはtextContent
+                                text = el.getAttribute('name') || el.getAttribute('comment') || '';
+                                if (!text) {
+                                    // テキストノードのみを連結
+                                    Array.from(el.childNodes).forEach(node => {
+                                        if (node.nodeType === Node.TEXT_NODE) {
+                                            text += node.textContent;
+                                        }
+                                    });
+                                    text = text.trim();
+                                }
+                            }
+
+                            if (text.length > 0 && !isNaN(start) && !isNaN(end)) {
+                                subtitles.push({
+                                    start: start,
+                                    end: end,
+                                    text: text
+                                });
+                            }
+                        }
+                    });
+
+                    if (subtitles.length > 0) {
+                        console.log(`パターン6: ${subtitles.length}個の字幕を検出`);
+                    }
+                }
+
+                if (subtitles.length === 0) {
+                    throw new Error('XML内に字幕データが見つかりませんでした。サポートされているフォーマットを確認してください。');
+                }
+
+                // 時系列でソート
+                subtitles.sort((a, b) => a.start - b.start);
+
+                console.log(`合計 ${subtitles.length} 個の字幕を読み込みました`);
                 return subtitles;
             }
         };
