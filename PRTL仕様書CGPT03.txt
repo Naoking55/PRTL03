@@ -1,0 +1,599 @@
+PRTLファイル仕様書（最新統合版：グラデーション・光沢・ベベル対応）
+================================================
+
+本仕様書は、Adobe Premiere Pro のレガシータイトル機能で使用されていた
+PRTL（.prtl）ファイル形式について、解析結果をもとに整理した技術資料です。
+
+特に、以下の表現に対応できるレベルまで仕様を掘り下げています。
+
+- 単色塗り
+- 線形グラデーション
+- 円形グラデーション
+- 黒地＋白い光沢（シーン／グリント）
+- ベベル（立体枠・立体文字）
+
+この仕様書を前提に、キャンバス側のデータ構造と PRTL 生成ロジックを設計すれば、
+Premiere のレガシータイトルとほぼ同じ見た目を再現できることを目標としています。
+
+
+1. 全体構造
+-----------
+
+PRTL ファイルは XML 形式で、概ね次のようなトップレベル構造を持ちます。
+
+    <?xml version="1.0" encoding="UTF-16"?>
+    <Adobe_Root>
+      <Adobe_Title>…</Adobe_Title>
+      <InscriberLayouts Version="1.0">…</InscriberLayouts>
+    </Adobe_Root>
+
+● <Adobe_Title>
+  - タイトル全体のバージョン、モーション設定（再生方向、プリロール、イーズイン／アウト等）を保持。
+  - 見た目やスタイルではなく「タイトルクリップの再生挙動」に関する設定。
+
+● <InscriberLayouts>
+  - 実際のレイアウト・スタイル・文字列・図形・背景などすべてを含む本体。
+  - 通常は 1 つの <Layout> のみを持つ。
+
+
+2. Layout の構造
+----------------
+
+<InscriberLayouts> 内には 1 つ以上の <Layout> が存在しますが、
+Premiere の標準タイトルでは 1 つだけです。
+
+代表的な構造は次の通りです。
+
+    <InscriberLayouts Version="1.0">
+      <Layout>
+        <LayoutEffectInfo>…</LayoutEffectInfo>
+        <LayoutDimension>…</LayoutDimension>
+        <LayoutAttributes>…</LayoutAttributes>
+        <Background>…</Background>
+        <DefaultStyle>…</DefaultStyle>
+        <DefaultTextDescription>…</DefaultTextDescription>
+        <GraphicObjectDefaults>…</GraphicObjectDefaults>
+        <TextChainDefaults>…</TextChainDefaults>
+        <TextDescriptions>…</TextDescriptions>
+        <Styles>…</Styles>
+        <Shaders>…</Shaders>
+        <Textures>…</Textures>
+        <Logos>…</Logos>
+        <Layers>…</Layers>
+        <VLS>…</VLS>
+      </Layout>
+    </InscriberLayouts>
+
+各要素の概要：
+
+- LayoutEffectInfo
+    - エフェクト種別、Indic 対応、Ligature、有無など。
+- LayoutDimension
+    - 画面サイズ（pXPIXELS / pYLINES）、画面アスペクト、成長方向など。
+- LayoutAttributes
+    - タイトル／アクションセーフエリアの矩形（0〜1 の相対座標）。
+- Background
+    - 背景として使用する Shader の参照。
+- DefaultStyle / DefaultTextDescription
+    - 既定の Style ID / TextDescription ID。
+- GraphicObjectDefaults
+    - 図形の線端、角の処理、線幅などのデフォルト。
+- TextChainDefaults
+    - テキストチェーンのデフォルト（wordWrap, Alignment 等）を chain 種別ごとに保持。
+- TextDescriptions
+    - フォント仕様の一覧（各フォントに 1 つ TextDescription）。
+- Styles
+    - 実際の見た目（塗り、アウトライン、影、ベベルなど）のスタイル定義。
+- Shaders / Textures
+    - 色・グラデーション・光沢・ベベルなどを定義する Shader 群とテクスチャ。
+- Layers
+    - DrawPage（図形）と TextPage（テキスト）の配置。
+- VLS
+    - 将来用のファイル参照・メタ情報。実用上は空で問題ない。
+
+
+3. フォント・テキスト構造
+--------------------------
+
+3.1 TextDescriptions（フォント仕様）
+------------------------------------
+
+フォント仕様は <TextDescriptions> 内の複数の <TextDescription> で定義されます。
+
+例：
+
+    <TextDescriptions>
+      <TextDescription Reference="4096">
+        <TypeSpec>
+          <size>590</size>
+          <txHeight>72</txHeight>
+          <txKern>0</txKern>
+          <baselineShift>0</baselineShift>
+          <leading>0</leading>
+          <txSCaps>72</txSCaps>
+          <txSCapsOn>false</txSCapsOn>
+          <txSlant>0</txSlant>
+          <txUnderline>false</txUnderline>
+          <txWidth>67.5</txWidth>
+          <linked>false</linked>
+          <fiBold>0</fiBold>
+          <fiItalic>0</fiItalic>
+          <fifullName>Yu Gothic UI</fifullName>
+          <fifontFamilyName>Yu Gothic UI</fifontFamilyName>
+          <fifontStyle>Regular</fifontStyle>
+          <fifontType>5</fifontType>
+          <ficategory>1</ficategory>
+        </TypeSpec>
+      </TextDescription>
+      …
+    </TextDescriptions>
+
+主なフィールド：
+
+- Reference        : TextDescription の ID（TextRef として参照される）
+- txHeight         : 実質的なポイントサイズ
+- txWidth          : 幅倍率（100=等幅）
+- txKern           : カーニング
+- baselineShift    : ベースラインシフト
+- leading          : 行間
+- fifullName       : フォントフルネーム
+- fifontFamilyName : フォントファミリ名
+- fifontStyle      : Regular, Bold 等
+- fiBold, fiItalic : 太字/斜体フラグ
+
+
+3.2 TextPage / TextChain / TextLine
+------------------------------------
+
+実際の文字列は Layers 内の TextPage に格納されます。
+
+    <Layers>
+      <Layer>
+        <DrawPage>…</DrawPage>   <!-- 図形 -->
+        <TextPage>
+          <TextChain>…</TextChain>
+          <TextChain>…</TextChain>
+        </TextPage>
+        <MergeGroups>…</MergeGroups>
+      </Layer>
+    </Layers>
+
+● TextChain
+
+テキストボックス単位。
+
+- ChainProperty
+    - Position（x,y）, Size（x,y）, wordWrap, Alignment など。
+- ChainTabs
+    - タブストップ情報（通常空）。
+
+● TextLine
+
+1 行分の文字列と、その行の基本プロパティ。
+
+代表的な構造：
+
+    <TextLine Version="2" objectID="1" persistentID="3">
+      <BaseProperties Version="5">
+        <txBase>86.4</txBase>
+        <XPos>960</XPos>
+        <angle>0</angle>
+        <verticalText>false</verticalText>
+        <objectLeading>0</objectLeading>
+      </BaseProperties>
+      <EnclosingObjectType>block</EnclosingObjectType>
+      <Alignment>left</Alignment>
+      <RTL>false</RTL>
+      <TRString>グラデーション</TRString>
+      <RunLengthEncodedCharacterAttributes>
+        <CharacterAttributes
+          RunCount="6"
+          StyleRef="4096"
+          TextRef="4096"
+          TXKerning="0"
+          TXPostKerning="0"
+          BaselineShifting="0"
+        />
+      </RunLengthEncodedCharacterAttributes>
+      <tagName></tagName>
+    </TextLine>
+
+TRString が実際の文字列で、CharacterAttributes の RunCount と StyleRef/TextRef で
+どのスタイル・フォントを何文字に適用するかを指定します。
+
+
+4. Styles / FragmentList / ShaderList
+--------------------------------------
+
+4.1 Style の概念
+-----------------
+
+<Styles> 内の <Style> は「見た目のセット」です。
+1 つのテキストオブジェクトや 1 つの図形に 1 Style を使う構成が扱いやすいです。
+
+    <Styles>
+      <Style ID="4096">
+        <StyleBase>…</StyleBase>
+        <FragmentList>…</FragmentList>
+        <ShaderList>…</ShaderList>
+      </Style>
+      …
+    </Styles>
+
+● StyleBase
+
+type, shadow, bevel, outline 等の ON/OFF。
+
+- type         : テキストなら 50000 前後
+- shadow       : 影の有無
+- bevel        : ベベルの有無
+- outline      : アウトラインの有無
+
+4.2 FragmentList（フラグメント＝レイヤー）
+-------------------------------------------
+
+FragmentList には、塗り、アウトライン、影、ベベルなどをそれぞれ別 Fragment として追加します。
+
+各 Fragment の主なプロパティ：
+
+- size
+    - 線幅、ぼかし、押し出し量など。
+- offset
+    - 影などの位置オフセット。
+- angle
+    - 方向・回転角度。
+- eFragmentType
+    - フラグメント種別。一般に 2=塗り／線、0=影など、1=ベベル用。
+- annotation
+    - 役割を表す識別子。よく出てくるもの：
+        - 65538 : 塗り本体
+        - 65537 : 押し出し影（3D側）
+        - 65540 : ベベル用フラグメント
+- painterMix
+    - 16 個の整数（0〜15）の列。
+    - ShaderList 内の PainterNumber と対応し、どの Shader をどの割合で使うかを決定。
+
+ベベルのあるスタイルでは、次のような構成になることが多いです。
+
+- Fragment 1: annotation=65538 … 塗り本体（PainterMix=15,15,15, …）
+- Fragment 2: annotation=65540 … ベベル（PainterMix=0〜14）
+- Fragment 3: annotation=65537 … 影（必要に応じて）
+
+
+4.3 ShaderList（PainterNumber → ShaderRef）
+-------------------------------------------
+
+ShaderList は、PainterNumber（論理スロット）に対して実際の Shader を割り当てます。
+
+    <ShaderList>
+      <ShaderRef PainterNumber="15"><shaderRef>4099</shaderRef></ShaderRef>
+      <ShaderRef PainterNumber="12"><shaderRef>4102</shaderRef></ShaderRef>
+      <ShaderRef PainterNumber="-1"><shaderRef>4101</shaderRef></ShaderRef>
+      …
+    </ShaderList>
+
+レガシータイトルのサンプル解析から、以下の用途が多いことが分かりました（運用ルール）：
+
+- Painter 15 : 塗り本体（単色／グラデーション／光沢など）
+- Painter 12,13 : アウトライン用 Shader
+- Painter 0〜14 : ベベル用 Fragment（annotation=65540）から使用される
+- Painter -1 : 半透明系 Shader（影など）
+- それ以外（2〜11,14,1000〜1015）は未使用なら shaderRef=0
+
+※ ベベルの実サンプルでは Painter 0〜14 に複数の Shader を割り当てていることもありますが、
+実装を簡略化するため「0〜14 すべて同じ bevel Shader」を割り当てても、かなり近い見た目になります。
+
+
+5. Shaders（塗り・グラデーション・光沢・ベベル）
+-------------------------------------------------
+
+5.1 Shader の共通構造
+----------------------
+
+Shader は <Shaders> 内で定義されます。
+
+    <Shaders>
+      <Shader Version="4">
+        <cReference>4099</cReference>
+        <textureRef>0</textureRef>
+        <colorOption>4</colorOption>
+        <shaderOn>true</shaderOn>
+        <glintSize>10</glintSize>
+        <glintOffset>0</glintOffset>
+        <rampPosTop>75</rampPosTop>
+        <rampPosBottom>25</rampPosBottom>
+        <rampAngle>0</rampAngle>
+        <bevelBalance>0</bevelBalance>
+        <rampCycle>0</rampCycle>
+        <classicStyle>0</classicStyle>
+        <rampType>0</rampType>
+        <ColorSpec index="0">…</ColorSpec>
+        …
+        <ColorSpec index="4">…</ColorSpec>
+        <glintAngle>0</glintAngle>
+        <bevelSize>0</bevelSize>
+        <bevelDirection>0</bevelDirection>
+        <bevelPipe>false</bevelPipe>
+        <bevelAngle>0</bevelAngle>
+        <bevelShape>1</bevelShape>
+        <bevelShining>0</bevelShining>
+        <bevelLight>false</bevelLight>
+        <bevelMerge>true</bevelMerge>
+        <sheenOn>false</sheenOn>
+      </Shader>
+      …
+    </Shaders>
+
+主要フィールド：
+
+- cReference
+    - Shader の ID。Styles の ShaderList から参照する。
+- colorOption
+    - 0 … グラデーション塗り
+    - 1 … ベベル系
+    - 4 … 単色系／光沢系 など
+- rampType
+    - -1 … 通常のグラデーション塗り（タイトル 12〜15 のグラデ）
+    - 0  … ベベルや光沢など特殊用途
+- ColorSpec index=0..4
+    - 赤・緑・青・透過度（xpar）。index の意味は mode によって異なる。
+- glintSize / glintAngle / sheenOn
+    - 光沢（Sheen/Glint）関連。光沢 ON の場合、glintAngle に沿って白い帯が乗る。
+- bevelSize / bevelBalance / bevelShining / bevelLight / bevelMerge
+    - ベベル表現のためのパラメータ。
+
+
+5.2 単色塗り（Solid Fill）
+---------------------------
+
+用途：
+
+- 普通の単色文字／枠。
+- ベベルを適用する際のベース色。
+
+共通パターン：
+
+- colorOption = 4
+- rampType   = 0
+- sheenOn    = false
+- bevelSize  = 0
+- ColorSpec index 0〜4 すべて同じ色。
+
+    <ColorSpec index="0"><red>R</red><green>G</green><blue>B</blue><xpar>0</xpar></ColorSpec>
+    …
+    <ColorSpec index="4"><red>R</red><green>G</green><blue>B</blue><xpar>0</xpar></ColorSpec>
+
+
+5.3 グラデーション塗り（線形／円形）
+------------------------------------
+
+解析対象：タイトル_11〜15.prtl と PNG 出力。
+
+特徴：
+
+- colorOption = 0
+- rampType   = -1
+- rampAngle  = グラデーションの角度（0〜360）
+- rampPosTop / rampPosBottom
+    - 線形グラデーション： 75 / 25
+    - 円形グラデーション： 85.8696 / 44.5652
+- sheenOn    = false
+- bevelSize  = 0
+- ColorSpec
+    - index0 : 開始色
+    - index2 : 中間色
+    - index4 : 終端色
+    - index1,3 : 黒（0,0,0, xpar=0）
+
+gradientStops を複数持っている場合、
+
+- start  = 最初のストップ
+- end    = 最後のストップ
+- middle = 中央付近のストップ（無ければ end）
+
+を抽出し、
+
+- index0 = start.color
+- index2 = middle.color
+- index4 = end.color
+
+として設定すると、Premiere のレガシータイトルの見た目にかなり近くなります。
+
+
+5.4 光沢（Sheen／Glint）
+-------------------------
+
+解析対象：タイトル_16〜21.prtl と PNG 出力。
+黒文字に白い光沢が入ったタイトルの実装です。
+
+特徴：
+
+- ベース色は黒（ColorSpec 0〜3 が黒）
+- ハイライトは白（ColorSpec 4）
+- colorOption = 4
+- rampType   = 0
+- glintSize  = 光沢の幅（0〜100）
+- glintAngle = 光沢の角度（0〜360）
+- sheenOn    = true
+- bevelSize  = 0
+
+ColorSpec の典型値：
+
+- index0 : 0,0,0, xpar=0
+- index1 : 0,0,0, xpar=0
+- index2 : 0,0,0, xpar=0
+- index3 : 0,0,0, xpar=0
+- index4 : 255,255,255, xpar=0
+
+この Shader を Painter 15 に割り当て、FragmentList で annotation=65538（塗り本体）の
+painterMix を「15 15 15 15 …」にしておくと、黒文字の表面に白い光沢の帯が入った
+表現になります。
+
+glintAngle の値と見た目の光の方向は「ほぼ 1:1」ですが、細かいズレがある場合には
+角度を 360 - angle にする等の補正を入れて調整します。
+
+
+5.5 ベベル（Bevel）
+-------------------
+
+解析対象：タイトル_22〜28.prtl と PNG 出力。
+
+ベベルは次の 2 要素で構成されています。
+
+(1) annotation=65540 のベベル用 Fragment
+(2) colorOption=1 / rampType=0 のベベル Shader
+
+
+5.5.1 ベベル用 Fragment
+------------------------
+
+ベベルを使うスタイルの FragmentList には、annotation=65540 を持つ Fragment が含まれます。
+
+共通の特徴：
+
+- annotation = 65540
+- eFragmentType = 1
+- size = ベベルの厚み（例: 20, 100）
+- painterMix = "0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 14"
+
+painterMix の 0〜14 は Painter 0〜14 に対応し、
+ベベル専用 Shader を参照して立体感を作っていると考えられます。
+
+
+5.5.2 ベベル Shader の共通部分
+-------------------------------
+
+各ベベル Shader の共通項：
+
+- colorOption = 1
+- rampType   = 0
+- bevelSize  = Fragment.size と同じ
+- ColorSpec
+    - index0 : 黒 (0,0,0)
+    - index1 : 白 (255,255,255)
+    - index2 : 黒 (0,0,0)
+    - index3 : 黒 (0,0,0)
+    - index4 : 250,250,250（少し落とした白）
+
+この組合せにより、「黒→白→黒＋弱白」の帯状の明暗が作られ、
+枠や文字の縁に立体的な効果が現れます。
+
+
+5.5.3 ベベルのバリエーションとパラメータ
+-----------------------------------------
+
+サンプル 22〜28 を比較すると、ベベルの見え方の違いは主に次の 4 つの値で制御されています。
+
+- bevelSize     : ベベルの幅
+- bevelBalance  : ベベルのバランス（-1=凹み寄り, 0=中央）
+- bevelShining  : 光の強さ／向き（-0.5〜0.5 程度で変化）
+- bevelLight    : true/false
+- bevelMerge    : true/false
+
+代表的なパターン：
+
+● inner（凹み枠：サンプル23）
+- bevelBalance = -1
+- bevelShining = 0
+- bevelLight   = false
+- bevelMerge   = true
+
+● frame（枠全体の立体：サンプル24）
+- bevelBalance = 0
+- bevelShining = 0
+- bevelLight   = false
+- bevelMerge   = true
+
+● text（文字立体：サンプル25〜28）
+- bevelBalance = 0
+- bevelShining = -0.5 〜 0.5
+- bevelLight   = true
+- bevelMerge   = false
+
+このように、mode と 1 つの「強さ（bevelShining）」を組み合わせることで、
+レガシータイトルのベベルに近い見た目を再現できます。
+
+
+6. 図形（DrawPage）
+-------------------
+
+テロップ枠などの図形は <DrawPage> 内に <DrawObject> として格納されます。
+
+    <DrawPage>
+      <DrawObject>
+        <BaseID>…</BaseID>
+        <GraphicSpec>…</GraphicSpec>
+        <GraphicGeometry>…</GraphicGeometry>
+        <LineParameters>…</LineParameters>
+        <PolyPoints>…</PolyPoints>
+        <tagName>…</tagName>
+      </DrawObject>
+      …
+    </DrawPage>
+
+- BaseID
+    - objectID / styleRef 等、スタイルとの紐づけ。
+- GraphicSpec
+    - 図形の種類（矩形、楕円、線 等）。
+- GraphicGeometry
+    - 位置（gCrsrX/Y）、サイズ（gSizeX/Y）、回転、スキューなど。
+- LineParameters
+    - 線幅、角の形状（miter/round）など。
+- PolyPoints
+    - 自由図形の点列。
+
+ベベル付き枠（サンプル22〜28）も、基本的には普通の矩形 DrawObject に
+ベベルを含む Style を適用しているだけです。
+
+
+7. 生成時の実装ポイント
+------------------------
+
+PRTL を自動生成する場合、以下の方針を取ると Premiere のレガシータイトルと
+互換性の高いデータを作りやすくなります。
+
+1) 1オブジェクト＝1スタイル
+   - テキストオブジェクト／図形オブジェクトごとに Style を 1 つ割り当てる。
+   - StyleBase.styleRef でフォントセット（TextDescription）を指定する。
+
+2) FragmentList の構成
+   - 塗り本体   : annotation=65538, eFragmentType=0, painterMix=15 15 15 …
+   - ベベル     : annotation=65540, eFragmentType=1, painterMix=0〜14（ベベル有効時のみ）
+   - 影など     : annotation=65537（必要に応じて）
+   - アウトライン: annotation=3,2,1 など、PainterMix=12,13,… を使う
+
+3) ShaderList の割り当て
+   - Painter 15 : 塗り Shader（単色／グラデ／光沢）
+   - Painter 12,13 : アウトライン Shader
+   - Painter 0〜14 : ベベル Shader（ベベル有効時のみ）。簡素化するなら同じ bevel Shader。
+   - Painter -1 : 半透明 Shader（影など）
+
+4) Shaders の作り分け
+   - 単色       : colorOption=4, rampType=0, ColorSpec 0〜4 同色
+   - グラデーション: colorOption=0, rampType=-1, ColorSpec 0,2,4 に 3 色
+   - 光沢       : colorOption=4, rampType=0, 黒＋白ハイライト, sheenOn=true, glintSize/Angle 設定
+   - ベベル     : colorOption=1, rampType=0, 黒→白→黒＋弱白, bevelSize/Balance/Shining 等を mode に応じて設定
+
+5) TextLine との紐づけ
+   - RunLengthEncodedCharacterAttributes の StyleRef に Style の ID を指定する。
+   - TextRef には TextDescriptions の Reference を指定する。
+   - 1 行の中でスタイルを切り替えることで、1 行の中で色やベベルの有無を変えることも可能。
+
+
+8. 補足・注意点
+----------------
+
+- XML ヘッダは encoding="UTF-16" となっていることが多いが、実データは UTF-8 の場合もある。
+  書き出し実装側では、Premiere が読み込める範囲で UTF-8 もしくは UTF-16 で保存すればよい。
+- 実際の PRTL は改行無しの 1 行で書き出されていることが多く、
+  デバッグ時には XML 整形ツールでインデントを付けると解析しやすい。
+- annotation の値（65537, 65538, 65540 など）は内部仕様に依存しているため、
+  既存の PRTL サンプルに倣って同じ値を使用するのが安全。
+- 今回の仕様は「Premiere の動作とサンプル解析から逆算した実用仕様」であり、
+  Adobe 公式仕様とは異なる可能性があるが、実際の表示結果を再現する目的には十分な精度を持つ。
+
+
+以上が、グラデーション・光沢・ベベルを含めた最新の PRTL ファイル仕様書です。
+キャンバス側データから PRTL を生成する際は、本仕様に沿って
+Styles / FragmentList / ShaderList / Shaders を構成することで、
+レガシータイトルとほぼ同等の見た目を再現できることを目標とします。
