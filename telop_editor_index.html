@@ -9385,11 +9385,10 @@
                         clipItems.forEach(el => {
                             const startEl = el.querySelector('start');
                             const endEl = el.querySelector('end');
-                            const nameEl = el.querySelector('name');
 
-                            if (startEl && endEl && nameEl) {
-                                const startFrames = parseInt(startEl.textContent);
-                                const endFrames = parseInt(endEl.textContent);
+                            if (startEl && endEl) {
+                                const startFrames = parseFloat(startEl.textContent);
+                                const endFrames = parseFloat(endEl.textContent);
 
                                 // フレームレート検出（timebaseタグから）
                                 let fps = 30; // デフォルト
@@ -9398,11 +9397,39 @@
                                     fps = parseFloat(timebaseEl.textContent) || 30;
                                 }
 
-                                subtitles.push({
-                                    start: startFrames / fps,
-                                    end: endFrames / fps,
-                                    text: nameEl.textContent.trim()
-                                });
+                                // <effect>内の<parameter>から<name>Text</name>を持つ要素の<value>を取得
+                                let text = '';
+                                const effectElements = el.querySelectorAll('effect');
+                                for (const effect of effectElements) {
+                                    const parameters = effect.querySelectorAll('parameter');
+                                    for (const param of parameters) {
+                                        const nameEl = param.querySelector('name');
+                                        if (nameEl && nameEl.textContent === 'Text') {
+                                            const valueEl = param.querySelector('value');
+                                            if (valueEl && valueEl.textContent.trim()) {
+                                                text = valueEl.textContent.trim();
+                                                break;
+                                            }
+                                        }
+                                    }
+                                    if (text) break;
+                                }
+
+                                // テキストが見つからない場合は<name>要素から取得（後方互換性）
+                                if (!text) {
+                                    const nameEl = el.querySelector('name');
+                                    if (nameEl) {
+                                        text = nameEl.textContent.trim();
+                                    }
+                                }
+
+                                if (text) {
+                                    subtitles.push({
+                                        start: startFrames / fps,
+                                        end: endFrames / fps,
+                                        text: text
+                                    });
+                                }
                             }
                         });
                     }
