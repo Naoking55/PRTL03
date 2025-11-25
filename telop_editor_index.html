@@ -2780,7 +2780,7 @@
                     obj.chars.forEach((c, i) => {
                         if (origObj.chars[i]) {
                             c.fontSize = Math.max(1, Math.round(origObj.chars[i].fontSize * sfY));
-                            c.scaleX = Math.max(10, Math.round((origObj.chars[i].scaleX || 100) * sfX / sfY));
+                            c.scaleX = Math.max(10, Math.round((origObj.chars[i].scaleX || 100) * sfX));
                         }
                     });
                     render();
@@ -4210,7 +4210,7 @@
             const sfX = newW / bounds.w, sfY = newH / bounds.h;
             obj.chars.forEach(c => {
                 c.fontSize = Math.max(1, Math.round(c.fontSize * sfY));
-                c.scaleX = Math.max(10, Math.round((c.scaleX || 100) * sfX / sfY));
+                c.scaleX = Math.max(10, Math.round((c.scaleX || 100) * sfX));
             });
             render();
         }
