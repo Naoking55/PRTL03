@@ -988,10 +988,17 @@
 
                 let shaderList = '';
                 for (let i = 2; i <= 15; i++) {
-                    const shaderRef = i >= 10 && i <= 13 ? (this.shaderCounter + index * 20 + (i - 10)) : 0;
+                    let shaderRef = 0;
+                    if (i >= 10 && i <= 13) {
+                        // Painter 10-13: ストローク用シェーダー
+                        shaderRef = this.shaderCounter + index * 20 + (i - 10);
+                    } else if (i === 15) {
+                        // Painter 15: メインテキスト（塗り本体）用シェーダー
+                        shaderRef = this.shaderCounter + index * 20 + 15;
+                    }
                     shaderList += `<ShaderRef PainterNumber="${i}"><shaderRef>${shaderRef}</shaderRef></ShaderRef>`;
                 }
-                shaderList += `<ShaderRef PainterNumber="-1"><shaderRef>${this.shaderCounter + index * 20 + 15}</shaderRef></ShaderRef>`;
+                shaderList += `<ShaderRef PainterNumber="-1"><shaderRef>0</shaderRef></ShaderRef>`;
                 for (let i = 1000; i <= 1015; i++) {
                     shaderList += `<ShaderRef PainterNumber="${i}"><shaderRef>0</shaderRef></ShaderRef>`;
                 }
@@ -1015,12 +1022,14 @@
                         strokes.forEach((stroke, i) => {
                             const ref = this.shaderCounter + index * 20 + i;
                             const rgb = this._hexToRGB(stroke.color);
-                            xml += `<Shader Version="4"><cReference>${ref}</cReference><textureRef>0</textureRef><colorOption>4</colorOption><shaderOn>true</shaderOn><glintSize>10</glintSize><glintOffset>0</glintOffset><rampPosTop>75</rampPosTop><rampPosBottom>25</rampPosBottom><rampAngle>0</rampAngle><bevelBalance>0</bevelBalance><rampCycle>0</rampCycle><classicStyle>0</classicStyle><rampType>0</rampType><ColorSpec index="0"><red>0</red><green>0</green><blue>0</blue><xpar>0</xpar></ColorSpec><ColorSpec index="1"><red>0</red><green>0</green><blue>0</blue><xpar>0</xpar></ColorSpec><ColorSpec index="2"><red>0</red><green>0</green><blue>0</blue><xpar>0</xpar></ColorSpec><ColorSpec index="3"><red>0</red><green>0</green><blue>0</blue><xpar>0</xpar></ColorSpec><ColorSpec index="4"><red>${rgb.r}</red><green>${rgb.g}</green><blue>${rgb.b}</blue><xpar>0</xpar></ColorSpec><glintAngle>0</glintAngle><bevelSize>0</bevelSize><bevelDirection>0</bevelDirection><bevelPipe>false</bevelPipe><bevelAngle>0</bevelAngle><bevelShape>1</bevelShape><bevelShining>0</bevelShining><bevelLight>false</bevelLight><bevelMerge>true</bevelMerge><sheenOn>false</sheenOn></Shader>`;
+                            // 単色塗りの場合はColorSpec 0〜4すべて同じ色に設定
+                            xml += `<Shader Version="4"><cReference>${ref}</cReference><textureRef>0</textureRef><colorOption>4</colorOption><shaderOn>true</shaderOn><glintSize>10</glintSize><glintOffset>0</glintOffset><rampPosTop>75</rampPosTop><rampPosBottom>25</rampPosBottom><rampAngle>0</rampAngle><bevelBalance>0</bevelBalance><rampCycle>0</rampCycle><classicStyle>0</classicStyle><rampType>0</rampType><ColorSpec index="0"><red>${rgb.r}</red><green>${rgb.g}</green><blue>${rgb.b}</blue><xpar>0</xpar></ColorSpec><ColorSpec index="1"><red>${rgb.r}</red><green>${rgb.g}</green><blue>${rgb.b}</blue><xpar>0</xpar></ColorSpec><ColorSpec index="2"><red>${rgb.r}</red><green>${rgb.g}</green><blue>${rgb.b}</blue><xpar>0</xpar></ColorSpec><ColorSpec index="3"><red>${rgb.r}</red><green>${rgb.g}</green><blue>${rgb.b}</blue><xpar>0</xpar></ColorSpec><ColorSpec index="4"><red>${rgb.r}</red><green>${rgb.g}</green><blue>${rgb.b}</blue><xpar>0</xpar></ColorSpec><glintAngle>0</glintAngle><bevelSize>0</bevelSize><bevelDirection>0</bevelDirection><bevelPipe>false</bevelPipe><bevelAngle>0</bevelAngle><bevelShape>1</bevelShape><bevelShining>0</bevelShining><bevelLight>false</bevelLight><bevelMerge>true</bevelMerge><sheenOn>false</sheenOn></Shader>`;
                         });
 
                         const mainRef = this.shaderCounter + index * 20 + 15;
                         const mainRGB = this._hexToRGB(char.color || '#ffffff');
-                        xml += `<Shader Version="4"><cReference>${mainRef}</cReference><textureRef>0</textureRef><colorOption>4</colorOption><shaderOn>true</shaderOn><glintSize>10</glintSize><glintOffset>0</glintOffset><rampPosTop>75</rampPosTop><rampPosBottom>25</rampPosBottom><rampAngle>0</rampAngle><bevelBalance>0</bevelBalance><rampCycle>0</rampCycle><classicStyle>0</classicStyle><rampType>0</rampType><ColorSpec index="0"><red>${mainRGB.r}</red><green>${mainRGB.g}</green><blue>${mainRGB.b}</blue><xpar>0</xpar></ColorSpec><ColorSpec index="1"><red>0</red><green>0</green><blue>0</blue><xpar>0</xpar></ColorSpec><ColorSpec index="2"><red>0</red><green>0</green><blue>0</blue><xpar>0</xpar></ColorSpec><ColorSpec index="3"><red>0</red><green>0</green><blue>0</blue><xpar>0</xpar></ColorSpec><ColorSpec index="4"><red>250</red><green>250</green><blue>250</blue><xpar>0</xpar></ColorSpec><glintAngle>0</glintAngle><bevelSize>0</bevelSize><bevelDirection>0</bevelDirection><bevelPipe>false</bevelPipe><bevelAngle>0</bevelAngle><bevelShape>1</bevelShape><bevelShining>0</bevelShining><bevelLight>false</bevelLight><bevelMerge>true</bevelMerge><sheenOn>false</sheenOn></Shader>`;
+                        // 単色塗りの場合はColorSpec 0〜4すべて同じ色に設定
+                        xml += `<Shader Version="4"><cReference>${mainRef}</cReference><textureRef>0</textureRef><colorOption>4</colorOption><shaderOn>true</shaderOn><glintSize>10</glintSize><glintOffset>0</glintOffset><rampPosTop>75</rampPosTop><rampPosBottom>25</rampPosBottom><rampAngle>0</rampAngle><bevelBalance>0</bevelBalance><rampCycle>0</rampCycle><classicStyle>0</classicStyle><rampType>0</rampType><ColorSpec index="0"><red>${mainRGB.r}</red><green>${mainRGB.g}</green><blue>${mainRGB.b}</blue><xpar>0</xpar></ColorSpec><ColorSpec index="1"><red>${mainRGB.r}</red><green>${mainRGB.g}</green><blue>${mainRGB.b}</blue><xpar>0</xpar></ColorSpec><ColorSpec index="2"><red>${mainRGB.r}</red><green>${mainRGB.g}</green><blue>${mainRGB.b}</blue><xpar>0</xpar></ColorSpec><ColorSpec index="3"><red>${mainRGB.r}</red><green>${mainRGB.g}</green><blue>${mainRGB.b}</blue><xpar>0</xpar></ColorSpec><ColorSpec index="4"><red>${mainRGB.r}</red><green>${mainRGB.g}</green><blue>${mainRGB.b}</blue><xpar>0</xpar></ColorSpec><glintAngle>0</glintAngle><bevelSize>0</bevelSize><bevelDirection>0</bevelDirection><bevelPipe>false</bevelPipe><bevelAngle>0</bevelAngle><bevelShape>1</bevelShape><bevelShining>0</bevelShining><bevelLight>false</bevelLight><bevelMerge>true</bevelMerge><sheenOn>false</sheenOn></Shader>`;
                     }
                 });
                 xml += '</Shaders>';
