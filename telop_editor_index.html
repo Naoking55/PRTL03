@@ -2414,6 +2414,11 @@
         initFonts();
 
         function setTool(tool) {
+            // テキスト編集中の場合は終了（空のテキストは削除される）
+            if (editingObjId && tool !== 'text' && tool !== 'textV') {
+                exitEditMode();
+            }
+
             currentTool = tool;
             // Update all tool icon states
             document.querySelectorAll('.tool-icon').forEach(el => el.classList.remove('active'));
@@ -2448,8 +2453,6 @@
             } else {
                 canvas.style.cursor = 'default';
             }
-
-            if (tool === 'select' && editingObjId) exitEditMode();
         }
 
         function alignToCenter(axis) {
@@ -3661,7 +3664,12 @@
 
         function findObjectAt(x, y) {
             for (let i = textObjects.length - 1; i >= 0; i--) {
-                const obj = textObjects[i], b = getObjectBounds(obj);
+                const obj = textObjects[i];
+                // テキストオブジェクトで文字が空の場合はスキップ（編集中以外）
+                if ((obj.type === 'text' || obj.type === 'pathText') && obj.chars && obj.chars.length === 0 && obj.id !== editingObjId) {
+                    continue;
+                }
+                const b = getObjectBounds(obj);
                 // テキスト系オブジェクトは広めの判定領域（30px）
                 const margin = (obj.type === 'text' || obj.type === 'pathText' || obj.chars) ? 30 : 10;
                 if (x >= b.x - margin && x <= b.x + b.w + margin && y >= b.y - margin && y <= b.y + b.h + margin) return obj;
