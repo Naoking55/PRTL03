@@ -825,6 +825,24 @@
         });
 
         function switchTool(tool) {
+            // テキスト編集中の場合は終了（空のテキストは削除される）
+            if (isTyping && tool !== 'text') {
+                isTyping = false;
+                const imeInput = document.getElementById('imeInput');
+                imeInput.classList.remove('active');
+                imeInput.blur();
+
+                // 空のテキストオブジェクトを削除
+                if (selectedObject && selectedObject.text.trim() === '') {
+                    const index = textObjects.indexOf(selectedObject);
+                    if (index !== -1) {
+                        textObjects.splice(index, 1);
+                        selectedObject = null;
+                    }
+                }
+                render();
+            }
+
             currentTool = tool;
 
             // 全ツールのactiveクラスを削除
@@ -1312,6 +1330,12 @@
             // テキストオブジェクトをチェック（後ろから）
             for (let i = textObjects.length - 1; i >= 0; i--) {
                 const obj = textObjects[i];
+
+                // テキストが空の場合はスキップ（編集中以外）
+                if (obj.text.trim() === '' && obj !== selectedObject) {
+                    continue;
+                }
+
                 const metrics = measureText(obj);
 
                 if (x >= obj.x - 10 && x <= obj.x + metrics.width + 10 &&
