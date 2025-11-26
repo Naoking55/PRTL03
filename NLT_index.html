@@ -504,7 +504,7 @@
                         </div>
                         <div class="property-row">
                             <label>フォントサイズ</label>
-                            <input type="number" id="prop_fontSize" value="72" min="1" max="500">
+                            <input type="number" id="prop_fontSize" value="100" min="1" max="500" step="0.1">
                         </div>
                         <div class="property-row">
                             <label>縦横比 (%)</label>
@@ -522,6 +522,24 @@
                         <div class="property-row">
                             <label>ベースラインシフト</label>
                             <input type="number" id="prop_baselineShift" value="0" step="1">
+                        </div>
+                        <div class="property-row">
+                            <label>行間</label>
+                            <input type="number" id="prop_leading" value="0" step="0.1">
+                        </div>
+                        <div class="property-row">
+                            <label>傾き (度)</label>
+                            <input type="number" id="prop_slant" value="0" step="0.1" min="-45" max="45">
+                        </div>
+                        <div class="property-row">
+                            <label><input type="checkbox" id="prop_underline">下線</label>
+                        </div>
+                        <div class="property-row">
+                            <label><input type="checkbox" id="prop_smallCaps">スモールキャップス</label>
+                        </div>
+                        <div class="property-row">
+                            <label>スモールキャップスサイズ (%)</label>
+                            <input type="number" id="prop_smallCapsSize" value="75" min="10" max="100">
                         </div>
                         <div class="property-row">
                             <label><input type="checkbox" id="prop_vertical">縦書き</label>
@@ -599,6 +617,30 @@
                                 <input type="number" id="gradient_blur" value="0" min="0" max="50">
                             </div>
                         </div>
+                        <div id="sheenFillControls" style="display: none;">
+                            <div class="property-grid-2">
+                                <div class="property-row">
+                                    <label>ベース色</label>
+                                    <input type="color" id="sheen_base_color" value="#000000">
+                                </div>
+                                <div class="property-row">
+                                    <label>ハイライト色</label>
+                                    <input type="color" id="sheen_highlight_color" value="#ffffff">
+                                </div>
+                            </div>
+                            <div class="property-row">
+                                <label>光沢サイズ (%)</label>
+                                <input type="number" id="sheen_size" value="10" min="0" max="100">
+                            </div>
+                            <div class="property-row">
+                                <label>光沢角度 (度)</label>
+                                <input type="number" id="sheen_angle" value="0" min="0" max="360">
+                            </div>
+                            <div class="property-row">
+                                <label>不透明度 (%)</label>
+                                <input type="number" id="sheen_opacity" value="100" min="0" max="100">
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -612,11 +654,15 @@
                         <div class="property-grid-3">
                             <div class="property-row">
                                 <label>サイズ</label>
-                                <input type="number" id="stroke1_size" value="8" min="0" max="200">
+                                <input type="number" id="stroke1_size" value="8" min="0" max="200" step="0.1">
                             </div>
-                            <div class="property-row" style="grid-column: span 2;">
+                            <div class="property-row">
                                 <label>カラー</label>
                                 <input type="color" id="stroke1_color" value="#000000">
+                            </div>
+                            <div class="property-row">
+                                <label>不透明度 (%)</label>
+                                <input type="number" id="stroke1_opacity" value="100" min="0" max="100" step="0.1">
                             </div>
                         </div>
 
@@ -626,11 +672,15 @@
                         <div class="property-grid-3">
                             <div class="property-row">
                                 <label>サイズ</label>
-                                <input type="number" id="stroke2_size" value="38" min="0" max="200">
+                                <input type="number" id="stroke2_size" value="50" min="0" max="200" step="0.1">
                             </div>
-                            <div class="property-row" style="grid-column: span 2;">
+                            <div class="property-row">
                                 <label>カラー</label>
                                 <input type="color" id="stroke2_color" value="#ffffff">
+                            </div>
+                            <div class="property-row">
+                                <label>不透明度 (%)</label>
+                                <input type="number" id="stroke2_opacity" value="100" min="0" max="100" step="0.1">
                             </div>
                         </div>
 
@@ -640,11 +690,15 @@
                         <div class="property-grid-3">
                             <div class="property-row">
                                 <label>サイズ</label>
-                                <input type="number" id="stroke3_size" value="68" min="0" max="200">
+                                <input type="number" id="stroke3_size" value="68" min="0" max="200" step="0.1">
                             </div>
-                            <div class="property-row" style="grid-column: span 2;">
+                            <div class="property-row">
                                 <label>カラー</label>
                                 <input type="color" id="stroke3_color" value="#000000">
+                            </div>
+                            <div class="property-row">
+                                <label>不透明度 (%)</label>
+                                <input type="number" id="stroke3_opacity" value="100" min="0" max="100" step="0.1">
                             </div>
                         </div>
 
@@ -654,11 +708,15 @@
                         <div class="property-grid-3">
                             <div class="property-row">
                                 <label>サイズ</label>
-                                <input type="number" id="stroke4_size" value="78" min="0" max="200">
+                                <input type="number" id="stroke4_size" value="78" min="0" max="200" step="0.1">
                             </div>
-                            <div class="property-row" style="grid-column: span 2;">
+                            <div class="property-row">
                                 <label>カラー</label>
                                 <input type="color" id="stroke4_color" value="#000000">
+                            </div>
+                            <div class="property-row">
+                                <label>不透明度 (%)</label>
+                                <input type="number" id="stroke4_opacity" value="100" min="0" max="100" step="0.1">
                             </div>
                         </div>
                     </div>
@@ -684,11 +742,21 @@
                         <div class="property-grid-2">
                             <div class="property-row">
                                 <label>距離</label>
-                                <input type="number" id="shadow_distance" value="10" min="0" max="100">
+                                <input type="number" id="shadow_distance" value="10" min="0" max="100" step="0.1">
                             </div>
                             <div class="property-row">
                                 <label>角度 (度)</label>
-                                <input type="number" id="shadow_angle" value="-45" min="-180" max="180">
+                                <input type="number" id="shadow_angle" value="135" min="-180" max="180" step="0.1">
+                            </div>
+                        </div>
+                        <div class="property-grid-2">
+                            <div class="property-row">
+                                <label>サイズ (%)</label>
+                                <input type="number" id="shadow_size" value="90" min="0" max="200" step="0.1">
+                            </div>
+                            <div class="property-row">
+                                <label>ぼかし</label>
+                                <input type="number" id="shadow_blur" value="0" min="0" max="100" step="0.1">
                             </div>
                         </div>
                     </div>
@@ -818,12 +886,13 @@
         const propertyInputs = [
             'prop_x', 'prop_y', 'prop_fontSize', 'prop_fontFamily',
             'prop_kerning', 'prop_tracking', 'prop_rotation', 'prop_vertical',
+            'prop_leading', 'prop_slant', 'prop_underline', 'prop_smallCaps', 'prop_smallCapsSize',
             'fill_color', 'fill_opacity', 'fill_enabled',
-            'stroke1_enabled', 'stroke1_size', 'stroke1_color',
-            'stroke2_enabled', 'stroke2_size', 'stroke2_color',
-            'stroke3_enabled', 'stroke3_size', 'stroke3_color',
-            'stroke4_enabled', 'stroke4_size', 'stroke4_color',
-            'shadow_enabled', 'shadow_color', 'shadow_opacity', 'shadow_distance', 'shadow_angle'
+            'stroke1_enabled', 'stroke1_size', 'stroke1_color', 'stroke1_opacity',
+            'stroke2_enabled', 'stroke2_size', 'stroke2_color', 'stroke2_opacity',
+            'stroke3_enabled', 'stroke3_size', 'stroke3_color', 'stroke3_opacity',
+            'stroke4_enabled', 'stroke4_size', 'stroke4_color', 'stroke4_opacity',
+            'shadow_enabled', 'shadow_color', 'shadow_opacity', 'shadow_distance', 'shadow_angle', 'shadow_size', 'shadow_blur'
         ];
 
         propertyInputs.forEach(id => {
@@ -839,19 +908,27 @@
             const fillType = this.value;
             const solidControls = document.getElementById('solidFillControls');
             const gradientControls = document.getElementById('gradientFillControls');
+            const sheenControls = document.getElementById('sheenFillControls');
 
             if (fillType === 'solid') {
                 solidControls.style.display = 'block';
                 gradientControls.style.display = 'none';
+                sheenControls.style.display = 'none';
             } else if (fillType === 'gradient-linear' || fillType === 'gradient-radial') {
                 solidControls.style.display = 'none';
                 gradientControls.style.display = 'block';
+                sheenControls.style.display = 'none';
                 // 円形グラデーションの場合は角度を非表示
                 document.getElementById('gradient_angle_row').style.display =
                     fillType === 'gradient-linear' ? 'flex' : 'none';
+            } else if (fillType === 'sheen') {
+                solidControls.style.display = 'none';
+                gradientControls.style.display = 'none';
+                sheenControls.style.display = 'block';
             } else {
                 solidControls.style.display = 'block';
                 gradientControls.style.display = 'none';
+                sheenControls.style.display = 'none';
             }
 
             updateSelectedObjectFromProperties();
@@ -875,6 +952,15 @@
             }
         });
 
+        // 光沢関連の入力イベント
+        ['sheen_base_color', 'sheen_highlight_color', 'sheen_size', 'sheen_angle', 'sheen_opacity'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.addEventListener('input', updateSelectedObjectFromProperties);
+                el.addEventListener('change', updateSelectedObjectFromProperties);
+            }
+        });
+
         function updateSelectedObjectFromProperties() {
             if (!selectedObject) return;
 
@@ -887,6 +973,11 @@
             selectedObject.tracking = parseInt(document.getElementById('prop_tracking').value) || 0;
             selectedObject.rotation = parseFloat(document.getElementById('prop_rotation').value) || 0;
             selectedObject.vertical = document.getElementById('prop_vertical').checked;
+            selectedObject.leading = parseFloat(document.getElementById('prop_leading').value) || 0;
+            selectedObject.slant = parseFloat(document.getElementById('prop_slant').value) || 0;
+            selectedObject.underline = document.getElementById('prop_underline').checked;
+            selectedObject.smallCaps = document.getElementById('prop_smallCaps').checked;
+            selectedObject.smallCapsSize = parseInt(document.getElementById('prop_smallCapsSize').value) || 75;
 
             const fillType = document.getElementById('fill_type').value;
             selectedObject.fill = {
@@ -913,26 +1004,41 @@
                 };
             }
 
+            // 光沢設定
+            if (fillType === 'sheen') {
+                selectedObject.fill.sheen = {
+                    baseColor: document.getElementById('sheen_base_color').value,
+                    highlightColor: document.getElementById('sheen_highlight_color').value,
+                    size: parseInt(document.getElementById('sheen_size').value) || 10,
+                    angle: parseInt(document.getElementById('sheen_angle').value) || 0,
+                    opacity: parseInt(document.getElementById('sheen_opacity').value) || 100
+                };
+            }
+
             selectedObject.strokes = [
                 {
                     enabled: document.getElementById('stroke1_enabled').checked,
                     size: parseInt(document.getElementById('stroke1_size').value) || 0,
-                    color: document.getElementById('stroke1_color').value
+                    color: document.getElementById('stroke1_color').value,
+                    opacity: parseInt(document.getElementById('stroke1_opacity').value) || 100
                 },
                 {
                     enabled: document.getElementById('stroke2_enabled').checked,
                     size: parseInt(document.getElementById('stroke2_size').value) || 0,
-                    color: document.getElementById('stroke2_color').value
+                    color: document.getElementById('stroke2_color').value,
+                    opacity: parseInt(document.getElementById('stroke2_opacity').value) || 100
                 },
                 {
                     enabled: document.getElementById('stroke3_enabled').checked,
                     size: parseInt(document.getElementById('stroke3_size').value) || 0,
-                    color: document.getElementById('stroke3_color').value
+                    color: document.getElementById('stroke3_color').value,
+                    opacity: parseInt(document.getElementById('stroke3_opacity').value) || 100
                 },
                 {
                     enabled: document.getElementById('stroke4_enabled').checked,
                     size: parseInt(document.getElementById('stroke4_size').value) || 0,
-                    color: document.getElementById('stroke4_color').value
+                    color: document.getElementById('stroke4_color').value,
+                    opacity: parseInt(document.getElementById('stroke4_opacity').value) || 100
                 }
             ];
 
@@ -941,7 +1047,9 @@
                 color: document.getElementById('shadow_color').value,
                 opacity: parseInt(document.getElementById('shadow_opacity').value) || 50,
                 distance: parseInt(document.getElementById('shadow_distance').value) || 10,
-                angle: parseInt(document.getElementById('shadow_angle').value) || -45
+                angle: parseInt(document.getElementById('shadow_angle').value) || -45,
+                size: parseInt(document.getElementById('shadow_size').value) || 90,
+                blur: parseInt(document.getElementById('shadow_blur').value) || 0
             };
 
             render();
@@ -974,30 +1082,38 @@
                     text: '',
                     x: x,
                     y: y,
-                    fontSize: 72,
+                    fontSize: 100,
                     fontFamily: 'Yu Gothic UI',
                     scaleX: 100,
                     kerning: 0,
                     tracking: 0,
                     rotation: 0,
                     vertical: false,
+                    leading: 0,
+                    slant: 0,
+                    underline: false,
+                    smallCaps: false,
+                    smallCapsSize: 75,
                     fill: {
                         enabled: true,
+                        type: 'solid',
                         color: '#fdff00',
                         opacity: 100
                     },
                     strokes: [
-                        { enabled: false, size: 8, color: '#000000' },
-                        { enabled: false, size: 38, color: '#ffffff' },
-                        { enabled: false, size: 68, color: '#000000' },
-                        { enabled: false, size: 78, color: '#000000' }
+                        { enabled: false, size: 8, color: '#000000', opacity: 100 },
+                        { enabled: false, size: 50, color: '#ffffff', opacity: 100 },
+                        { enabled: false, size: 68, color: '#000000', opacity: 100 },
+                        { enabled: false, size: 78, color: '#000000', opacity: 100 }
                     ],
                     shadow: {
                         enabled: false,
                         color: '#000000',
                         opacity: 50,
                         distance: 10,
-                        angle: -45
+                        angle: 135,
+                        size: 90,
+                        blur: 0
                     }
                 };
 
@@ -1441,6 +1557,11 @@
             document.getElementById('prop_tracking').value = selectedObject.tracking;
             document.getElementById('prop_rotation').value = selectedObject.rotation;
             document.getElementById('prop_vertical').checked = selectedObject.vertical || false;
+            document.getElementById('prop_leading').value = selectedObject.leading || 0;
+            document.getElementById('prop_slant').value = selectedObject.slant || 0;
+            document.getElementById('prop_underline').checked = selectedObject.underline || false;
+            document.getElementById('prop_smallCaps').checked = selectedObject.smallCaps || false;
+            document.getElementById('prop_smallCapsSize').value = selectedObject.smallCapsSize || 75;
 
             document.getElementById('fill_enabled').checked = selectedObject.fill.enabled;
             document.getElementById('fill_color').value = selectedObject.fill.color;
@@ -1491,18 +1612,22 @@
                 document.getElementById('stroke1_enabled').checked = selectedObject.strokes[0].enabled;
                 document.getElementById('stroke1_size').value = selectedObject.strokes[0].size;
                 document.getElementById('stroke1_color').value = selectedObject.strokes[0].color;
+                document.getElementById('stroke1_opacity').value = selectedObject.strokes[0].opacity || 100;
 
                 document.getElementById('stroke2_enabled').checked = selectedObject.strokes[1].enabled;
                 document.getElementById('stroke2_size').value = selectedObject.strokes[1].size;
                 document.getElementById('stroke2_color').value = selectedObject.strokes[1].color;
+                document.getElementById('stroke2_opacity').value = selectedObject.strokes[1].opacity || 100;
 
                 document.getElementById('stroke3_enabled').checked = selectedObject.strokes[2].enabled;
                 document.getElementById('stroke3_size').value = selectedObject.strokes[2].size;
                 document.getElementById('stroke3_color').value = selectedObject.strokes[2].color;
+                document.getElementById('stroke3_opacity').value = selectedObject.strokes[2].opacity || 100;
 
                 document.getElementById('stroke4_enabled').checked = selectedObject.strokes[3].enabled;
                 document.getElementById('stroke4_size').value = selectedObject.strokes[3].size;
                 document.getElementById('stroke4_color').value = selectedObject.strokes[3].color;
+                document.getElementById('stroke4_opacity').value = selectedObject.strokes[3].opacity || 100;
             }
 
             document.getElementById('shadow_enabled').checked = selectedObject.shadow.enabled;
@@ -1510,6 +1635,8 @@
             document.getElementById('shadow_opacity').value = selectedObject.shadow.opacity;
             document.getElementById('shadow_distance').value = selectedObject.shadow.distance;
             document.getElementById('shadow_angle').value = selectedObject.shadow.angle;
+            document.getElementById('shadow_size').value = selectedObject.shadow.size || 90;
+            document.getElementById('shadow_blur').value = selectedObject.shadow.blur || 0;
         }
 
         function measureText(obj) {
