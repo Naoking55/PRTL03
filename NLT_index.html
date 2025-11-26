@@ -272,24 +272,23 @@
 
         /* 隠しIME入力フィールド */
         #imeInput {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            padding: 10px;
-            background: rgba(255, 255, 255, 0.95);
-            border: 2px solid #007acc;
-            border-radius: 4px;
+            position: absolute;
+            padding: 0;
+            margin: 0;
+            border: none;
+            background: transparent;
+            color: transparent;
+            outline: none;
             font-size: 16px;
-            color: #000;
-            z-index: 10000;
-            min-width: 300px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-            display: none;
+            z-index: -1;
+            opacity: 0;
+            pointer-events: none;
+            width: 1px;
+            height: 1px;
         }
 
         #imeInput.active {
-            display: block;
+            opacity: 0;
         }
 
         /* スクロールバーのスタイル */
@@ -921,6 +920,23 @@
                     }
                 };
             } else if (currentTool === 'select') {
+                // テキスト入力中の場合は終了
+                if (isTyping) {
+                    isTyping = false;
+                    const imeInput = document.getElementById('imeInput');
+                    imeInput.classList.remove('active');
+                    imeInput.blur();
+
+                    // 空のテキストオブジェクトを削除
+                    if (selectedObject && selectedObject.text === '') {
+                        const index = textObjects.indexOf(selectedObject);
+                        if (index > -1) {
+                            textObjects.splice(index, 1);
+                        }
+                        selectedObject = null;
+                    }
+                }
+
                 // ハンドルクリックチェック
                 const handle = getHandleAt(x, y);
                 if (handle && selectedObject) {
@@ -1100,8 +1116,14 @@
             isTyping = true;
             cursorPosition = selectedObject.text.length;
 
-            // IME入力をフォーカス（より確実に）
+            // IME入力をフォーカス（Canvas上で透明に）
             const imeInput = document.getElementById('imeInput');
+            const rect = canvas.getBoundingClientRect();
+
+            // Canvas上のテキストオブジェクトの位置にIME入力を配置
+            imeInput.style.left = (rect.left + selectedObject.x * (rect.width / canvas.width)) + 'px';
+            imeInput.style.top = (rect.top + selectedObject.y * (rect.height / canvas.height)) + 'px';
+
             imeInput.value = selectedObject.text;
             imeInput.classList.add('active');
 
