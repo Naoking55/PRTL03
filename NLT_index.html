@@ -586,6 +586,18 @@
                                 <label>不透明度 (%)</label>
                                 <input type="number" id="gradient_opacity" value="100" min="0" max="100">
                             </div>
+                            <div class="property-row">
+                                <label>開始位置 (%)</label>
+                                <input type="number" id="gradient_ratio_start" value="0" min="0" max="100">
+                            </div>
+                            <div class="property-row">
+                                <label>終了位置 (%)</label>
+                                <input type="number" id="gradient_ratio_end" value="100" min="0" max="100">
+                            </div>
+                            <div class="property-row">
+                                <label>ぼかし (px)</label>
+                                <input type="number" id="gradient_blur" value="0" min="0" max="50">
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -855,7 +867,7 @@
 
         // グラデーション関連の入力イベント
         ['gradient_color1', 'gradient_color2', 'gradient_color3', 'gradient_color3_position',
-         'gradient_angle', 'gradient_opacity'].forEach(id => {
+         'gradient_angle', 'gradient_opacity', 'gradient_ratio_start', 'gradient_ratio_end', 'gradient_blur'].forEach(id => {
             const el = document.getElementById(id);
             if (el) {
                 el.addEventListener('input', updateSelectedObjectFromProperties);
@@ -894,7 +906,10 @@
                     color3: document.getElementById('gradient_color3').value,
                     color3Position: parseInt(document.getElementById('gradient_color3_position').value) || 50,
                     angle: parseInt(document.getElementById('gradient_angle').value) || 0,
-                    opacity: parseInt(document.getElementById('gradient_opacity').value) || 100
+                    opacity: parseInt(document.getElementById('gradient_opacity').value) || 100,
+                    ratioStart: parseInt(document.getElementById('gradient_ratio_start').value) || 0,
+                    ratioEnd: parseInt(document.getElementById('gradient_ratio_end').value) || 100,
+                    blur: parseInt(document.getElementById('gradient_blur').value) || 0
                 };
             }
 
@@ -1431,6 +1446,47 @@
             document.getElementById('fill_color').value = selectedObject.fill.color;
             document.getElementById('fill_opacity').value = selectedObject.fill.opacity;
 
+            // 塗りタイプとグラデーション設定を更新
+            if (selectedObject.fill.type) {
+                document.getElementById('fill_type').value = selectedObject.fill.type;
+
+                // UIの表示切り替え
+                const fillType = selectedObject.fill.type;
+                const solidControls = document.getElementById('solidFillControls');
+                const gradientControls = document.getElementById('gradientFillControls');
+
+                if (fillType === 'gradient-linear' || fillType === 'gradient-radial') {
+                    solidControls.style.display = 'none';
+                    gradientControls.style.display = 'block';
+
+                    // グラデーション値を更新
+                    if (selectedObject.fill.gradient) {
+                        const g = selectedObject.fill.gradient;
+                        document.getElementById('gradient_color1').value = g.color1 || '#fdff00';
+                        document.getElementById('gradient_color2').value = g.color2 || '#ff6600';
+                        document.getElementById('gradient_use_color3').checked = g.useColor3 || false;
+                        document.getElementById('gradient_color3').value = g.color3 || '#ffaa00';
+                        document.getElementById('gradient_color3_position').value = g.color3Position || 50;
+                        document.getElementById('gradient_angle').value = g.angle || 0;
+                        document.getElementById('gradient_opacity').value = g.opacity || 100;
+                        document.getElementById('gradient_ratio_start').value = g.ratioStart || 0;
+                        document.getElementById('gradient_ratio_end').value = g.ratioEnd || 100;
+                        document.getElementById('gradient_blur').value = g.blur || 0;
+
+                        // 中間色の表示制御
+                        document.getElementById('gradient_color3_row').style.display = g.useColor3 ? 'flex' : 'none';
+                        document.getElementById('gradient_color3_position_row').style.display = g.useColor3 ? 'flex' : 'none';
+                    }
+
+                    // 角度の表示制御
+                    document.getElementById('gradient_angle_row').style.display =
+                        fillType === 'gradient-linear' ? 'flex' : 'none';
+                } else {
+                    solidControls.style.display = 'block';
+                    gradientControls.style.display = 'none';
+                }
+            }
+
             if (selectedObject.strokes.length >= 4) {
                 document.getElementById('stroke1_enabled').checked = selectedObject.strokes[0].enabled;
                 document.getElementById('stroke1_size').value = selectedObject.strokes[0].size;
@@ -1468,9 +1524,18 @@
                 };
             } else {
                 // 横書きの場合
-                const metrics = ctx.measureText(obj.text || '|');
+                const text = obj.text || '|';
+                const metrics = ctx.measureText(text);
+                let width = metrics.width;
+
+                // カーニングを考慮した幅
+                const kerning = obj.kerning || 0;
+                if (kerning !== 0 && text.length > 1) {
+                    width += kerning * (text.length - 1);
+                }
+
                 return {
-                    width: metrics.width * (obj.scaleX / 100),
+                    width: width * (obj.scaleX / 100),
                     height: obj.fontSize
                 };
             }
@@ -1794,14 +1859,80 @@
 
                     // 塗り描画
                     if (obj.fill && obj.fill.enabled) {
-                        const opacity = obj.fill.opacity / 100;
-                        if (opacity < 1) {
-                            const rgb = hexToRgb(obj.fill.color);
-                            ctx.fillStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${opacity})`;
+                        const fillType = obj.fill.type || 'solid';
+
+                        if (fillType === 'gradient-linear' || fillType === 'gradient-radial') {
+                            // グラデーション描画
+                            const gradient = obj.fill.gradient;
+                            if (gradient) {
+                                const charMetrics = ctx.measureText(char);
+                                const charWidth = obj.fontSize;
+                                const charHeight = obj.fontSize;
+
+                                let fillGradient;
+                                const ratioStart = (gradient.ratioStart || 0) / 100;
+                                const ratioEnd = (gradient.ratioEnd || 100) / 100;
+
+                                if (fillType === 'gradient-linear') {
+                                    const angle = (gradient.angle || 0) * Math.PI / 180;
+                                    const cos = Math.cos(angle);
+                                    const sin = Math.sin(angle);
+                                    const maxDist = Math.abs(charWidth * cos) + Math.abs(charHeight * sin);
+
+                                    const x1 = charWidth/2 - (cos * maxDist/2);
+                                    const y1 = charHeight/2 - (sin * maxDist/2);
+                                    const x2 = charWidth/2 + (cos * maxDist/2);
+                                    const y2 = charHeight/2 + (sin * maxDist/2);
+
+                                    fillGradient = ctx.createLinearGradient(x1, y1, x2, y2);
+                                } else {
+                                    const centerX = charWidth / 2;
+                                    const centerY = charHeight / 2;
+                                    const radius = Math.max(charWidth, charHeight) / 2;
+                                    fillGradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius);
+                                }
+
+                                const opacity = (gradient.opacity || 100) / 100;
+                                const rgb1 = hexToRgb(gradient.color1);
+                                const rgb2 = hexToRgb(gradient.color2);
+
+                                fillGradient.addColorStop(ratioStart, `rgba(${rgb1.r}, ${rgb1.g}, ${rgb1.b}, ${opacity})`);
+
+                                if (gradient.useColor3) {
+                                    const rgb3 = hexToRgb(gradient.color3);
+                                    const color3Pos = (gradient.color3Position || 50) / 100;
+                                    const adjustedPos = ratioStart + (ratioEnd - ratioStart) * color3Pos;
+                                    fillGradient.addColorStop(adjustedPos, `rgba(${rgb3.r}, ${rgb3.g}, ${rgb3.b}, ${opacity})`);
+                                }
+
+                                fillGradient.addColorStop(ratioEnd, `rgba(${rgb2.r}, ${rgb2.g}, ${rgb2.b}, ${opacity})`);
+
+                                ctx.fillStyle = fillGradient;
+
+                                // ぼかし効果
+                                if (gradient.blur && gradient.blur > 0) {
+                                    ctx.filter = `blur(${gradient.blur}px)`;
+                                }
+                            } else {
+                                ctx.fillStyle = obj.fill.color;
+                            }
                         } else {
-                            ctx.fillStyle = obj.fill.color;
+                            // ベタ塗り
+                            const opacity = obj.fill.opacity / 100;
+                            if (opacity < 1) {
+                                const rgb = hexToRgb(obj.fill.color);
+                                ctx.fillStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${opacity})`;
+                            } else {
+                                ctx.fillStyle = obj.fill.color;
+                            }
                         }
+
                         ctx.fillText(char, 0, 0);
+
+                        // ぼかしをリセット
+                        if (obj.fill.gradient && obj.fill.gradient.blur > 0) {
+                            ctx.filter = 'none';
+                        }
                     }
 
                     ctx.restore();
@@ -1809,9 +1940,27 @@
             } else {
                 // 横書き描画
                 const scaleX = obj.scaleX / 100;
+                const kerning = obj.kerning || 0;
                 ctx.translate(obj.x, obj.y);
                 ctx.rotate(obj.rotation * Math.PI / 180);
                 ctx.scale(scaleX, 1);
+
+                // カーニングを考慮した文字位置の計算
+                const renderWithKerning = (renderFunc) => {
+                    if (kerning !== 0) {
+                        // カーニングありの場合、文字ごとに描画
+                        let xOffset = 0;
+                        for (let i = 0; i < text.length; i++) {
+                            const char = text[i];
+                            renderFunc(char, xOffset, 0);
+                            const charWidth = ctx.measureText(char).width;
+                            xOffset += charWidth + kerning;
+                        }
+                    } else {
+                        // カーニングなしの場合、一括描画
+                        renderFunc(text, 0, 0);
+                    }
+                };
 
                 // シャドウ描画
                 if (obj.shadow && obj.shadow.enabled) {
@@ -1822,7 +1971,7 @@
 
                     const rgb = hexToRgb(obj.shadow.color);
                     ctx.fillStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${opacity})`;
-                    ctx.fillText(text, offsetX, offsetY);
+                    renderWithKerning((txt, x, y) => ctx.fillText(txt, x + offsetX, y + offsetY));
                 }
 
                 // ストローク描画（外側から内側へ）
@@ -1834,21 +1983,87 @@
                             ctx.lineWidth = stroke.size;
                             ctx.lineJoin = 'round';
                             ctx.miterLimit = 2;
-                            ctx.strokeText(text, 0, 0);
+                            renderWithKerning((txt, x, y) => ctx.strokeText(txt, x, y));
                         }
                     }
                 }
 
                 // フェース（塗り）描画
                 if (obj.fill && obj.fill.enabled) {
-                    const opacity = obj.fill.opacity / 100;
-                    if (opacity < 1) {
-                        const rgb = hexToRgb(obj.fill.color);
-                        ctx.fillStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${opacity})`;
+                    const fillType = obj.fill.type || 'solid';
+
+                    if (fillType === 'gradient-linear' || fillType === 'gradient-radial') {
+                        // グラデーション描画
+                        const gradient = obj.fill.gradient;
+                        if (gradient) {
+                            const metrics = ctx.measureText(text);
+                            const textWidth = metrics.width;
+                            const textHeight = obj.fontSize;
+
+                            let fillGradient;
+                            const ratioStart = (gradient.ratioStart || 0) / 100;
+                            const ratioEnd = (gradient.ratioEnd || 100) / 100;
+
+                            if (fillType === 'gradient-linear') {
+                                const angle = (gradient.angle || 0) * Math.PI / 180;
+                                const cos = Math.cos(angle);
+                                const sin = Math.sin(angle);
+                                const maxDist = Math.abs(textWidth * cos) + Math.abs(textHeight * sin);
+
+                                const x1 = textWidth/2 - (cos * maxDist/2);
+                                const y1 = textHeight/2 - (sin * maxDist/2);
+                                const x2 = textWidth/2 + (cos * maxDist/2);
+                                const y2 = textHeight/2 + (sin * maxDist/2);
+
+                                fillGradient = ctx.createLinearGradient(x1, y1, x2, y2);
+                            } else {
+                                const centerX = textWidth / 2;
+                                const centerY = textHeight / 2;
+                                const radius = Math.max(textWidth, textHeight) / 2;
+                                fillGradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius);
+                            }
+
+                            const opacity = (gradient.opacity || 100) / 100;
+                            const rgb1 = hexToRgb(gradient.color1);
+                            const rgb2 = hexToRgb(gradient.color2);
+
+                            fillGradient.addColorStop(ratioStart, `rgba(${rgb1.r}, ${rgb1.g}, ${rgb1.b}, ${opacity})`);
+
+                            if (gradient.useColor3) {
+                                const rgb3 = hexToRgb(gradient.color3);
+                                const color3Pos = (gradient.color3Position || 50) / 100;
+                                const adjustedPos = ratioStart + (ratioEnd - ratioStart) * color3Pos;
+                                fillGradient.addColorStop(adjustedPos, `rgba(${rgb3.r}, ${rgb3.g}, ${rgb3.b}, ${opacity})`);
+                            }
+
+                            fillGradient.addColorStop(ratioEnd, `rgba(${rgb2.r}, ${rgb2.g}, ${rgb2.b}, ${opacity})`);
+
+                            ctx.fillStyle = fillGradient;
+
+                            // ぼかし効果
+                            if (gradient.blur && gradient.blur > 0) {
+                                ctx.filter = `blur(${gradient.blur}px)`;
+                            }
+                        } else {
+                            ctx.fillStyle = obj.fill.color;
+                        }
                     } else {
-                        ctx.fillStyle = obj.fill.color;
+                        // ベタ塗り
+                        const opacity = obj.fill.opacity / 100;
+                        if (opacity < 1) {
+                            const rgb = hexToRgb(obj.fill.color);
+                            ctx.fillStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${opacity})`;
+                        } else {
+                            ctx.fillStyle = obj.fill.color;
+                        }
                     }
-                    ctx.fillText(text, 0, 0);
+
+                    renderWithKerning((txt, x, y) => ctx.fillText(txt, x, y));
+
+                    // ぼかしをリセット
+                    if (obj.fill.gradient && obj.fill.gradient.blur > 0) {
+                        ctx.filter = 'none';
+                    }
                 }
             }
 
@@ -1968,11 +2183,13 @@
                 fontFamily: obj.fontFamily,
                 fontSize: obj.fontSize,
                 scaleX: obj.scaleX,
+                kerning: obj.kerning || 0,
                 posX: obj.x,
                 posY: obj.y,
                 textAlign: 'left',
-                fillType: 'solid',
+                fillType: obj.fill.type || 'solid',
                 fillColor: obj.fill.color,
+                fillGradient: obj.fill.gradient,
                 stroke4_enabled: obj.strokes[3].enabled,
                 stroke4_size: obj.strokes[3].size,
                 stroke4_color: obj.strokes[3].color,
@@ -2125,13 +2342,14 @@
                 const fontFamily = config.fontFamily || 'Yu Gothic UI';
                 const fontSize = config.fontSize || 72;
                 const scaleX = config.scaleX || 100;
+                const kerning = config.kerning || 0;
 
                 return `<TextDescriptions Version="4">` +
                     `<TextDescription Reference="${ref}">` +
                         `<TypeSpec>` +
                             `<size>${fontSize * 8}</size>` +
                             `<txHeight>${fontSize}</txHeight>` +
-                            `<txKern>0</txKern>` +
+                            `<txKern>${kerning}</txKern>` +
                             `<baselineShift>0</baselineShift>` +
                             `<leading>0</leading>` +
                             `<txSCaps>${fontSize}</txSCaps>` +
@@ -2361,31 +2579,125 @@
             }
 
             _buildFaceShader(shaderRef, config) {
-                const rgb = this._parseColor(config.fillColor || '#ffffff');
+                const fillType = config.fillType || 'solid';
+                const gradient = config.fillGradient;
+
+                let colorOption, rampType, rampAngle, rampPosTop, rampPosBottom;
                 let colorSpecs = '';
-                for (let i = 0; i <= 4; i++) {
-                    colorSpecs += `<ColorSpec index="${i}">` +
-                        `<red>${rgb.r}</red>` +
-                        `<green>${rgb.g}</green>` +
-                        `<blue>${rgb.b}</blue>` +
+
+                if ((fillType === 'gradient-linear' || fillType === 'gradient-radial') && gradient) {
+                    // グラデーション設定
+                    colorOption = 0;
+                    rampType = -1;
+                    rampAngle = gradient.angle || 0;
+
+                    // 比率の設定（ratioStart/ratioEndから計算）
+                    const ratioStart = gradient.ratioStart || 0;
+                    const ratioEnd = gradient.ratioEnd || 100;
+
+                    if (fillType === 'gradient-linear') {
+                        // 線形グラデーション：デフォルト値75/25をベースに調整
+                        rampPosTop = 100 - ratioStart;
+                        rampPosBottom = 100 - ratioEnd;
+                    } else {
+                        // 円形グラデーション：デフォルト値85.8696/44.5652をベースに調整
+                        const baseTop = 85.8696;
+                        const baseBottom = 44.5652;
+                        const range = baseTop - baseBottom;
+                        rampPosTop = baseTop - (ratioStart / 100 * range);
+                        rampPosBottom = baseBottom - (ratioEnd / 100 * range);
+                    }
+
+                    // ColorSpecの生成（グラデーション用）
+                    const rgb1 = this._parseColor(gradient.color1 || '#fdff00');
+                    const rgb2 = this._parseColor(gradient.color2 || '#ff6600');
+
+                    // index 0: 開始色
+                    colorSpecs += `<ColorSpec index="0">` +
+                        `<red>${rgb1.r}</red>` +
+                        `<green>${rgb1.g}</green>` +
+                        `<blue>${rgb1.b}</blue>` +
                         `<xpar>0</xpar>` +
                     `</ColorSpec>`;
+
+                    // index 1: 補間用（開始色）
+                    colorSpecs += `<ColorSpec index="1">` +
+                        `<red>${rgb1.r}</red>` +
+                        `<green>${rgb1.g}</green>` +
+                        `<blue>${rgb1.b}</blue>` +
+                        `<xpar>0</xpar>` +
+                    `</ColorSpec>`;
+
+                    if (gradient.useColor3) {
+                        // index 2: 中間色
+                        const rgb3 = this._parseColor(gradient.color3 || '#ffaa00');
+                        colorSpecs += `<ColorSpec index="2">` +
+                            `<red>${rgb3.r}</red>` +
+                            `<green>${rgb3.g}</green>` +
+                            `<blue>${rgb3.b}</blue>` +
+                            `<xpar>0</xpar>` +
+                        `</ColorSpec>`;
+                    } else {
+                        // 中間色なし：補間
+                        const midR = Math.round((rgb1.r + rgb2.r) / 2);
+                        const midG = Math.round((rgb1.g + rgb2.g) / 2);
+                        const midB = Math.round((rgb1.b + rgb2.b) / 2);
+                        colorSpecs += `<ColorSpec index="2">` +
+                            `<red>${midR}</red>` +
+                            `<green>${midG}</green>` +
+                            `<blue>${midB}</blue>` +
+                            `<xpar>0</xpar>` +
+                        `</ColorSpec>`;
+                    }
+
+                    // index 3: 補間用（終了色）
+                    colorSpecs += `<ColorSpec index="3">` +
+                        `<red>${rgb2.r}</red>` +
+                        `<green>${rgb2.g}</green>` +
+                        `<blue>${rgb2.b}</blue>` +
+                        `<xpar>0</xpar>` +
+                    `</ColorSpec>`;
+
+                    // index 4: 終了色
+                    colorSpecs += `<ColorSpec index="4">` +
+                        `<red>${rgb2.r}</red>` +
+                        `<green>${rgb2.g}</green>` +
+                        `<blue>${rgb2.b}</blue>` +
+                        `<xpar>0</xpar>` +
+                    `</ColorSpec>`;
+                } else {
+                    // ベタ塗り設定
+                    colorOption = 4;
+                    rampType = 0;
+                    rampAngle = 0;
+                    rampPosTop = 75;
+                    rampPosBottom = 25;
+
+                    const rgb = this._parseColor(config.fillColor || '#ffffff');
+                    for (let i = 0; i <= 4; i++) {
+                        colorSpecs += `<ColorSpec index="${i}">` +
+                            `<red>${rgb.r}</red>` +
+                            `<green>${rgb.g}</green>` +
+                            `<blue>${rgb.b}</blue>` +
+                            `<xpar>0</xpar>` +
+                        `</ColorSpec>`;
+                    }
                 }
 
                 return `<Shader Version="4">` +
                     `<cReference>${shaderRef}</cReference>` +
                     `<textureRef>0</textureRef>` +
-                    `<colorOption>4</colorOption>` +
+                    `<colorOption>${colorOption}</colorOption>` +
                     `<shaderOn>true</shaderOn>` +
                     `<glintSize>10</glintSize>` +
                     `<glintOffset>0</glintOffset>` +
-                    `<rampPosTop>75</rampPosTop>` +
-                    `<rampPosBottom>25</rampPosBottom>` +
-                    `<rampAngle>0</rampAngle>` +
+                    `<rampPosTop>${rampPosTop}</rampPosTop>` +
+                    `<rampPosBottom>${rampPosBottom}</rampPosBottom>` +
+                    `<rampAngle>${rampAngle}</rampAngle>` +
                     `<bevelBalance>0</bevelBalance>` +
                     `<rampCycle>0</rampCycle>` +
                     `<classicStyle>0</classicStyle>` +
-                    `<rampType>0</rampType>` +
+                    `<rampType>${rampType}</rampType>` +
                     colorSpecs +
                     `<glintAngle>0</glintAngle>` +
                     `<bevelSize>0</bevelSize>` +
@@ -2452,6 +2764,7 @@
                 const textRef = this.nextTextDescID;
                 const fontSize = config.fontSize || 72;
                 const txBase = fontSize * 1.2;
+                const kerning = config.kerning || 0;
 
                 return `<Layers>` +
                     `<Layer>` +
@@ -2482,8 +2795,8 @@
                                             `RunCount="${text.length}" ` +
                                             `StyleRef="${styleRef}" ` +
                                             `TextRef="${textRef}" ` +
-                                            `TXKerning="0" ` +
-                                            `TXPostKerning="0" ` +
+                                            `TXKerning="${kerning}" ` +
+                                            `TXPostKerning="${kerning}" ` +
                                             `BaselineShifting="0" />` +
                                     `</RunLengthEncodedCharacterAttributes>` +
                                     `<tagName></tagName>` +
