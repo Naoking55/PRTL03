@@ -434,7 +434,7 @@
                 <label>背景色</label>
                 <div class="row2">
                     <div><input type="color" id="canvasBgColor" value="#000000" onchange="updateCanvasBackground()"></div>
-                    <div><label>不透明度%</label><input type="number" id="canvasBgOpacity" min="0" max="100" value="100" onchange="updateCanvasBackground()"></div>
+                    <div><label>不透明度%</label><input type="number" id="canvasBgOpacity" min="0" max="100" value="0" onchange="updateCanvasBackground()"></div>
                 </div>
                 <label>背景画像</label>
                 <input type="file" id="bgImageInput" accept="image/*" onchange="loadBackgroundImage(event)" style="width:100%;font-size:10px;">
@@ -1246,7 +1246,7 @@
         let boxSelectEnd = { x: 0, y: 0 };  // 矩形選択終了位置
         let bgImage = null;   // 背景画像
         let canvasBgColor = '#000000';
-        let canvasBgOpacity = 100;
+        let canvasBgOpacity = 0;
 
         // ビューポート制御（ズーム・パン）
         let viewZoom = 1.0;
@@ -2205,9 +2205,27 @@
             render();
         }
 
+        function drawCheckerboard(ctx, width, height) {
+            // チェッカーボードパターン（透明度を視覚的に示す）
+            const squareSize = 10;
+            const color1 = '#ffffff';
+            const color2 = '#cccccc';
+
+            for (let y = 0; y < height; y += squareSize) {
+                for (let x = 0; x < width; x += squareSize) {
+                    const isEven = (Math.floor(x / squareSize) + Math.floor(y / squareSize)) % 2 === 0;
+                    ctx.fillStyle = isEven ? color1 : color2;
+                    ctx.fillRect(x, y, squareSize, squareSize);
+                }
+            }
+        }
+
         function drawBackground(ctx) {
             // 透過エクスポート中は背景をスキップ
             if (exportingTransparent) return;
+
+            // チェッカーボードパターン（エディタ用の視覚的背景）
+            drawCheckerboard(ctx, canvas.width, canvas.height);
 
             // 背景色（不透明度が0より大きい場合のみ描画）
             if (canvasBgOpacity > 0) {
