@@ -1252,50 +1252,70 @@
                     render();
                 }
             } else if (currentTool === 'text') {
-                // 新しいテキストオブジェクトを作成
-                const newText = {
-                    text: '',
-                    x: x,
-                    y: y,
-                    fontSize: 100,
-                    fontFamily: 'Yu Gothic UI',
-                    scaleX: 100,
-                    kerning: 0,
-                    tracking: 0,
-                    rotation: 0,
-                    vertical: false,
-                    leading: 0,
-                    slant: 0,
-                    underline: false,
-                    smallCaps: false,
-                    smallCapsSize: 75,
-                    fill: {
-                        enabled: true,
-                        type: 'solid',
-                        color: '#fdff00',
-                        opacity: 100
-                    },
-                    strokes: [
-                        { enabled: false, size: 8, color: '#000000', opacity: 100 },
-                        { enabled: false, size: 50, color: '#ffffff', opacity: 100 },
-                        { enabled: false, size: 68, color: '#000000', opacity: 100 },
-                        { enabled: false, size: 78, color: '#000000', opacity: 100 }
-                    ],
-                    shadow: {
-                        enabled: false,
-                        color: '#000000',
-                        opacity: 50,
-                        distance: 10,
-                        angle: 135,
-                        size: 90,
-                        blur: 0
-                    }
-                };
+                // まず既存のテキストオブジェクトをクリックしたか確認
+                let clickedExistingText = false;
+                for (let i = textObjects.length - 1; i >= 0; i--) {
+                    const obj = textObjects[i];
+                    const metrics = measureText(obj);
 
-                textObjects.push(newText);
-                selectedObject = newText;
-                updatePropertiesPanel();
-                startTyping();
+                    if (x >= obj.x - 10 && x <= obj.x + metrics.width + 10 &&
+                        y >= obj.y - 10 && y <= obj.y + metrics.height + 10) {
+                        // 既存のテキストをクリックした
+                        selectedObject = obj;
+                        updatePropertiesPanel();
+                        startTyping();
+                        clickedExistingText = true;
+                        break;
+                    }
+                }
+
+                // 既存のテキストをクリックしていない場合のみ新しいテキストを作成
+                if (!clickedExistingText) {
+                    // 新しいテキストオブジェクトを作成
+                    const newText = {
+                        text: '',
+                        x: x,
+                        y: y,
+                        fontSize: 100,
+                        fontFamily: 'Yu Gothic UI',
+                        scaleX: 100,
+                        kerning: 0,
+                        tracking: 0,
+                        rotation: 0,
+                        vertical: false,
+                        leading: 0,
+                        slant: 0,
+                        underline: false,
+                        smallCaps: false,
+                        smallCapsSize: 75,
+                        fill: {
+                            enabled: true,
+                            type: 'solid',
+                            color: '#fdff00',
+                            opacity: 100
+                        },
+                        strokes: [
+                            { enabled: false, size: 8, color: '#000000', opacity: 100 },
+                            { enabled: false, size: 50, color: '#ffffff', opacity: 100 },
+                            { enabled: false, size: 68, color: '#000000', opacity: 100 },
+                            { enabled: false, size: 78, color: '#000000', opacity: 100 }
+                        ],
+                        shadow: {
+                            enabled: false,
+                            color: '#000000',
+                            opacity: 50,
+                            distance: 10,
+                            angle: 135,
+                            size: 90,
+                            blur: 0
+                        }
+                    };
+
+                    textObjects.push(newText);
+                    selectedObject = newText;
+                    updatePropertiesPanel();
+                    startTyping();
+                }
             } else if (currentTool === 'pen') {
                 // ペンツール: フリーハンド描画開始
                 isDrawingPen = true;
