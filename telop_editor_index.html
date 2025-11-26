@@ -383,20 +383,6 @@
                 <div class="tool-group" style="flex:1;max-width:150px;">
                     <input type="range" id="timeline" min="0" max="100" value="0" style="width:100%;" oninput="seekAnimation(this.value)">
                 </div>
-                <div class="tool-group">
-                    <button class="tool-icon" onclick="zoomIn()" title="拡大 (Ctrl++)">
-                        <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/><path d="M12 10h-2v2H9v-2H7V9h2V7h1v2h2v1z"/></svg>
-                    </button>
-                    <button class="tool-icon" onclick="zoomOut()" title="縮小 (Ctrl+-)">
-                        <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14zM7 9h5v1H7z"/></svg>
-                    </button>
-                    <button class="tool-icon" onclick="fitToScreen()" title="画面に合わせる (Ctrl+0)">
-                        <svg viewBox="0 0 24 24"><path d="M4 4h4v2H6v2H4V4zm2 14H4v-4h2v2h2v2zm12 0v-2h2v-2h2v4h-4zm2-16v4h-2V6h-2V4h4zM13 7h-2v4h4V9h-2V7zm-2 10v-4h4v2h-2v2h-2z"/></svg>
-                    </button>
-                    <button class="tool-icon" onclick="resetView()" title="ビューリセット (Ctrl+R)">
-                        <svg viewBox="0 0 24 24"><path d="M17.65 6.35A7.958 7.958 0 0012 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0112 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
-                    </button>
-                </div>
                 <div class="tool-group" style="margin-left:auto;">
                     <button class="tool-icon" onclick="setToolbarSize('s')" title="小">
                         <span style="font-size:8px;">S</span>
@@ -434,7 +420,7 @@
                 <label>背景色</label>
                 <div class="row2">
                     <div><input type="color" id="canvasBgColor" value="#000000" onchange="updateCanvasBackground()"></div>
-                    <div><label>不透明度%</label><input type="number" id="canvasBgOpacity" min="0" max="100" value="100" onchange="updateCanvasBackground()"></div>
+                    <div><label>不透明度%</label><input type="number" id="canvasBgOpacity" min="0" max="100" value="0" onchange="updateCanvasBackground()"></div>
                 </div>
                 <label>背景画像</label>
                 <input type="file" id="bgImageInput" accept="image/*" onchange="loadBackgroundImage(event)" style="width:100%;font-size:10px;">
@@ -1246,16 +1232,7 @@
         let boxSelectEnd = { x: 0, y: 0 };  // 矩形選択終了位置
         let bgImage = null;   // 背景画像
         let canvasBgColor = '#000000';
-        let canvasBgOpacity = 100;
-
-        // ビューポート制御（ズーム・パン）
-        let viewZoom = 1.0;
-        let viewPanX = 0;
-        let viewPanY = 0;
-        let isPanning = false;
-        let panStartX = 0;
-        let panStartY = 0;
-        let spaceKeyPressed = false;
+        let canvasBgOpacity = 0;
 
         // アニメーション関連
         let isPlaying = false;
@@ -2563,40 +2540,11 @@
             return null;
         }
 
-        // マウスホイールでズーム
-        canvas.addEventListener('wheel', (e) => {
-            e.preventDefault();
-            const delta = e.deltaY > 0 ? 0.9 : 1.1;
-            const oldZoom = viewZoom;
-            viewZoom = Math.max(0.1, Math.min(10, viewZoom * delta));
-
-            // マウスカーソル位置を中心にズーム
-            const rect = canvas.getBoundingClientRect();
-            const mouseX = e.clientX - rect.left;
-            const mouseY = e.clientY - rect.top;
-
-            viewPanX = mouseX - (mouseX - viewPanX) * (viewZoom / oldZoom);
-            viewPanY = mouseY - (mouseY - viewPanY) * (viewZoom / oldZoom);
-
-            render();
-            updateStatusZoom();
-        }, { passive: false });
-
         canvas.addEventListener('mousedown', (e) => {
             const rect = canvas.getBoundingClientRect();
             scale = canvas.width / rect.width;
-
-            // スペースキーでパンモード
-            if (e.button === 0 && (e.shiftKey || spaceKeyPressed)) {
-                isPanning = true;
-                panStartX = e.clientX - viewPanX;
-                panStartY = e.clientY - viewPanY;
-                canvas.style.cursor = 'grabbing';
-                return;
-            }
-
-            const x = ((e.clientX - rect.left - viewPanX) / viewZoom);
-            const y = ((e.clientY - rect.top - viewPanY) / viewZoom);
+            const x = (e.clientX - rect.left) * scale;
+            const y = (e.clientY - rect.top) * scale;
 
             // スポイトモード
             if (pickingColor) {
@@ -2808,17 +2756,8 @@
 
         canvas.addEventListener('mousemove', (e) => {
             const rect = canvas.getBoundingClientRect();
-
-            // パンモード中
-            if (isPanning) {
-                viewPanX = e.clientX - panStartX;
-                viewPanY = e.clientY - panStartY;
-                render();
-                return;
-            }
-
-            const x = ((e.clientX - rect.left - viewPanX) / viewZoom);
-            const y = ((e.clientY - rect.top - viewPanY) / viewZoom);
+            const x = (e.clientX - rect.left) * scale;
+            const y = (e.clientY - rect.top) * scale;
 
             if (isBoxSelecting) {
                 // 矩形選択中：終了位置を更新
@@ -2934,13 +2873,6 @@
         });
 
         canvas.addEventListener('mouseup', () => {
-            // パンモード終了
-            if (isPanning) {
-                isPanning = false;
-                canvas.style.cursor = spaceKeyPressed ? 'grab' : 'default';
-                return;
-            }
-
             isDragging = false;
             isSelecting = false;
             isResizing = false;
@@ -2994,38 +2926,6 @@
         });
 
         document.addEventListener('keydown', (e) => {
-            // スペースキーでパンモード
-            if (e.code === 'Space' && !editingObjId && !spaceKeyPressed) {
-                e.preventDefault();
-                spaceKeyPressed = true;
-                if (currentTool === 'select') {
-                    canvas.style.cursor = 'grab';
-                }
-                return;
-            }
-
-            // ズームショートカット
-            if (e.ctrlKey && (e.key === '+' || e.key === '=')) {
-                e.preventDefault();
-                zoomIn();
-                return;
-            }
-            if (e.ctrlKey && (e.key === '-' || e.key === '_')) {
-                e.preventDefault();
-                zoomOut();
-                return;
-            }
-            if (e.ctrlKey && e.key === '0') {
-                e.preventDefault();
-                fitToScreen();
-                return;
-            }
-            if (e.ctrlKey && e.key === 'r') {
-                e.preventDefault();
-                resetView();
-                return;
-            }
-
             // Undo/Redo ショートカット
             if (e.ctrlKey && e.key === 'z') {
                 e.preventDefault();
@@ -3207,16 +3107,6 @@
                 insertText(e.key);
             }
             updateLayerList();
-        });
-
-        // スペースキー離した時の処理
-        document.addEventListener('keyup', (e) => {
-            if (e.code === 'Space' && spaceKeyPressed) {
-                spaceKeyPressed = false;
-                if (currentTool === 'select' && !isPanning) {
-                    canvas.style.cursor = 'default';
-                }
-            }
         });
 
         function getCharIndexAt(obj, x, y) {
@@ -5269,11 +5159,6 @@
 
         function render() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.save();
-
-            // ビューポート変換を適用
-            ctx.translate(viewPanX, viewPanY);
-            ctx.scale(viewZoom, viewZoom);
 
             // 背景描画
             drawBackground(ctx);
@@ -6909,9 +6794,6 @@
             // セーフマージン描画（最前面）
             drawSafeMargins(ctx);
 
-            // ビューポート変換を解除
-            ctx.restore();
-
             let statusMsg = `オブジェクト: ${textObjects.length}`;
             if (editingObjId) {
                 statusMsg = '編集中 (Esc終了)';
@@ -6933,44 +6815,6 @@
             canvas.width = w; canvas.height = h;
             document.getElementById('resolution-display').textContent = `${w}×${h}`;
             render();
-        }
-
-        // ========== ビューポート制御（ズーム・パン） ==========
-
-        function zoomIn() {
-            viewZoom = Math.min(viewZoom * 1.2, 10);
-            render();
-            updateStatusZoom();
-        }
-
-        function zoomOut() {
-            viewZoom = Math.max(viewZoom / 1.2, 0.1);
-            render();
-            updateStatusZoom();
-        }
-
-        function resetView() {
-            viewZoom = 1.0;
-            viewPanX = 0;
-            viewPanY = 0;
-            render();
-            updateStatusZoom();
-        }
-
-        function fitToScreen() {
-            const container = canvas.parentElement;
-            const scaleX = container.clientWidth / canvas.width;
-            const scaleY = container.clientHeight / canvas.height;
-            viewZoom = Math.min(scaleX, scaleY) * 0.95;
-            viewPanX = 0;
-            viewPanY = 0;
-            render();
-            updateStatusZoom();
-        }
-
-        function updateStatusZoom() {
-            const zoomPct = Math.round(viewZoom * 100);
-            document.getElementById('statusText').textContent = `ズーム: ${zoomPct}%`;
         }
 
         // 画像関連の関数
