@@ -2251,8 +2251,84 @@
                 }
             }
 
-            // ストローク
-            if (obj.stroke && obj.stroke.enabled) {
+            // パス描画用のヘルパー関数
+            const drawShapePath = () => {
+                if (obj.type === 'rectangle') {
+                    ctx.beginPath();
+                    ctx.rect(x, y, w, h);
+                } else if (obj.type === 'roundRect') {
+                    const radius = Math.min(obj.radius || 20, Math.abs(w) / 2, Math.abs(h) / 2);
+                    ctx.beginPath();
+                    ctx.roundRect(x, y, w, h, radius);
+                } else if (obj.type === 'ellipse') {
+                    ctx.beginPath();
+                    ctx.ellipse(x + w/2, y + h/2, Math.abs(w/2), Math.abs(h/2), 0, 0, 2 * Math.PI);
+                } else if (obj.type === 'line') {
+                    ctx.beginPath();
+                    ctx.moveTo(x, y);
+                    ctx.lineTo(x + w, y + h);
+                } else if (obj.type === 'pen') {
+                    if (obj.points && obj.points.length > 1) {
+                        ctx.beginPath();
+                        ctx.moveTo(obj.points[0].x, obj.points[0].y);
+                        for (let i = 1; i < obj.points.length; i++) {
+                            ctx.lineTo(obj.points[i].x, obj.points[i].y);
+                        }
+                    }
+                } else if (obj.type === 'chamferRect') {
+                    const chamfer = Math.min(obj.radius || 20, Math.abs(w) / 2, Math.abs(h) / 2);
+                    ctx.beginPath();
+                    const x1 = x, y1 = y;
+                    const x2 = x + w, y2 = y + h;
+                    ctx.moveTo(x1 + chamfer, y1);
+                    ctx.lineTo(x2 - chamfer, y1);
+                    ctx.lineTo(x2, y1 + chamfer);
+                    ctx.lineTo(x2, y2 - chamfer);
+                    ctx.lineTo(x2 - chamfer, y2);
+                    ctx.lineTo(x1 + chamfer, y2);
+                    ctx.lineTo(x1, y2 - chamfer);
+                    ctx.lineTo(x1, y1 + chamfer);
+                    ctx.closePath();
+                } else if (obj.type === 'triangle') {
+                    ctx.beginPath();
+                    ctx.moveTo(x + w / 2, y);
+                    ctx.lineTo(x + w, y + h);
+                    ctx.lineTo(x, y + h);
+                    ctx.closePath();
+                }
+            };
+
+            // 塗りつぶし
+            if (obj.fill && obj.fill.enabled) {
+                drawShapePath();
+                if (obj.type === 'rectangle') {
+                    ctx.fillRect(x, y, w, h);
+                } else {
+                    ctx.fill();
+                }
+            }
+
+            // 複数ストローク対応（外側から内側へ）
+            if (obj.strokes && Array.isArray(obj.strokes)) {
+                const enabledStrokes = obj.strokes.filter(s => s.enabled && s.size > 0);
+                // 大きいサイズから小さいサイズへ描画（逆順）
+                for (let i = enabledStrokes.length - 1; i >= 0; i--) {
+                    const stroke = enabledStrokes[i];
+                    const strokeOpacity = (stroke.opacity || 100) / 100;
+                    if (strokeOpacity < 1) {
+                        const rgb = hexToRgb(stroke.color);
+                        ctx.strokeStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${strokeOpacity})`;
+                    } else {
+                        ctx.strokeStyle = stroke.color;
+                    }
+                    ctx.lineWidth = stroke.size;
+                    ctx.lineJoin = 'round';
+                    ctx.lineCap = 'round';
+                    drawShapePath();
+                    ctx.stroke();
+                }
+            } else if (obj.stroke && obj.stroke.enabled) {
+                // 単一ストローク（後方互換性のため）
                 const strokeOpacity = (obj.stroke.opacity || 100) / 100;
                 if (strokeOpacity < 1) {
                     const rgb = hexToRgb(obj.stroke.color);
@@ -2261,91 +2337,12 @@
                     ctx.strokeStyle = obj.stroke.color;
                 }
                 ctx.lineWidth = obj.stroke.size;
+                drawShapePath();
+                ctx.stroke();
             }
 
-            // 図形タイプごとの描画
-            if (obj.type === 'rectangle') {
-                if (obj.fill && obj.fill.enabled) {
-                    ctx.fillRect(x, y, w, h);
-                }
-                if (obj.stroke && obj.stroke.enabled) {
-                    ctx.strokeRect(x, y, w, h);
-                }
-            } else if (obj.type === 'roundRect') {
-                // 角丸矩形
-                const radius = Math.min(obj.radius || 20, Math.abs(w) / 2, Math.abs(h) / 2);
-                ctx.beginPath();
-                ctx.roundRect(x, y, w, h, radius);
-                if (obj.fill && obj.fill.enabled) {
-                    ctx.fill();
-                }
-                if (obj.stroke && obj.stroke.enabled) {
-                    ctx.stroke();
-                }
-            } else if (obj.type === 'ellipse') {
-                ctx.beginPath();
-                ctx.ellipse(x + w/2, y + h/2, Math.abs(w/2), Math.abs(h/2), 0, 0, 2 * Math.PI);
-                if (obj.fill && obj.fill.enabled) {
-                    ctx.fill();
-                }
-                if (obj.stroke && obj.stroke.enabled) {
-                    ctx.stroke();
-                }
-            } else if (obj.type === 'line') {
-                // 線
-                ctx.beginPath();
-                ctx.moveTo(x, y);
-                ctx.lineTo(x + w, y + h);
-                if (obj.stroke && obj.stroke.enabled) {
-                    ctx.stroke();
-                }
-            } else if (obj.type === 'pen') {
-                // ペン（フリーハンド描画）
-                if (obj.points && obj.points.length > 1) {
-                    ctx.beginPath();
-                    ctx.moveTo(obj.points[0].x, obj.points[0].y);
-                    for (let i = 1; i < obj.points.length; i++) {
-                        ctx.lineTo(obj.points[i].x, obj.points[i].y);
-                    }
-                    if (obj.stroke && obj.stroke.enabled) {
-                        ctx.stroke();
-                    }
-                }
-            } else if (obj.type === 'chamferRect') {
-                // 斜角長方形
-                const chamfer = Math.min(obj.radius || 20, Math.abs(w) / 2, Math.abs(h) / 2);
-                ctx.beginPath();
-                const x1 = x, y1 = y;
-                const x2 = x + w, y2 = y + h;
-                ctx.moveTo(x1 + chamfer, y1);
-                ctx.lineTo(x2 - chamfer, y1);
-                ctx.lineTo(x2, y1 + chamfer);
-                ctx.lineTo(x2, y2 - chamfer);
-                ctx.lineTo(x2 - chamfer, y2);
-                ctx.lineTo(x1 + chamfer, y2);
-                ctx.lineTo(x1, y2 - chamfer);
-                ctx.lineTo(x1, y1 + chamfer);
-                ctx.closePath();
-                if (obj.fill && obj.fill.enabled) {
-                    ctx.fill();
-                }
-                if (obj.stroke && obj.stroke.enabled) {
-                    ctx.stroke();
-                }
-            } else if (obj.type === 'triangle') {
-                // 三角形
-                ctx.beginPath();
-                ctx.moveTo(x + w / 2, y);
-                ctx.lineTo(x + w, y + h);
-                ctx.lineTo(x, y + h);
-                ctx.closePath();
-                if (obj.fill && obj.fill.enabled) {
-                    ctx.fill();
-                }
-                if (obj.stroke && obj.stroke.enabled) {
-                    ctx.stroke();
-                }
-            } else if (obj.type === 'arc') {
+            // 円弧は特殊処理
+            if (obj.type === 'arc') {
                 // 円弧
                 const centerX = x + w / 2;
                 const centerY = y + h / 2;
