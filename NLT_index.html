@@ -91,9 +91,11 @@
             background: repeating-conic-gradient(
                 #2a2a2a 0% 25%,
                 #1e1e1e 0% 50%
-            ) 50% / 20px 20px;
+            ) 50% / 16px 16px;
             box-shadow: 0 4px 20px rgba(0,0,0,0.5);
             cursor: crosshair;
+            max-width: 100%;
+            max-height: 100%;
         }
 
         #canvas.selection-mode {
@@ -313,10 +315,10 @@
     <div class="main-container">
         <!-- 上部ツールバー -->
         <div class="toolbar">
-            <div class="tool-btn active" id="selectTool" title="選択ツール">
+            <div class="tool-btn active" id="selectTool" title="選択ツール (V)">
                 ➤
             </div>
-            <div class="tool-btn" id="textTool" title="テキストツール">
+            <div class="tool-btn" id="textTool" title="テキストツール (T)">
                 T
             </div>
             <div class="toolbar-separator"></div>
@@ -324,6 +326,19 @@
             <input type="number" id="canvasWidth" value="1920" min="1" style="width: 70px; padding: 4px; background: #3a3a3a; border: 1px solid #555; border-radius: 3px; color: #fff; font-size: 11px;">
             <span style="font-size: 11px; color: #888;">×</span>
             <input type="number" id="canvasHeight" value="1080" min="1" style="width: 70px; padding: 4px; background: #3a3a3a; border: 1px solid #555; border-radius: 3px; color: #fff; font-size: 11px;">
+            <div class="toolbar-separator"></div>
+            <div class="tool-btn" onclick="zoomIn()" title="拡大 (Ctrl++)">
+                +
+            </div>
+            <div class="tool-btn" onclick="zoomOut()" title="縮小 (Ctrl+-)">
+                −
+            </div>
+            <div class="tool-btn" onclick="fitToScreen()" title="画面に合わせる (Ctrl+0)">
+                ⊡
+            </div>
+            <div class="tool-btn" onclick="resetView()" title="ビューリセット (Ctrl+R)">
+                ⟲
+            </div>
             <div class="toolbar-separator"></div>
             <button class="btn btn-primary" onclick="exportPRTL()" style="width: auto; padding: 6px 12px;">PRTL書き出し</button>
         </div>
@@ -338,6 +353,37 @@
             <!-- 右側プロパティパネル -->
             <div class="properties-panel">
                 <h3 style="font-size: 12px; margin-bottom: 12px; color: #0066cc;">プロパティ</h3>
+
+                <!-- キャンバス設定セクション -->
+                <div class="property-section">
+                    <div class="property-section-header">キャンバス設定</div>
+                    <div class="property-section-content">
+                        <h4 style="font-size: 10px; color: #888; margin: 8px 0 4px;">セーフマージン</h4>
+                        <div class="property-row">
+                            <label><input type="checkbox" id="safeMarginEnabled" checked onchange="render()">表示</label>
+                        </div>
+                        <div class="property-grid-2">
+                            <div class="property-row">
+                                <label>アクション %</label>
+                                <input type="number" id="actionSafeMargin" min="0" max="20" value="5" onchange="render()">
+                            </div>
+                            <div class="property-row">
+                                <label>タイトル %</label>
+                                <input type="number" id="titleSafeMargin" min="0" max="20" value="10" onchange="render()">
+                            </div>
+                        </div>
+                        <div class="property-grid-2">
+                            <div class="property-row">
+                                <label>色</label>
+                                <input type="color" id="safeMarginColor" value="#ffffff" onchange="render()">
+                            </div>
+                            <div class="property-row">
+                                <label>不透明度 %</label>
+                                <input type="number" id="safeMarginOpacity" min="0" max="100" value="50" onchange="render()">
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
                 <!-- 変形セクション -->
                 <div class="property-section">
@@ -555,6 +601,11 @@
         let selectedObject = null;
         let isTyping = false;
         let cursorPosition = 0;
+
+        // ビューポート制御
+        let viewportScale = 1;
+        let viewportOffsetX = 0;
+        let viewportOffsetY = 0;
 
         // ツール切り替え
         document.getElementById('selectTool').addEventListener('click', () => {
@@ -833,6 +884,11 @@
             ctx.fillStyle = '#000';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+            // セーフマージン描画
+            if (document.getElementById('safeMarginEnabled').checked) {
+                drawSafeMargins();
+            }
+
             // 全テキストオブジェクトを描画
             textObjects.forEach(obj => {
                 drawTextObject(obj, obj === selectedObject);
@@ -842,6 +898,34 @@
             if (isTyping && selectedObject) {
                 drawCursor();
             }
+        }
+
+        function drawSafeMargins() {
+            const actionMargin = parseFloat(document.getElementById('actionSafeMargin').value) / 100;
+            const titleMargin = parseFloat(document.getElementById('titleSafeMargin').value) / 100;
+            const marginColor = document.getElementById('safeMarginColor').value;
+            const opacity = parseFloat(document.getElementById('safeMarginOpacity').value) / 100;
+
+            const rgb = hexToRgb(marginColor);
+            ctx.strokeStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${opacity})`;
+            ctx.lineWidth = 1;
+            ctx.setLineDash([5, 5]);
+
+            // アクションセーフ
+            const actionX = canvas.width * actionMargin;
+            const actionY = canvas.height * actionMargin;
+            const actionW = canvas.width * (1 - actionMargin * 2);
+            const actionH = canvas.height * (1 - actionMargin * 2);
+            ctx.strokeRect(actionX, actionY, actionW, actionH);
+
+            // タイトルセーフ
+            const titleX = canvas.width * titleMargin;
+            const titleY = canvas.height * titleMargin;
+            const titleW = canvas.width * (1 - titleMargin * 2);
+            const titleH = canvas.height * (1 - titleMargin * 2);
+            ctx.strokeRect(titleX, titleY, titleW, titleH);
+
+            ctx.setLineDash([]);
         }
 
         function drawTextObject(obj, isSelected) {
@@ -1531,6 +1615,60 @@
                     .replace(/'/g, '&apos;');
             }
         }
+
+        // ビューコントロール関数
+        function zoomIn() {
+            viewportScale *= 1.2;
+            applyViewportTransform();
+        }
+
+        function zoomOut() {
+            viewportScale /= 1.2;
+            applyViewportTransform();
+        }
+
+        function fitToScreen() {
+            const container = document.querySelector('.canvas-area');
+            const scaleX = (container.clientWidth - 40) / canvas.width;
+            const scaleY = (container.clientHeight - 40) / canvas.height;
+            viewportScale = Math.min(scaleX, scaleY);
+            viewportOffsetX = 0;
+            viewportOffsetY = 0;
+            applyViewportTransform();
+        }
+
+        function resetView() {
+            viewportScale = 1;
+            viewportOffsetX = 0;
+            viewportOffsetY = 0;
+            applyViewportTransform();
+        }
+
+        function applyViewportTransform() {
+            canvas.style.transform = `scale(${viewportScale}) translate(${viewportOffsetX}px, ${viewportOffsetY}px)`;
+        }
+
+        // キーボードショートカット
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey || e.metaKey) {
+                if (e.key === '=' || e.key === '+') {
+                    e.preventDefault();
+                    zoomIn();
+                } else if (e.key === '-') {
+                    e.preventDefault();
+                    zoomOut();
+                } else if (e.key === '0') {
+                    e.preventDefault();
+                    fitToScreen();
+                } else if (e.key === 'r' || e.key === 'R') {
+                    e.preventDefault();
+                    resetView();
+                }
+            }
+        });
+
+        // 初期表示を画面に合わせる
+        setTimeout(fitToScreen, 100);
 
         // 初期レンダリング
         render();
