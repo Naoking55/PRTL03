@@ -2726,14 +2726,12 @@
             if (currentTool === 'pathText' && isDrawingPath && pathPoints.length >= 2) {
                 const rect = canvas.getBoundingClientRect();
                 scale = canvas.width / rect.width;
-                const text = prompt('パスに表示するテキストを入力:', 'サンプルテキスト');
-                if (text) {
-                    saveState();
-                    const pathTextObj = createPathTextObject(text, pathPoints);
-                    textObjects.push(pathTextObj);
-                    selectObject(pathTextObj.id);
-                    updateLayerList();
-                }
+                const text = prompt('パスに表示するテキストを入力:', 'サンプルテキスト') || 'サンプルテキスト';
+                saveState();
+                const pathTextObj = createPathTextObject(text, pathPoints);
+                textObjects.push(pathTextObj);
+                selectObject(pathTextObj.id);
+                updateLayerList();
                 pathPoints = [];
                 isDrawingPath = false;
                 render();
