@@ -996,20 +996,29 @@
         function updateSelectedObjectFromProperties() {
             if (!selectedObject) return;
 
+            // 図形オブジェクトかどうかを判定
+            const isShapeObject = selectedObject.type &&
+                ['rectangle', 'roundRect', 'ellipse', 'polygon', 'star'].includes(selectedObject.type);
+
             selectedObject.x = parseFloat(document.getElementById('prop_x').value) || 0;
             selectedObject.y = parseFloat(document.getElementById('prop_y').value) || 0;
-            selectedObject.fontSize = parseInt(document.getElementById('prop_fontSize').value) || 72;
-            selectedObject.fontFamily = document.getElementById('prop_fontFamily').value;
-            selectedObject.scaleX = parseInt(document.getElementById('prop_scaleX').value) || 100;
-            selectedObject.kerning = parseInt(document.getElementById('prop_kerning').value) || 0;
-            selectedObject.tracking = parseInt(document.getElementById('prop_tracking').value) || 0;
-            selectedObject.rotation = parseFloat(document.getElementById('prop_rotation').value) || 0;
-            selectedObject.vertical = document.getElementById('prop_vertical').checked;
-            selectedObject.leading = parseFloat(document.getElementById('prop_leading').value) || 0;
-            selectedObject.slant = parseFloat(document.getElementById('prop_slant').value) || 0;
-            selectedObject.underline = document.getElementById('prop_underline').checked;
-            selectedObject.smallCaps = document.getElementById('prop_smallCaps').checked;
-            selectedObject.smallCapsSize = parseInt(document.getElementById('prop_smallCapsSize').value) || 75;
+
+            // テキストオブジェクトのプロパティのみ更新
+            if (!isShapeObject) {
+                selectedObject.fontSize = parseInt(document.getElementById('prop_fontSize').value) || 72;
+                selectedObject.fontFamily = document.getElementById('prop_fontFamily').value;
+                selectedObject.scaleX = parseInt(document.getElementById('prop_scaleX').value) || 100;
+                selectedObject.kerning = parseInt(document.getElementById('prop_kerning').value) || 0;
+                selectedObject.tracking = parseInt(document.getElementById('prop_tracking').value) || 0;
+                selectedObject.baselineShift = parseFloat(document.getElementById('prop_baselineShift').value) || 0;
+                selectedObject.rotation = parseFloat(document.getElementById('prop_rotation').value) || 0;
+                selectedObject.vertical = document.getElementById('prop_vertical').checked;
+                selectedObject.leading = parseFloat(document.getElementById('prop_leading').value) || 0;
+                selectedObject.slant = parseFloat(document.getElementById('prop_slant').value) || 0;
+                selectedObject.underline = document.getElementById('prop_underline').checked;
+                selectedObject.smallCaps = document.getElementById('prop_smallCaps').checked;
+                selectedObject.smallCapsSize = parseInt(document.getElementById('prop_smallCapsSize').value) || 75;
+            }
 
             const fillType = document.getElementById('fill_type').value;
             selectedObject.fill = {
@@ -1047,42 +1056,54 @@
                 };
             }
 
-            selectedObject.strokes = [
-                {
+            // ストロークとシャドウの更新
+            if (!isShapeObject) {
+                // テキストオブジェクトの場合、複数のストロークを配列で管理
+                selectedObject.strokes = [
+                    {
+                        enabled: document.getElementById('stroke1_enabled').checked,
+                        size: parseInt(document.getElementById('stroke1_size').value) || 0,
+                        color: document.getElementById('stroke1_color').value,
+                        opacity: parseInt(document.getElementById('stroke1_opacity').value) || 100
+                    },
+                    {
+                        enabled: document.getElementById('stroke2_enabled').checked,
+                        size: parseInt(document.getElementById('stroke2_size').value) || 0,
+                        color: document.getElementById('stroke2_color').value,
+                        opacity: parseInt(document.getElementById('stroke2_opacity').value) || 100
+                    },
+                    {
+                        enabled: document.getElementById('stroke3_enabled').checked,
+                        size: parseInt(document.getElementById('stroke3_size').value) || 0,
+                        color: document.getElementById('stroke3_color').value,
+                        opacity: parseInt(document.getElementById('stroke3_opacity').value) || 100
+                    },
+                    {
+                        enabled: document.getElementById('stroke4_enabled').checked,
+                        size: parseInt(document.getElementById('stroke4_size').value) || 0,
+                        color: document.getElementById('stroke4_color').value,
+                        opacity: parseInt(document.getElementById('stroke4_opacity').value) || 100
+                    }
+                ];
+
+                selectedObject.shadow = {
+                    enabled: document.getElementById('shadow_enabled').checked,
+                    color: document.getElementById('shadow_color').value,
+                    opacity: parseInt(document.getElementById('shadow_opacity').value) || 50,
+                    distance: parseInt(document.getElementById('shadow_distance').value) || 10,
+                    angle: parseInt(document.getElementById('shadow_angle').value) || -45,
+                    size: parseInt(document.getElementById('shadow_size').value) || 90,
+                    blur: parseInt(document.getElementById('shadow_blur').value) || 0
+                };
+            } else {
+                // 図形オブジェクトの場合、単一のstrokeプロパティ
+                selectedObject.stroke = {
                     enabled: document.getElementById('stroke1_enabled').checked,
                     size: parseInt(document.getElementById('stroke1_size').value) || 0,
                     color: document.getElementById('stroke1_color').value,
                     opacity: parseInt(document.getElementById('stroke1_opacity').value) || 100
-                },
-                {
-                    enabled: document.getElementById('stroke2_enabled').checked,
-                    size: parseInt(document.getElementById('stroke2_size').value) || 0,
-                    color: document.getElementById('stroke2_color').value,
-                    opacity: parseInt(document.getElementById('stroke2_opacity').value) || 100
-                },
-                {
-                    enabled: document.getElementById('stroke3_enabled').checked,
-                    size: parseInt(document.getElementById('stroke3_size').value) || 0,
-                    color: document.getElementById('stroke3_color').value,
-                    opacity: parseInt(document.getElementById('stroke3_opacity').value) || 100
-                },
-                {
-                    enabled: document.getElementById('stroke4_enabled').checked,
-                    size: parseInt(document.getElementById('stroke4_size').value) || 0,
-                    color: document.getElementById('stroke4_color').value,
-                    opacity: parseInt(document.getElementById('stroke4_opacity').value) || 100
-                }
-            ];
-
-            selectedObject.shadow = {
-                enabled: document.getElementById('shadow_enabled').checked,
-                color: document.getElementById('shadow_color').value,
-                opacity: parseInt(document.getElementById('shadow_opacity').value) || 50,
-                distance: parseInt(document.getElementById('shadow_distance').value) || 10,
-                angle: parseInt(document.getElementById('shadow_angle').value) || -45,
-                size: parseInt(document.getElementById('shadow_size').value) || 90,
-                blur: parseInt(document.getElementById('shadow_blur').value) || 0
-            };
+                };
+            }
 
             render();
         }
@@ -1122,6 +1143,7 @@
                             scaleX: 100,
                             kerning: 0,
                             tracking: 0,
+                            baselineShift: 0,
                             rotation: 0,
                             leading: 0,
                             slant: 0,
@@ -1220,13 +1242,15 @@
                     sides: 5, // 多角形・星形用
                     fill: {
                         enabled: true,
+                        type: 'solid',
                         color: '#ffffff',
                         opacity: 100
                     },
                     stroke: {
                         enabled: true,
                         size: 3,
-                        color: '#000000'
+                        color: '#000000',
+                        opacity: 100
                     }
                 };
             } else if (currentTool === 'select') {
@@ -1531,8 +1555,19 @@
             const rect = canvas.getBoundingClientRect();
 
             // Canvas上のテキストオブジェクトの位置にIME入力を配置
-            imeInput.style.left = (rect.left + selectedObject.x * (rect.width / canvas.width)) + 'px';
-            imeInput.style.top = (rect.top + selectedObject.y * (rect.height / canvas.height)) + 'px';
+            let objX, objY;
+            if (selectedObject.path && selectedObject.path.length > 0) {
+                // パス上文字の場合、パスの最初のポイントを使用
+                objX = selectedObject.path[0].x;
+                objY = selectedObject.path[0].y;
+            } else {
+                // 通常のテキストの場合
+                objX = selectedObject.x;
+                objY = selectedObject.y;
+            }
+
+            imeInput.style.left = (rect.left + objX * (rect.width / canvas.width)) + 'px';
+            imeInput.style.top = (rect.top + objY * (rect.height / canvas.height)) + 'px';
 
             imeInput.value = selectedObject.text;
             imeInput.classList.add('active');
@@ -1657,21 +1692,30 @@
         function updatePropertiesPanel() {
             if (!selectedObject) return;
 
+            // 図形オブジェクトかどうかを判定
+            const isShapeObject = selectedObject.type &&
+                ['rectangle', 'roundRect', 'ellipse', 'polygon', 'star'].includes(selectedObject.type);
+
             document.getElementById('prop_x').value = selectedObject.x.toFixed(1);
             document.getElementById('prop_y').value = selectedObject.y.toFixed(1);
-            document.getElementById('prop_fontSize').value = selectedObject.fontSize;
-            document.getElementById('prop_fontFamily').value = selectedObject.fontFamily;
-            document.getElementById('prop_scaleX').value = selectedObject.scaleX;
-            document.getElementById('scaleXValue').textContent = selectedObject.scaleX + '%';
-            document.getElementById('prop_kerning').value = selectedObject.kerning;
-            document.getElementById('prop_tracking').value = selectedObject.tracking;
-            document.getElementById('prop_rotation').value = selectedObject.rotation;
-            document.getElementById('prop_vertical').checked = selectedObject.vertical || false;
-            document.getElementById('prop_leading').value = selectedObject.leading || 0;
-            document.getElementById('prop_slant').value = selectedObject.slant || 0;
-            document.getElementById('prop_underline').checked = selectedObject.underline || false;
-            document.getElementById('prop_smallCaps').checked = selectedObject.smallCaps || false;
-            document.getElementById('prop_smallCapsSize').value = selectedObject.smallCapsSize || 75;
+
+            // テキストオブジェクトのプロパティ
+            if (!isShapeObject) {
+                document.getElementById('prop_fontSize').value = selectedObject.fontSize;
+                document.getElementById('prop_fontFamily').value = selectedObject.fontFamily;
+                document.getElementById('prop_scaleX').value = selectedObject.scaleX;
+                document.getElementById('scaleXValue').textContent = selectedObject.scaleX + '%';
+                document.getElementById('prop_kerning').value = selectedObject.kerning;
+                document.getElementById('prop_tracking').value = selectedObject.tracking;
+                document.getElementById('prop_baselineShift').value = selectedObject.baselineShift || 0;
+                document.getElementById('prop_rotation').value = selectedObject.rotation;
+                document.getElementById('prop_vertical').checked = selectedObject.vertical || false;
+                document.getElementById('prop_leading').value = selectedObject.leading || 0;
+                document.getElementById('prop_slant').value = selectedObject.slant || 0;
+                document.getElementById('prop_underline').checked = selectedObject.underline || false;
+                document.getElementById('prop_smallCaps').checked = selectedObject.smallCaps || false;
+                document.getElementById('prop_smallCapsSize').value = selectedObject.smallCapsSize || 75;
+            }
 
             document.getElementById('fill_enabled').checked = selectedObject.fill.enabled;
             document.getElementById('fill_color').value = selectedObject.fill.color;
@@ -1718,35 +1762,54 @@
                 }
             }
 
-            if (selectedObject.strokes.length >= 4) {
-                document.getElementById('stroke1_enabled').checked = selectedObject.strokes[0].enabled;
-                document.getElementById('stroke1_size').value = selectedObject.strokes[0].size;
-                document.getElementById('stroke1_color').value = selectedObject.strokes[0].color;
-                document.getElementById('stroke1_opacity').value = selectedObject.strokes[0].opacity || 100;
+            // ストロークとシャドウはテキストオブジェクトのみ
+            if (!isShapeObject) {
+                if (selectedObject.strokes && selectedObject.strokes.length >= 4) {
+                    document.getElementById('stroke1_enabled').checked = selectedObject.strokes[0].enabled;
+                    document.getElementById('stroke1_size').value = selectedObject.strokes[0].size;
+                    document.getElementById('stroke1_color').value = selectedObject.strokes[0].color;
+                    document.getElementById('stroke1_opacity').value = selectedObject.strokes[0].opacity || 100;
 
-                document.getElementById('stroke2_enabled').checked = selectedObject.strokes[1].enabled;
-                document.getElementById('stroke2_size').value = selectedObject.strokes[1].size;
-                document.getElementById('stroke2_color').value = selectedObject.strokes[1].color;
-                document.getElementById('stroke2_opacity').value = selectedObject.strokes[1].opacity || 100;
+                    document.getElementById('stroke2_enabled').checked = selectedObject.strokes[1].enabled;
+                    document.getElementById('stroke2_size').value = selectedObject.strokes[1].size;
+                    document.getElementById('stroke2_color').value = selectedObject.strokes[1].color;
+                    document.getElementById('stroke2_opacity').value = selectedObject.strokes[1].opacity || 100;
 
-                document.getElementById('stroke3_enabled').checked = selectedObject.strokes[2].enabled;
-                document.getElementById('stroke3_size').value = selectedObject.strokes[2].size;
-                document.getElementById('stroke3_color').value = selectedObject.strokes[2].color;
-                document.getElementById('stroke3_opacity').value = selectedObject.strokes[2].opacity || 100;
+                    document.getElementById('stroke3_enabled').checked = selectedObject.strokes[2].enabled;
+                    document.getElementById('stroke3_size').value = selectedObject.strokes[2].size;
+                    document.getElementById('stroke3_color').value = selectedObject.strokes[2].color;
+                    document.getElementById('stroke3_opacity').value = selectedObject.strokes[2].opacity || 100;
 
-                document.getElementById('stroke4_enabled').checked = selectedObject.strokes[3].enabled;
-                document.getElementById('stroke4_size').value = selectedObject.strokes[3].size;
-                document.getElementById('stroke4_color').value = selectedObject.strokes[3].color;
-                document.getElementById('stroke4_opacity').value = selectedObject.strokes[3].opacity || 100;
+                    document.getElementById('stroke4_enabled').checked = selectedObject.strokes[3].enabled;
+                    document.getElementById('stroke4_size').value = selectedObject.strokes[3].size;
+                    document.getElementById('stroke4_color').value = selectedObject.strokes[3].color;
+                    document.getElementById('stroke4_opacity').value = selectedObject.strokes[3].opacity || 100;
+                }
+
+                if (selectedObject.shadow) {
+                    document.getElementById('shadow_enabled').checked = selectedObject.shadow.enabled;
+                    document.getElementById('shadow_color').value = selectedObject.shadow.color;
+                    document.getElementById('shadow_opacity').value = selectedObject.shadow.opacity;
+                    document.getElementById('shadow_distance').value = selectedObject.shadow.distance;
+                    document.getElementById('shadow_angle').value = selectedObject.shadow.angle;
+                    document.getElementById('shadow_size').value = selectedObject.shadow.size || 90;
+                    document.getElementById('shadow_blur').value = selectedObject.shadow.blur || 0;
+                }
+            } else {
+                // 図形オブジェクトのストローク設定（単一のstrokeプロパティ）
+                if (selectedObject.stroke) {
+                    // 図形のストロークをstroke1に表示
+                    document.getElementById('stroke1_enabled').checked = selectedObject.stroke.enabled;
+                    document.getElementById('stroke1_size').value = selectedObject.stroke.size;
+                    document.getElementById('stroke1_color').value = selectedObject.stroke.color;
+                    document.getElementById('stroke1_opacity').value = selectedObject.stroke.opacity || 100;
+
+                    // 他のストロークは無効化
+                    document.getElementById('stroke2_enabled').checked = false;
+                    document.getElementById('stroke3_enabled').checked = false;
+                    document.getElementById('stroke4_enabled').checked = false;
+                }
             }
-
-            document.getElementById('shadow_enabled').checked = selectedObject.shadow.enabled;
-            document.getElementById('shadow_color').value = selectedObject.shadow.color;
-            document.getElementById('shadow_opacity').value = selectedObject.shadow.opacity;
-            document.getElementById('shadow_distance').value = selectedObject.shadow.distance;
-            document.getElementById('shadow_angle').value = selectedObject.shadow.angle;
-            document.getElementById('shadow_size').value = selectedObject.shadow.size || 90;
-            document.getElementById('shadow_blur').value = selectedObject.shadow.blur || 0;
         }
 
         function measureText(obj) {
@@ -2401,11 +2464,14 @@
                     ctx.rotate(angle + obj.rotation * Math.PI / 180);
                     ctx.scale(scaleX, 1);
 
+                    // ベースラインシフトを適用
+                    const baselineShift = obj.baselineShift || 0;
+
                     // シャドウ描画
                     if (obj.shadow && obj.shadow.enabled) {
                         const shadowAngle = obj.shadow.angle * Math.PI / 180;
                         const offsetX = Math.cos(shadowAngle) * obj.shadow.distance;
-                        const offsetY = Math.sin(shadowAngle) * obj.shadow.distance;
+                        const offsetY = Math.sin(shadowAngle) * obj.shadow.distance + baselineShift;
                         const opacity = obj.shadow.opacity / 100;
                         const rgb = hexToRgb(obj.shadow.color);
                         ctx.fillStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${opacity})`;
@@ -2421,7 +2487,7 @@
                                 ctx.lineWidth = stroke.size;
                                 ctx.lineJoin = 'round';
                                 ctx.miterLimit = 2;
-                                ctx.strokeText(char, 0, 0);
+                                ctx.strokeText(char, 0, baselineShift);
                             }
                         }
                     }
@@ -2429,7 +2495,56 @@
                     // 塗り描画
                     if (obj.fill && obj.fill.enabled) {
                         const fillType = obj.fill.type || 'solid';
-                        if (fillType === 'solid') {
+
+                        if (fillType === 'gradient-linear' || fillType === 'gradient-radial') {
+                            // グラデーション描画
+                            const gradient = obj.fill.gradient;
+                            if (gradient) {
+                                const charMetrics = ctx.measureText(char);
+                                const charWidth = obj.fontSize;
+                                const charHeight = obj.fontSize;
+
+                                let fillGradient;
+                                const ratioStart = (gradient.ratioStart || 0) / 100;
+                                const ratioEnd = (gradient.ratioEnd || 100) / 100;
+
+                                if (fillType === 'gradient-linear') {
+                                    const gradAngle = (gradient.angle || 0) * Math.PI / 180;
+                                    const cos = Math.cos(gradAngle);
+                                    const sin = Math.sin(gradAngle);
+                                    const maxDist = Math.abs(charWidth * cos) + Math.abs(charHeight * sin);
+
+                                    const x1 = charWidth/2 - (cos * maxDist/2);
+                                    const y1 = charHeight/2 - (sin * maxDist/2) + baselineShift;
+                                    const x2 = charWidth/2 + (cos * maxDist/2);
+                                    const y2 = charHeight/2 + (sin * maxDist/2) + baselineShift;
+
+                                    fillGradient = ctx.createLinearGradient(x1, y1, x2, y2);
+                                } else {
+                                    const centerX = charWidth / 2;
+                                    const centerY = charHeight / 2 + baselineShift;
+                                    const radius = Math.max(charWidth, charHeight) / 2;
+                                    fillGradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius);
+                                }
+
+                                const opacity = (gradient.opacity || 100) / 100;
+                                const rgb1 = hexToRgb(gradient.color1);
+                                const rgb2 = hexToRgb(gradient.color2);
+
+                                fillGradient.addColorStop(ratioStart, `rgba(${rgb1.r}, ${rgb1.g}, ${rgb1.b}, ${opacity})`);
+
+                                if (gradient.useColor3) {
+                                    const rgb3 = hexToRgb(gradient.color3);
+                                    const color3Pos = (gradient.color3Position || 50) / 100;
+                                    const adjustedPos = ratioStart + (ratioEnd - ratioStart) * color3Pos;
+                                    fillGradient.addColorStop(adjustedPos, `rgba(${rgb3.r}, ${rgb3.g}, ${rgb3.b}, ${opacity})`);
+                                }
+
+                                fillGradient.addColorStop(ratioEnd, `rgba(${rgb2.r}, ${rgb2.g}, ${rgb2.b}, ${opacity})`);
+
+                                ctx.fillStyle = fillGradient;
+                            }
+                        } else if (fillType === 'solid') {
                             const opacity = obj.fill.opacity / 100;
                             if (opacity < 1) {
                                 const rgb = hexToRgb(obj.fill.color);
@@ -2440,7 +2555,7 @@
                         } else {
                             ctx.fillStyle = obj.fill.color;
                         }
-                        ctx.fillText(char, 0, 0);
+                        ctx.fillText(char, 0, baselineShift);
                     }
 
                     ctx.restore();
