@@ -601,11 +601,20 @@
         let selectedObject = null;
         let isTyping = false;
         let cursorPosition = 0;
+        let selectionStart = 0;
+        let selectionEnd = 0;
 
         // ビューポート制御
         let viewportScale = 1;
         let viewportOffsetX = 0;
         let viewportOffsetY = 0;
+
+        // カーソル点滅用
+        let cursorVisible = true;
+        setInterval(() => {
+            cursorVisible = !cursorVisible;
+            if (isTyping) render();
+        }, 530);
 
         // ツール切り替え
         document.getElementById('selectTool').addEventListener('click', () => {
@@ -801,6 +810,27 @@
             if (selectedObject && isTyping) {
                 selectedObject.text = e.target.value;
                 cursorPosition = e.target.selectionStart;
+                selectionStart = e.target.selectionStart;
+                selectionEnd = e.target.selectionEnd;
+                render();
+            }
+        });
+
+        // 選択範囲の変更を追跡
+        document.getElementById('imeInput').addEventListener('select', (e) => {
+            if (selectedObject && isTyping) {
+                selectionStart = e.target.selectionStart;
+                selectionEnd = e.target.selectionEnd;
+                cursorPosition = e.target.selectionStart;
+                render();
+            }
+        });
+
+        document.getElementById('imeInput').addEventListener('click', (e) => {
+            if (selectedObject && isTyping) {
+                selectionStart = e.target.selectionStart;
+                selectionEnd = e.target.selectionEnd;
+                cursorPosition = e.target.selectionStart;
                 render();
             }
         });
@@ -880,9 +910,8 @@
         }
 
         function render() {
-            // キャンバスクリア
-            ctx.fillStyle = '#000';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            // チェッカーボード背景を描画（レガシータイトルと同じ）
+            drawCheckerboardBackground();
 
             // セーフマージン描画
             if (document.getElementById('safeMarginEnabled').checked) {
@@ -894,9 +923,28 @@
                 drawTextObject(obj, obj === selectedObject);
             });
 
+            // テキスト選択範囲の描画（入力中の場合）
+            if (isTyping && selectedObject && selectionStart !== selectionEnd) {
+                drawTextSelection();
+            }
+
             // カーソル描画（入力中の場合）
-            if (isTyping && selectedObject) {
+            if (isTyping && selectedObject && cursorVisible) {
                 drawCursor();
+            }
+        }
+
+        function drawCheckerboardBackground() {
+            const squareSize = 16;
+            const color1 = '#3a3a3a';
+            const color2 = '#2a2a2a';
+
+            for (let y = 0; y < canvas.height; y += squareSize) {
+                for (let x = 0; x < canvas.width; x += squareSize) {
+                    const isEven = ((x / squareSize) + (y / squareSize)) % 2 === 0;
+                    ctx.fillStyle = isEven ? color1 : color2;
+                    ctx.fillRect(x, y, squareSize, squareSize);
+                }
             }
         }
 
@@ -986,15 +1034,58 @@
 
             ctx.restore();
 
-            // 選択ボックス描画
-            if (isSelected && !isTyping) {
+            // 選択ボックス描画（レガシータイトルと同じスタイル）
+            if (isSelected) {
                 const metrics = measureText(obj);
-                ctx.strokeStyle = '#0066cc';
-                ctx.lineWidth = 2;
-                ctx.setLineDash([4, 4]);
-                ctx.strokeRect(obj.x - 5, obj.y - 5, metrics.width + 10, metrics.height + 10);
+                ctx.strokeStyle = '#0099ff';
+                ctx.lineWidth = 1;
                 ctx.setLineDash([]);
+                ctx.strokeRect(obj.x - 2, obj.y - 2, metrics.width + 4, metrics.height + 4);
+
+                // ハンドル（レガシータイトル風）
+                const handleSize = 6;
+                const handles = [
+                    [obj.x - 2, obj.y - 2], // 左上
+                    [obj.x + metrics.width + 2, obj.y - 2], // 右上
+                    [obj.x - 2, obj.y + metrics.height + 2], // 左下
+                    [obj.x + metrics.width + 2, obj.y + metrics.height + 2], // 右下
+                ];
+
+                ctx.fillStyle = '#ffffff';
+                ctx.strokeStyle = '#0099ff';
+                ctx.lineWidth = 1;
+                handles.forEach(([hx, hy]) => {
+                    ctx.fillRect(hx - handleSize/2, hy - handleSize/2, handleSize, handleSize);
+                    ctx.strokeRect(hx - handleSize/2, hy - handleSize/2, handleSize, handleSize);
+                });
             }
+        }
+
+        function drawTextSelection() {
+            if (!selectedObject) return;
+
+            ctx.save();
+            ctx.font = `${selectedObject.fontSize}px "${selectedObject.fontFamily}"`;
+
+            const start = Math.min(selectionStart, selectionEnd);
+            const end = Math.max(selectionStart, selectionEnd);
+
+            const textBeforeSelection = selectedObject.text.substring(0, start);
+            const selectedText = selectedObject.text.substring(start, end);
+
+            const metricsBeforeSelection = ctx.measureText(textBeforeSelection);
+            const metricsSelectedText = ctx.measureText(selectedText);
+
+            const selectionX = selectedObject.x + metricsBeforeSelection.width * (selectedObject.scaleX / 100);
+            const selectionWidth = metricsSelectedText.width * (selectedObject.scaleX / 100);
+            const selectionY = selectedObject.y;
+            const selectionHeight = selectedObject.fontSize;
+
+            // 青いハイライト（レガシータイトルと同じ）
+            ctx.fillStyle = 'rgba(0, 102, 204, 0.3)';
+            ctx.fillRect(selectionX, selectionY, selectionWidth, selectionHeight);
+
+            ctx.restore();
         }
 
         function drawCursor() {
@@ -1007,7 +1098,8 @@
             const cursorX = selectedObject.x + metrics.width * (selectedObject.scaleX / 100);
             const cursorY = selectedObject.y;
 
-            ctx.strokeStyle = '#fff';
+            // より目立つカーソル（レガシータイトルと同じ）
+            ctx.strokeStyle = '#ffffff';
             ctx.lineWidth = 2;
             ctx.beginPath();
             ctx.moveTo(cursorX, cursorY);
