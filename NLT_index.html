@@ -261,12 +261,23 @@
         /* 隠しIME入力フィールド */
         #imeInput {
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 1px;
-            height: 1px;
-            opacity: 0.01;
-            z-index: -1;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.95);
+            border: 2px solid #007acc;
+            border-radius: 4px;
+            font-size: 16px;
+            color: #000;
+            z-index: 10000;
+            min-width: 300px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            display: none;
+        }
+
+        #imeInput.active {
+            display: block;
         }
 
         /* スクロールバーのスタイル */
@@ -1038,6 +1049,7 @@
             // IME入力をフォーカス
             const imeInput = document.getElementById('imeInput');
             imeInput.value = selectedObject.text;
+            imeInput.classList.add('active');
             imeInput.focus();
             imeInput.select();
         }
@@ -1072,12 +1084,23 @@
             }
         });
 
+        // IME入力のblurイベント
+        document.getElementById('imeInput').addEventListener('blur', (e) => {
+            if (isTyping) {
+                isTyping = false;
+                e.target.classList.remove('active');
+                render();
+            }
+        });
+
         // キーボードイベント
         document.addEventListener('keydown', (e) => {
             if (isTyping && selectedObject) {
                 if (e.key === 'Escape') {
                     isTyping = false;
-                    document.getElementById('imeInput').blur();
+                    const imeInput = document.getElementById('imeInput');
+                    imeInput.blur();
+                    imeInput.classList.remove('active');
                     render();
                 }
             } else if (selectedObject && !isTyping) {
