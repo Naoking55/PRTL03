@@ -392,6 +392,9 @@
                 <div class="tool-btn" id="textTool" title="テキストツール (T)">
                     T
                 </div>
+                <div class="tool-btn" id="textVTool" title="縦書きテキストツール">
+                    T↓
+                </div>
                 <div class="tool-btn" id="pathTextTool" title="パス上文字ツール (Shift+T)">
                     ⌇
                 </div>
@@ -817,6 +820,10 @@
             switchTool('text');
         });
 
+        document.getElementById('textVTool').addEventListener('click', () => {
+            switchTool('textV');
+        });
+
         document.getElementById('pathTextTool').addEventListener('click', () => {
             switchTool('pathText');
         });
@@ -855,7 +862,7 @@
 
         function switchTool(tool) {
             // テキスト編集中の場合は終了（空のテキストは削除される）
-            if (isTyping && tool !== 'text') {
+            if (isTyping && tool !== 'text' && tool !== 'textV') {
                 isTyping = false;
                 const imeInput = document.getElementById('imeInput');
                 imeInput.classList.remove('active');
@@ -884,6 +891,10 @@
                 canvas.style.cursor = 'default';
             } else if (tool === 'text') {
                 document.getElementById('textTool').classList.add('active');
+                canvas.classList.remove('selection-mode');
+                canvas.style.cursor = 'crosshair';
+            } else if (tool === 'textV') {
+                document.getElementById('textVTool').classList.add('active');
                 canvas.classList.remove('selection-mode');
                 canvas.style.cursor = 'crosshair';
             } else if (tool === 'pathText') {
@@ -1283,6 +1294,71 @@
                         tracking: 0,
                         rotation: 0,
                         vertical: false,
+                        leading: 0,
+                        slant: 0,
+                        underline: false,
+                        smallCaps: false,
+                        smallCapsSize: 75,
+                        fill: {
+                            enabled: true,
+                            type: 'solid',
+                            color: '#fdff00',
+                            opacity: 100
+                        },
+                        strokes: [
+                            { enabled: false, size: 8, color: '#000000', opacity: 100 },
+                            { enabled: false, size: 50, color: '#ffffff', opacity: 100 },
+                            { enabled: false, size: 68, color: '#000000', opacity: 100 },
+                            { enabled: false, size: 78, color: '#000000', opacity: 100 }
+                        ],
+                        shadow: {
+                            enabled: false,
+                            color: '#000000',
+                            opacity: 50,
+                            distance: 10,
+                            angle: 135,
+                            size: 90,
+                            blur: 0
+                        }
+                    };
+
+                    textObjects.push(newText);
+                    selectedObject = newText;
+                    updatePropertiesPanel();
+                    startTyping();
+                }
+            } else if (currentTool === 'textV') {
+                // まず既存のテキストオブジェクトをクリックしたか確認
+                let clickedExistingText = false;
+                for (let i = textObjects.length - 1; i >= 0; i--) {
+                    const obj = textObjects[i];
+                    const metrics = measureText(obj);
+
+                    if (x >= obj.x - 10 && x <= obj.x + metrics.width + 10 &&
+                        y >= obj.y - 10 && y <= obj.y + metrics.height + 10) {
+                        // 既存のテキストをクリックした
+                        selectedObject = obj;
+                        updatePropertiesPanel();
+                        startTyping();
+                        clickedExistingText = true;
+                        break;
+                    }
+                }
+
+                // 既存のテキストをクリックしていない場合のみ新しいテキストを作成
+                if (!clickedExistingText) {
+                    // 新しい縦書きテキストオブジェクトを作成
+                    const newText = {
+                        text: '',
+                        x: x,
+                        y: y,
+                        fontSize: 100,
+                        fontFamily: 'Yu Gothic UI',
+                        scaleX: 100,
+                        kerning: 0,
+                        tracking: 0,
+                        rotation: 0,
+                        vertical: true,
                         leading: 0,
                         slant: 0,
                         underline: false,
