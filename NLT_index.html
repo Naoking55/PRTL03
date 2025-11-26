@@ -392,6 +392,9 @@
                 <div class="tool-btn" id="textTool" title="テキストツール (T)">
                     T
                 </div>
+                <div class="tool-btn" id="pathTextTool" title="パス上文字ツール (Shift+T)">
+                    ⌇
+                </div>
                 <div class="tool-btn" id="rectangleTool" title="矩形ツール (R)">
                     ▭
                 </div>
@@ -775,8 +778,11 @@
 
         let currentTool = 'select'; // 'select', 'text', 'rectangle', 'roundRect', 'ellipse', 'polygon', 'star'
         let textObjects = []; // { text, x, y, fontSize, fontFamily, scaleX, ... }
+        let pathTextObjects = []; // { text, path, fontSize, fontFamily, ... }
         let shapeObjects = []; // { type, x, y, width, height, ... }
         let selectedObject = null;
+        let currentPath = null; // パス作成中のパス
+        let pathPoints = []; // パスのコントロールポイント
         let isTyping = false;
         let cursorPosition = 0;
         let selectionStart = 0;
@@ -802,6 +808,10 @@
 
         document.getElementById('textTool').addEventListener('click', () => {
             switchTool('text');
+        });
+
+        document.getElementById('pathTextTool').addEventListener('click', () => {
+            switchTool('pathText');
         });
 
         document.getElementById('rectangleTool').addEventListener('click', () => {
@@ -855,6 +865,10 @@
                 canvas.style.cursor = 'default';
             } else if (tool === 'text') {
                 document.getElementById('textTool').classList.add('active');
+                canvas.classList.remove('selection-mode');
+                canvas.style.cursor = 'crosshair';
+            } else if (tool === 'pathText') {
+                document.getElementById('pathTextTool').classList.add('active');
                 canvas.classList.remove('selection-mode');
                 canvas.style.cursor = 'crosshair';
             } else if (tool === 'rectangle') {
@@ -1094,7 +1108,61 @@
             dragStartX = x;
             dragStartY = y;
 
-            if (currentTool === 'text') {
+            if (currentTool === 'pathText') {
+                // パス上文字ツール: パスポイントを追加
+                if (e.shiftKey && pathPoints.length > 0) {
+                    // Shiftキーでパス確定
+                    if (pathPoints.length >= 2) {
+                        // パス上文字オブジェクトを作成
+                        const newPathText = {
+                            text: 'Sample Text',
+                            path: [...pathPoints],
+                            fontSize: 100,
+                            fontFamily: 'Yu Gothic UI',
+                            scaleX: 100,
+                            kerning: 0,
+                            tracking: 0,
+                            rotation: 0,
+                            leading: 0,
+                            slant: 0,
+                            underline: false,
+                            smallCaps: false,
+                            smallCapsSize: 75,
+                            fill: {
+                                enabled: true,
+                                type: 'solid',
+                                color: '#fdff00',
+                                opacity: 100
+                            },
+                            strokes: [
+                                { enabled: false, size: 8, color: '#000000', opacity: 100 },
+                                { enabled: false, size: 50, color: '#ffffff', opacity: 100 },
+                                { enabled: false, size: 68, color: '#000000', opacity: 100 },
+                                { enabled: false, size: 78, color: '#000000', opacity: 100 }
+                            ],
+                            shadow: {
+                                enabled: false,
+                                color: '#000000',
+                                opacity: 50,
+                                distance: 10,
+                                angle: 135,
+                                size: 90,
+                                blur: 0
+                            }
+                        };
+
+                        pathTextObjects.push(newPathText);
+                        selectedObject = newPathText;
+                        pathPoints = [];
+                        updatePropertiesPanel();
+                        startTyping();
+                    }
+                } else {
+                    // パスポイントを追加
+                    pathPoints.push({ x: x, y: y });
+                    render();
+                }
+            } else if (currentTool === 'text') {
                 // 新しいテキストオブジェクトを作成
                 const newText = {
                     text: '',
@@ -1344,6 +1412,24 @@
                     updatePropertiesPanel();
                     render();
                     return true;
+                }
+            }
+
+            // パス上文字オブジェクトをチェック（後ろから）
+            for (let i = pathTextObjects.length - 1; i >= 0; i--) {
+                const obj = pathTextObjects[i];
+                if (obj.path && obj.path.length > 0) {
+                    // パスポイントの近くをクリックしたかチェック
+                    for (let j = 0; j < obj.path.length; j++) {
+                        const p = obj.path[j];
+                        const dist = Math.sqrt((x - p.x) ** 2 + (y - p.y) ** 2);
+                        if (dist < 20) {
+                            selectedObject = obj;
+                            updatePropertiesPanel();
+                            render();
+                            return true;
+                        }
+                    }
                 }
             }
 
@@ -1726,6 +1812,16 @@
             textObjects.forEach(obj => {
                 drawTextObject(obj, obj === selectedObject);
             });
+
+            // 全パス上文字オブジェクトを描画
+            pathTextObjects.forEach(obj => {
+                drawPathTextObject(obj, obj === selectedObject);
+            });
+
+            // パス作成中の場合、パスポイントを描画
+            if (currentTool === 'pathText' && pathPoints.length > 0) {
+                drawPathPoints();
+            }
 
             // テキスト選択範囲の描画（入力中の場合）
             if (isTyping && selectedObject && selectionStart !== selectionEnd) {
@@ -2245,6 +2341,165 @@
                     ctx.strokeRect(hx - handleSize/2, hy - handleSize/2, handleSize, handleSize);
                 });
             }
+        }
+
+        function drawPathTextObject(obj, isSelected) {
+            if (!obj.path || obj.path.length < 2) return;
+
+            ctx.save();
+            ctx.font = `${obj.fontSize}px "${obj.fontFamily}"`;
+            ctx.textBaseline = 'top';
+            ctx.textAlign = 'left';
+
+            const text = obj.text || '';
+            const scaleX = obj.scaleX / 100;
+
+            // パスの全長を計算
+            let totalLength = 0;
+            const pathSegments = [];
+            for (let i = 0; i < obj.path.length - 1; i++) {
+                const p1 = obj.path[i];
+                const p2 = obj.path[i + 1];
+                const dx = p2.x - p1.x;
+                const dy = p2.y - p1.y;
+                const segmentLength = Math.sqrt(dx * dx + dy * dy);
+                pathSegments.push({
+                    start: p1,
+                    end: p2,
+                    length: segmentLength,
+                    startDist: totalLength
+                });
+                totalLength += segmentLength;
+            }
+
+            // 各文字をパスに沿って配置
+            let currentDist = 0;
+            for (let i = 0; i < text.length; i++) {
+                const char = text[i];
+                const charWidth = ctx.measureText(char).width * scaleX;
+
+                // 現在の距離に対応するパスセグメントを見つける
+                let segment = null;
+                let segmentT = 0;
+                for (let j = 0; j < pathSegments.length; j++) {
+                    const seg = pathSegments[j];
+                    if (currentDist >= seg.startDist && currentDist <= seg.startDist + seg.length) {
+                        segment = seg;
+                        segmentT = (currentDist - seg.startDist) / seg.length;
+                        break;
+                    }
+                }
+
+                if (segment) {
+                    // 線形補間で文字の位置と角度を計算
+                    const x = segment.start.x + (segment.end.x - segment.start.x) * segmentT;
+                    const y = segment.start.y + (segment.end.y - segment.start.y) * segmentT;
+                    const angle = Math.atan2(segment.end.y - segment.start.y, segment.end.x - segment.start.x);
+
+                    ctx.save();
+                    ctx.translate(x, y);
+                    ctx.rotate(angle + obj.rotation * Math.PI / 180);
+                    ctx.scale(scaleX, 1);
+
+                    // シャドウ描画
+                    if (obj.shadow && obj.shadow.enabled) {
+                        const shadowAngle = obj.shadow.angle * Math.PI / 180;
+                        const offsetX = Math.cos(shadowAngle) * obj.shadow.distance;
+                        const offsetY = Math.sin(shadowAngle) * obj.shadow.distance;
+                        const opacity = obj.shadow.opacity / 100;
+                        const rgb = hexToRgb(obj.shadow.color);
+                        ctx.fillStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${opacity})`;
+                        ctx.fillText(char, offsetX, offsetY);
+                    }
+
+                    // ストローク描画
+                    if (obj.strokes) {
+                        for (let j = obj.strokes.length - 1; j >= 0; j--) {
+                            const stroke = obj.strokes[j];
+                            if (stroke.enabled && stroke.size > 0) {
+                                ctx.strokeStyle = stroke.color;
+                                ctx.lineWidth = stroke.size;
+                                ctx.lineJoin = 'round';
+                                ctx.miterLimit = 2;
+                                ctx.strokeText(char, 0, 0);
+                            }
+                        }
+                    }
+
+                    // 塗り描画
+                    if (obj.fill && obj.fill.enabled) {
+                        const fillType = obj.fill.type || 'solid';
+                        if (fillType === 'solid') {
+                            const opacity = obj.fill.opacity / 100;
+                            if (opacity < 1) {
+                                const rgb = hexToRgb(obj.fill.color);
+                                ctx.fillStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${opacity})`;
+                            } else {
+                                ctx.fillStyle = obj.fill.color;
+                            }
+                        } else {
+                            ctx.fillStyle = obj.fill.color;
+                        }
+                        ctx.fillText(char, 0, 0);
+                    }
+
+                    ctx.restore();
+                }
+
+                currentDist += charWidth + (obj.kerning || 0);
+            }
+
+            ctx.restore();
+
+            // 選択時はパスを表示
+            if (isSelected) {
+                ctx.strokeStyle = '#0099ff';
+                ctx.lineWidth = 2;
+                ctx.setLineDash([5, 5]);
+                ctx.beginPath();
+                ctx.moveTo(obj.path[0].x, obj.path[0].y);
+                for (let i = 1; i < obj.path.length; i++) {
+                    ctx.lineTo(obj.path[i].x, obj.path[i].y);
+                }
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                // パスポイントを表示
+                obj.path.forEach(point => {
+                    ctx.fillStyle = '#ffffff';
+                    ctx.strokeStyle = '#0099ff';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.arc(point.x, point.y, 4, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.stroke();
+                });
+            }
+        }
+
+        function drawPathPoints() {
+            // パス作成中のポイントを描画
+            ctx.strokeStyle = '#ff9900';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.moveTo(pathPoints[0].x, pathPoints[0].y);
+            for (let i = 1; i < pathPoints.length; i++) {
+                ctx.lineTo(pathPoints[i].x, pathPoints[i].y);
+            }
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // ポイントを描画
+            pathPoints.forEach((point, index) => {
+                ctx.fillStyle = index === 0 ? '#00ff00' : '#ff9900';
+                ctx.strokeStyle = '#000000';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(point.x, point.y, 5, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+            });
         }
 
         function drawTextSelection() {
@@ -3175,6 +3430,8 @@
                 // ツール切り替え
                 if (e.key === 'v' || e.key === 'V') {
                     switchTool('select');
+                } else if (e.key === 'T' && e.shiftKey) {
+                    switchTool('pathText');
                 } else if (e.key === 't' || e.key === 'T') {
                     switchTool('text');
                 } else if (e.key === 'r' || e.key === 'R') {
