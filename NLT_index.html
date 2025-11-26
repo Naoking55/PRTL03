@@ -1013,7 +1013,11 @@
                     }
                 };
             } else if (currentTool === 'select') {
-                // テキスト入力中の場合は終了
+                // 以前選択されていたオブジェクトを記憶
+                const previouslySelected = selectedObject;
+                const wasTyping = isTyping;
+
+                // テキスト入力中の場合は一時的に終了
                 if (isTyping) {
                     isTyping = false;
                     const imeInput = document.getElementById('imeInput');
@@ -1041,11 +1045,18 @@
                     dragStartWidth = metrics.width;
                     dragStartHeight = metrics.height;
                 } else if (selectObjectAt(x, y)) {
-                    // オブジェクト選択成功、ドラッグ開始
-                    isDragging = true;
-                    dragTarget = 'object';
-                    dragStartObjX = selectedObject.x;
-                    dragStartObjY = selectedObject.y;
+                    // オブジェクト選択成功
+                    // 既に選択されていたテキストオブジェクトを再度クリックした場合は編集モードに入る
+                    if (selectedObject === previouslySelected && selectedObject.hasOwnProperty('text')) {
+                        // 同じテキストオブジェクトをクリック - 編集モード開始
+                        startTyping();
+                    } else {
+                        // 新しいオブジェクト選択 - ドラッグ開始
+                        isDragging = true;
+                        dragTarget = 'object';
+                        dragStartObjX = selectedObject.x;
+                        dragStartObjY = selectedObject.y;
+                    }
                 }
             }
         });
@@ -1173,7 +1184,7 @@
                 const metrics = measureText(obj);
 
                 if (x >= obj.x - 10 && x <= obj.x + metrics.width + 10 &&
-                    y >= obj.y - metrics.height && y <= obj.y + 10) {
+                    y >= obj.y - 10 && y <= obj.y + metrics.height + 10) {
                     selectedObject = obj;
                     updatePropertiesPanel();
                     render();
