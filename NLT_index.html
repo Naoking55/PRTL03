@@ -1312,6 +1312,7 @@
                     radius: 20, // 角丸矩形・斜角長方形用
                     startAngle: 0, // 円弧用
                     endAngle: 90, // 円弧用
+                    rotation: 0,
                     fill: {
                         enabled: true,
                         type: 'solid',
@@ -1358,18 +1359,11 @@
                     dragStartWidth = metrics.width;
                     dragStartHeight = metrics.height;
                 } else if (selectObjectAt(x, y)) {
-                    // オブジェクト選択成功
-                    // 既に選択されていたテキストオブジェクトを再度クリックした場合は編集モードに入る
-                    if (selectedObject === previouslySelected && selectedObject.hasOwnProperty('text')) {
-                        // 同じテキストオブジェクトをクリック - 編集モード開始
-                        startTyping();
-                    } else {
-                        // 新しいオブジェクト選択 - ドラッグ開始
-                        isDragging = true;
-                        dragTarget = 'object';
-                        dragStartObjX = selectedObject.x;
-                        dragStartObjY = selectedObject.y;
-                    }
+                    // オブジェクト選択成功 - ドラッグ開始
+                    isDragging = true;
+                    dragTarget = 'object';
+                    dragStartObjX = selectedObject.x;
+                    dragStartObjY = selectedObject.y;
                 }
             }
         });
@@ -1399,9 +1393,14 @@
                     updatePropertiesPanel();
                     scheduleRender();
                 } else if (dragTarget && dragTarget.startsWith('handle-')) {
-                    // リサイズ処理
                     const handleType = dragTarget.replace('handle-', '');
-                    resizeObject(handleType, dx, dy);
+                    if (handleType === 'rotate') {
+                        // 回転処理
+                        rotateObject(x, y);
+                    } else {
+                        // リサイズ処理
+                        resizeObject(handleType, dx, dy);
+                    }
                 }
             } else {
                 // カーソル形状を更新
@@ -1409,7 +1408,9 @@
                     const handle = getHandleAt(x, y);
                     if (handle) {
                         const handleType = handle.replace('handle-', '');
-                        if (handleType === 'nw' || handleType === 'se') {
+                        if (handleType === 'rotate') {
+                            canvas.style.cursor = 'grab';
+                        } else if (handleType === 'nw' || handleType === 'se') {
                             canvas.style.cursor = 'nwse-resize';
                         } else if (handleType === 'ne' || handleType === 'sw') {
                             canvas.style.cursor = 'nesw-resize';
@@ -1481,18 +1482,43 @@
         function getHandleAt(x, y) {
             if (!selectedObject) return null;
 
-            const metrics = measureText(selectedObject);
             const handleSize = 6;
-            const handles = {
-                'handle-nw': [selectedObject.x - 2, selectedObject.y - 2],
-                'handle-ne': [selectedObject.x + metrics.width + 2, selectedObject.y - 2],
-                'handle-sw': [selectedObject.x - 2, selectedObject.y + metrics.height + 2],
-                'handle-se': [selectedObject.x + metrics.width + 2, selectedObject.y + metrics.height + 2]
-            };
 
-            for (const [name, [hx, hy]] of Object.entries(handles)) {
-                if (Math.abs(x - hx) <= handleSize && Math.abs(y - hy) <= handleSize) {
-                    return name;
+            // 図形オブジェクトの場合
+            if (selectedObject.type) {
+                const minX = Math.min(selectedObject.x, selectedObject.x + selectedObject.width);
+                const minY = Math.min(selectedObject.y, selectedObject.y + selectedObject.height);
+                const maxX = Math.max(selectedObject.x, selectedObject.x + selectedObject.width);
+                const maxY = Math.max(selectedObject.y, selectedObject.y + selectedObject.height);
+
+                const handles = {
+                    'handle-rotate': [minX + (maxX - minX) / 2, minY - 22],
+                    'handle-nw': [minX - 2, minY - 2],
+                    'handle-ne': [maxX + 2, minY - 2],
+                    'handle-sw': [minX - 2, maxY + 2],
+                    'handle-se': [maxX + 2, maxY + 2]
+                };
+
+                for (const [name, [hx, hy]] of Object.entries(handles)) {
+                    if (Math.abs(x - hx) <= handleSize && Math.abs(y - hy) <= handleSize) {
+                        return name;
+                    }
+                }
+            } else {
+                // テキストオブジェクトの場合
+                const metrics = measureText(selectedObject);
+                const handles = {
+                    'handle-rotate': [selectedObject.x + metrics.width / 2, selectedObject.y - 22],
+                    'handle-nw': [selectedObject.x - 2, selectedObject.y - 2],
+                    'handle-ne': [selectedObject.x + metrics.width + 2, selectedObject.y - 2],
+                    'handle-sw': [selectedObject.x - 2, selectedObject.y + metrics.height + 2],
+                    'handle-se': [selectedObject.x + metrics.width + 2, selectedObject.y + metrics.height + 2]
+                };
+
+                for (const [name, [hx, hy]] of Object.entries(handles)) {
+                    if (Math.abs(x - hx) <= handleSize && Math.abs(y - hy) <= handleSize) {
+                        return name;
+                    }
                 }
             }
 
@@ -1517,6 +1543,35 @@
                 const metrics = measureText(selectedObject);
                 selectedObject.x = dragStartObjX + (dragStartWidth - metrics.width);
             }
+
+            updatePropertiesPanel();
+            render();
+        }
+
+        function rotateObject(x, y) {
+            if (!selectedObject) return;
+
+            // オブジェクトの中心点を計算
+            let centerX, centerY;
+            if (selectedObject.type) {
+                // 図形オブジェクト
+                const minX = Math.min(selectedObject.x, selectedObject.x + selectedObject.width);
+                const minY = Math.min(selectedObject.y, selectedObject.y + selectedObject.height);
+                const maxX = Math.max(selectedObject.x, selectedObject.x + selectedObject.width);
+                const maxY = Math.max(selectedObject.y, selectedObject.y + selectedObject.height);
+                centerX = minX + (maxX - minX) / 2;
+                centerY = minY + (maxY - minY) / 2;
+            } else {
+                // テキストオブジェクト
+                const metrics = measureText(selectedObject);
+                centerX = selectedObject.x + metrics.width / 2;
+                centerY = selectedObject.y + metrics.height / 2;
+            }
+
+            // マウス位置と中心点からの角度を計算
+            const angle = Math.atan2(y - centerY, x - centerX) * 180 / Math.PI;
+            // 角度を調整（上向きを0度とする）
+            selectedObject.rotation = angle + 90;
 
             updatePropertiesPanel();
             render();
@@ -2018,6 +2073,15 @@
             const w = obj.width;
             const h = obj.height;
 
+            // 回転を適用
+            if (obj.rotation && obj.rotation !== 0) {
+                const centerX = x + w / 2;
+                const centerY = y + h / 2;
+                ctx.translate(centerX, centerY);
+                ctx.rotate(obj.rotation * Math.PI / 180);
+                ctx.translate(-centerX, -centerY);
+            }
+
             // 塗り
             if (obj.fill && obj.fill.enabled) {
                 if (obj.fill.type === 'gradient-linear' && obj.fill.gradient) {
@@ -2034,13 +2098,21 @@
 
                     const gradient = ctx.createLinearGradient(x0, y0, x1, y1);
                     const opacity = (grad.opacity || 100) / 100;
+                    const ratioStart = (grad.ratioStart || 0) / 100;
+                    const ratioEnd = (grad.ratioEnd || 100) / 100;
 
-                    gradient.addColorStop(0, hexToRgba(grad.color1, opacity));
+                    // ratioStartとratioEndを考慮したカラーストップ
+                    gradient.addColorStop(ratioStart, hexToRgba(grad.color1, opacity));
                     if (grad.useColor3 && grad.color3) {
-                        const pos = (grad.color3Position || 50) / 100;
+                        const pos = ratioStart + (ratioEnd - ratioStart) * (grad.color3Position || 50) / 100;
                         gradient.addColorStop(pos, hexToRgba(grad.color3, opacity));
                     }
-                    gradient.addColorStop(1, hexToRgba(grad.color2, opacity));
+                    gradient.addColorStop(ratioEnd, hexToRgba(grad.color2, opacity));
+
+                    // ぼかし効果を適用
+                    if (grad.blur && grad.blur > 0) {
+                        ctx.filter = `blur(${grad.blur}px)`;
+                    }
 
                     ctx.fillStyle = gradient;
                 } else if (obj.fill.type === 'gradient-radial' && obj.fill.gradient) {
@@ -2049,8 +2121,13 @@
                     const centerX = x + w / 2;
                     const centerY = y + h / 2;
                     const radius = Math.max(Math.abs(w), Math.abs(h)) / 2;
+                    const ratioStart = (grad.ratioStart || 0) / 100;
+                    const ratioEnd = (grad.ratioEnd || 100) / 100;
 
-                    const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius);
+                    const gradient = ctx.createRadialGradient(
+                        centerX, centerY, radius * ratioStart,
+                        centerX, centerY, radius * ratioEnd
+                    );
                     const opacity = (grad.opacity || 100) / 100;
 
                     gradient.addColorStop(0, hexToRgba(grad.color1, opacity));
@@ -2059,6 +2136,11 @@
                         gradient.addColorStop(pos, hexToRgba(grad.color3, opacity));
                     }
                     gradient.addColorStop(1, hexToRgba(grad.color2, opacity));
+
+                    // ぼかし効果を適用
+                    if (grad.blur && grad.blur > 0) {
+                        ctx.filter = `blur(${grad.blur}px)`;
+                    }
 
                     ctx.fillStyle = gradient;
                 } else {
@@ -2075,7 +2157,13 @@
 
             // ストローク
             if (obj.stroke && obj.stroke.enabled) {
-                ctx.strokeStyle = obj.stroke.color;
+                const strokeOpacity = (obj.stroke.opacity || 100) / 100;
+                if (strokeOpacity < 1) {
+                    const rgb = hexToRgb(obj.stroke.color);
+                    ctx.strokeStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${strokeOpacity})`;
+                } else {
+                    ctx.strokeStyle = obj.stroke.color;
+                }
                 ctx.lineWidth = obj.stroke.size;
             }
 
@@ -2181,6 +2269,9 @@
                 }
             }
 
+            // フィルターをリセット
+            ctx.filter = 'none';
+
             // 選択ボックス
             if (isSelected) {
                 ctx.strokeStyle = '#0099ff';
@@ -2210,6 +2301,22 @@
                     ctx.fillRect(hx - handleSize/2, hy - handleSize/2, handleSize, handleSize);
                     ctx.strokeRect(hx - handleSize/2, hy - handleSize/2, handleSize, handleSize);
                 });
+
+                // 回転ハンドル（上部中央から20px上）
+                const rotateHandleX = minX + (maxX - minX) / 2;
+                const rotateHandleY = minY - 22;
+
+                // 回転ハンドルへの接続線
+                ctx.beginPath();
+                ctx.moveTo(rotateHandleX, minY - 2);
+                ctx.lineTo(rotateHandleX, rotateHandleY + handleSize/2);
+                ctx.stroke();
+
+                // 回転ハンドル（円形）
+                ctx.beginPath();
+                ctx.arc(rotateHandleX, rotateHandleY, handleSize/2, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
             }
 
             ctx.restore();
@@ -2340,7 +2447,10 @@
                                     const centerX = charWidth / 2;
                                     const centerY = charHeight / 2;
                                     const radius = Math.max(charWidth, charHeight) / 2;
-                                    fillGradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius);
+                                    fillGradient = ctx.createRadialGradient(
+                                        centerX, centerY, radius * ratioStart,
+                                        centerX, centerY, radius * ratioEnd
+                                    );
                                 }
 
                                 const opacity = (gradient.opacity || 100) / 100;
@@ -2471,7 +2581,10 @@
                                 const centerX = textWidth / 2;
                                 const centerY = textHeight / 2;
                                 const radius = Math.max(textWidth, textHeight) / 2;
-                                fillGradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius);
+                                fillGradient = ctx.createRadialGradient(
+                                    centerX, centerY, radius * ratioStart,
+                                    centerX, centerY, radius * ratioEnd
+                                );
                             }
 
                             const opacity = (gradient.opacity || 100) / 100;
@@ -2544,6 +2657,22 @@
                     ctx.fillRect(hx - handleSize/2, hy - handleSize/2, handleSize, handleSize);
                     ctx.strokeRect(hx - handleSize/2, hy - handleSize/2, handleSize, handleSize);
                 });
+
+                // 回転ハンドル（上部中央から20px上）
+                const rotateHandleX = obj.x + metrics.width / 2;
+                const rotateHandleY = obj.y - 22;
+
+                // 回転ハンドルへの接続線
+                ctx.beginPath();
+                ctx.moveTo(rotateHandleX, obj.y - 2);
+                ctx.lineTo(rotateHandleX, rotateHandleY + handleSize/2);
+                ctx.stroke();
+
+                // 回転ハンドル（円形）
+                ctx.beginPath();
+                ctx.arc(rotateHandleX, rotateHandleY, handleSize/2, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
             }
         }
 
