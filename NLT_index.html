@@ -1089,6 +1089,16 @@
             if (isTyping) {
                 isTyping = false;
                 e.target.classList.remove('active');
+
+                // 空のテキストオブジェクトを削除（レガシータイトルと同じ動作）
+                if (selectedObject && selectedObject.text.trim() === '') {
+                    const index = textObjects.indexOf(selectedObject);
+                    if (index > -1) {
+                        textObjects.splice(index, 1);
+                        selectedObject = null;
+                    }
+                }
+
                 render();
             }
         });
