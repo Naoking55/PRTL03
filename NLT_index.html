@@ -1539,11 +1539,13 @@
         // キャンバス解像度変更
         document.getElementById('canvasWidth').addEventListener('change', function() {
             canvas.width = parseInt(this.value);
+            updateCanvasSize();
             render();
         });
 
         document.getElementById('canvasHeight').addEventListener('change', function() {
             canvas.height = parseInt(this.value);
+            updateCanvasSize();
             render();
         });
 
