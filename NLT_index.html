@@ -335,6 +335,29 @@
         .resize-handle.ne { top: -4px; right: -4px; cursor: ne-resize; }
         .resize-handle.sw { bottom: -4px; left: -4px; cursor: sw-resize; }
         .resize-handle.se { bottom: -4px; right: -4px; cursor: se-resize; }
+
+        /* ステータスメッセージ */
+        .status-message {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 102, 204, 0.95);
+            color: #fff;
+            padding: 12px 24px;
+            border-radius: 6px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+            font-size: 14px;
+            font-weight: 500;
+            z-index: 10000;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+        }
+
+        .status-message.show {
+            opacity: 1;
+        }
     </style>
 </head>
 <body>
@@ -1173,13 +1196,35 @@
                     blur: parseInt(document.getElementById('shadow_blur').value) || 0
                 };
             } else {
-                // 図形オブジェクトの場合、単一のstrokeプロパティ
-                selectedObject.stroke = {
-                    enabled: document.getElementById('stroke1_enabled').checked,
-                    size: parseInt(document.getElementById('stroke1_size').value) || 0,
-                    color: document.getElementById('stroke1_color').value,
-                    opacity: parseInt(document.getElementById('stroke1_opacity').value) || 100
-                };
+                // 図形オブジェクトの場合も複数のストロークを配列で管理
+                selectedObject.strokes = [
+                    {
+                        enabled: document.getElementById('stroke1_enabled').checked,
+                        size: parseInt(document.getElementById('stroke1_size').value) || 0,
+                        color: document.getElementById('stroke1_color').value,
+                        opacity: parseInt(document.getElementById('stroke1_opacity').value) || 100
+                    },
+                    {
+                        enabled: document.getElementById('stroke2_enabled').checked,
+                        size: parseInt(document.getElementById('stroke2_size').value) || 0,
+                        color: document.getElementById('stroke2_color').value,
+                        opacity: parseInt(document.getElementById('stroke2_opacity').value) || 100
+                    },
+                    {
+                        enabled: document.getElementById('stroke3_enabled').checked,
+                        size: parseInt(document.getElementById('stroke3_size').value) || 0,
+                        color: document.getElementById('stroke3_color').value,
+                        opacity: parseInt(document.getElementById('stroke3_opacity').value) || 100
+                    },
+                    {
+                        enabled: document.getElementById('stroke4_enabled').checked,
+                        size: parseInt(document.getElementById('stroke4_size').value) || 0,
+                        color: document.getElementById('stroke4_color').value,
+                        opacity: parseInt(document.getElementById('stroke4_opacity').value) || 100
+                    }
+                ];
+                // 後方互換性のため、単一のstrokeプロパティも保持
+                selectedObject.stroke = selectedObject.strokes[0];
             }
 
             render();
@@ -1881,6 +1926,15 @@
             } else if (isCreatingShape && currentShape) {
                 // 図形を確定
                 if (Math.abs(currentShape.width) > 5 || Math.abs(currentShape.height) > 5) {
+                    // widthやheightが負の値の場合、x、yを調整して正規化
+                    if (currentShape.width < 0) {
+                        currentShape.x += currentShape.width;
+                        currentShape.width = -currentShape.width;
+                    }
+                    if (currentShape.height < 0) {
+                        currentShape.y += currentShape.height;
+                        currentShape.height = -currentShape.height;
+                    }
                     shapeObjects.push(currentShape);
                 }
                 isCreatingShape = false;
@@ -2334,6 +2388,17 @@
                     const imeInput = document.getElementById('imeInput');
                     imeInput.blur();
                     imeInput.classList.remove('active');
+
+                    // 空のテキストオブジェクトを削除
+                    if (selectedObject.text.trim() === '') {
+                        const index = textObjects.indexOf(selectedObject);
+                        if (index > -1) {
+                            textObjects.splice(index, 1);
+                            selectedObject = null;
+                            console.log('🗑️ 空のテキストオブジェクトを削除（Escape）');
+                        }
+                    }
+
                     render();
                 }
             } else if (isDrawingPathTextPath && currentPathTextPath) {
@@ -5175,6 +5240,27 @@
                     sendToBack();
                 }
             } else {
+                // 「T」キーでパスを確定してテキスト入力開始
+                if ((e.key === 't' || e.key === 'T') && isDrawingPath && currentPath) {
+                    e.preventDefault();
+                    // パスを確定
+                    if (currentPath.anchors.length >= 2) {
+                        shapeObjects.push(currentPath);
+                        console.log('パスを確定しました。テキスト入力を開始します。');
+                    }
+                    isDrawingPath = false;
+                    currentPath = null;
+                    selectedAnchorIndex = -1;
+                    isDraggingHandle = false;
+                    render();
+
+                    // テキストツールに切り替えてユーザーに通知
+                    switchTool('text');
+                    // ステータスメッセージを表示（3秒間）
+                    showStatusMessage('パスを確定しました。テキストツールに切り替わりました。');
+                    return;
+                }
+
                 // ツール切り替え
                 if (e.key === 'v' || e.key === 'V') {
                     switchTool('select');
@@ -5207,6 +5293,22 @@
 
         // 初期レンダリング
         render();
+    </script>
+
+    <!-- ステータスメッセージ -->
+    <div id="statusMessage" class="status-message"></div>
+
+    <script>
+        // ステータスメッセージを表示する関数
+        function showStatusMessage(message, duration = 3000) {
+            const statusEl = document.getElementById('statusMessage');
+            statusEl.textContent = message;
+            statusEl.classList.add('show');
+
+            setTimeout(() => {
+                statusEl.classList.remove('show');
+            }, duration);
+        }
     </script>
 </body>
 </html>
