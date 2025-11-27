@@ -109,9 +109,7 @@
             ) 50% / 16px 16px;
             box-shadow: 0 4px 20px rgba(0,0,0,0.5);
             cursor: crosshair;
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
+            /* サイズはJavaScriptで動的に設定される */
         }
 
         #canvas.selection-mode {
@@ -465,8 +463,8 @@
             height: 32px;
         }
 
-        /* リサイズハンドル */
-        .resize-handle {
+        /* パネルリサイズハンドル */
+        .panel-resize-handle {
             position: absolute;
             top: 0;
             bottom: 0;
@@ -476,19 +474,19 @@
             background: transparent;
         }
 
-        .resize-handle:hover {
+        .panel-resize-handle:hover {
             background: rgba(0, 102, 204, 0.3);
         }
 
-        .resize-handle.resizing {
+        .panel-resize-handle.resizing {
             background: rgba(0, 102, 204, 0.5);
         }
 
-        .resize-handle-left {
+        .panel-resize-handle-left {
             right: 0;
         }
 
-        .resize-handle-right {
+        .panel-resize-handle-right {
             left: 0;
         }
     </style>
@@ -586,7 +584,7 @@
                     </div>
                 </div>
                 <!-- リサイズハンドル -->
-                <div class="resize-handle resize-handle-left" id="leftPanelResizeHandle"></div>
+                <div class="panel-resize-handle panel-resize-handle-left" id="leftPanelResizeHandle"></div>
             </div>
 
             <!-- キャンバスエリア -->
@@ -597,7 +595,7 @@
             <!-- 右側プロパティパネル -->
             <div class="properties-panel">
                 <!-- リサイズハンドル -->
-                <div class="resize-handle resize-handle-right" id="rightPanelResizeHandle"></div>
+                <div class="panel-resize-handle panel-resize-handle-right" id="rightPanelResizeHandle"></div>
                 <h3 style="font-size: 12px; margin-bottom: 12px; color: #0066cc;">プロパティ</h3>
 
                 <!-- 変形セクション -->
