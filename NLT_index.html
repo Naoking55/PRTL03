@@ -358,6 +358,84 @@
         .status-message.show {
             opacity: 1;
         }
+
+        /* レイヤーパネル */
+        .layer-item {
+            display: flex;
+            align-items: center;
+            padding: 6px 8px;
+            margin-bottom: 4px;
+            background: #1a1a1a;
+            border: 1px solid #444;
+            border-radius: 3px;
+            cursor: pointer;
+            transition: all 0.2s;
+            gap: 6px;
+        }
+
+        .layer-item:hover {
+            background: #252525;
+            border-color: #555;
+        }
+
+        .layer-item.selected {
+            background: #0066cc;
+            border-color: #0077ee;
+        }
+
+        .layer-name {
+            flex: 1;
+            font-size: 11px;
+            color: #e0e0e0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .layer-item.selected .layer-name {
+            color: #fff;
+            font-weight: 500;
+        }
+
+        .layer-controls {
+            display: flex;
+            gap: 2px;
+        }
+
+        .layer-btn {
+            width: 20px;
+            height: 20px;
+            background: #3a3a3a;
+            border: 1px solid #555;
+            border-radius: 2px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #aaa;
+            font-size: 10px;
+            transition: all 0.2s;
+        }
+
+        .layer-btn:hover {
+            background: #4a4a4a;
+            color: #fff;
+        }
+
+        .layer-item.selected .layer-btn {
+            background: #0055aa;
+            border-color: #0066cc;
+            color: #fff;
+        }
+
+        .layer-item.selected .layer-btn:hover {
+            background: #0077ee;
+        }
+
+        .layers-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
     </style>
 </head>
 <body>
@@ -466,6 +544,16 @@
             <!-- 右側プロパティパネル -->
             <div class="properties-panel">
                 <h3 style="font-size: 12px; margin-bottom: 12px; color: #0066cc;">プロパティ</h3>
+
+                <!-- レイヤー管理セクション -->
+                <div class="property-section">
+                    <div class="property-section-header">レイヤー</div>
+                    <div class="property-section-content">
+                        <div class="layers-list" id="layersList">
+                            <!-- レイヤーアイテムが動的に生成されます -->
+                        </div>
+                    </div>
+                </div>
 
                 <!-- キャンバス設定セクション -->
                 <div class="property-section">
@@ -833,6 +921,11 @@
         let isComposing = false; // IME変換中かどうか
         let selectionEnd = 0;
 
+        // レイヤー管理用
+        let layers = []; // 統合されたレイヤー配列 { type: 'text'|'shape'|'pathText', object: オブジェクトへの参照, name: 表示名 }
+        let lastObjectCount = 0; // レイヤーリスト更新のための前回のオブジェクト数
+        let lastSelectedObject = null; // 前回選択されていたオブジェクト
+
         // ビューポート制御
         let viewportScale = 1;
         let viewportOffsetX = 0;
@@ -992,6 +1085,215 @@
                 canvas.classList.remove('selection-mode');
                 canvas.style.cursor = 'crosshair';
             }
+        }
+
+        // レイヤー管理関数
+        function updateLayersList() {
+            // 全オブジェクトを収集してレイヤー配列を構築
+            layers = [];
+
+            // 図形オブジェクトを追加
+            shapeObjects.forEach((obj, index) => {
+                let typeName = '';
+                switch(obj.type) {
+                    case 'rectangle': typeName = '矩形'; break;
+                    case 'roundRect': typeName = '角丸矩形'; break;
+                    case 'ellipse': typeName = '楕円'; break;
+                    case 'line': typeName = '線'; break;
+                    case 'pen': typeName = 'ペンパス'; break;
+                    case 'chamferRect': typeName = '斜角矩形'; break;
+                    case 'triangle': typeName = '三角形'; break;
+                    case 'arc': typeName = '円弧'; break;
+                    default: typeName = '図形';
+                }
+                layers.push({
+                    type: 'shape',
+                    object: obj,
+                    name: `レイヤー${layers.length + 1}（${typeName}）`
+                });
+            });
+
+            // テキストオブジェクトを追加
+            textObjects.forEach((obj, index) => {
+                const previewText = obj.text.substring(0, 10) + (obj.text.length > 10 ? '...' : '');
+                layers.push({
+                    type: 'text',
+                    object: obj,
+                    name: `レイヤー${layers.length + 1}（テキスト${previewText ? ': ' + previewText : ''}）`
+                });
+            });
+
+            // パス上文字オブジェクトを追加
+            pathTextObjects.forEach((obj, index) => {
+                const previewText = obj.text.substring(0, 10) + (obj.text.length > 10 ? '...' : '');
+                layers.push({
+                    type: 'pathText',
+                    object: obj,
+                    name: `レイヤー${layers.length + 1}（パス上文字${previewText ? ': ' + previewText : ''}）`
+                });
+            });
+
+            // レイヤーリストのHTMLを生成
+            const layersList = document.getElementById('layersList');
+            layersList.innerHTML = '';
+
+            // レイヤーを逆順で表示（上のレイヤーが上に表示される）
+            for (let i = layers.length - 1; i >= 0; i--) {
+                const layer = layers[i];
+                const isSelected = layer.object === selectedObject;
+
+                const layerItem = document.createElement('div');
+                layerItem.className = 'layer-item' + (isSelected ? ' selected' : '');
+
+                const layerName = document.createElement('div');
+                layerName.className = 'layer-name';
+                layerName.textContent = layer.name;
+
+                const layerControls = document.createElement('div');
+                layerControls.className = 'layer-controls';
+
+                // 上移動ボタン
+                const upBtn = document.createElement('div');
+                upBtn.className = 'layer-btn';
+                upBtn.textContent = '↑';
+                upBtn.title = '前面へ';
+                upBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    moveLayerUp(i);
+                };
+
+                // 下移動ボタン
+                const downBtn = document.createElement('div');
+                downBtn.className = 'layer-btn';
+                downBtn.textContent = '↓';
+                downBtn.title = '背面へ';
+                downBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    moveLayerDown(i);
+                };
+
+                // 削除ボタン
+                const deleteBtn = document.createElement('div');
+                deleteBtn.className = 'layer-btn';
+                deleteBtn.textContent = '×';
+                deleteBtn.title = '削除';
+                deleteBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    deleteLayer(i);
+                };
+
+                layerControls.appendChild(upBtn);
+                layerControls.appendChild(downBtn);
+                layerControls.appendChild(deleteBtn);
+
+                layerItem.appendChild(layerName);
+                layerItem.appendChild(layerControls);
+
+                // レイヤークリックで選択
+                layerItem.onclick = () => selectLayer(i);
+
+                layersList.appendChild(layerItem);
+            }
+        }
+
+        function selectLayer(index) {
+            const layer = layers[index];
+            selectedObject = layer.object;
+            updatePropertiesPanel();
+            updateLayersList();
+            render();
+        }
+
+        function moveLayerUp(index) {
+            if (index >= layers.length - 1) return; // 既に最上位
+
+            const layer = layers[index];
+
+            // 元の配列内での位置を特定して移動
+            if (layer.type === 'shape') {
+                const objIndex = shapeObjects.indexOf(layer.object);
+                if (objIndex !== -1 && objIndex < shapeObjects.length - 1) {
+                    // 配列内で1つ後ろに移動（描画順序が後=前面）
+                    [shapeObjects[objIndex], shapeObjects[objIndex + 1]] =
+                    [shapeObjects[objIndex + 1], shapeObjects[objIndex]];
+                }
+            } else if (layer.type === 'text') {
+                const objIndex = textObjects.indexOf(layer.object);
+                if (objIndex !== -1 && objIndex < textObjects.length - 1) {
+                    [textObjects[objIndex], textObjects[objIndex + 1]] =
+                    [textObjects[objIndex + 1], textObjects[objIndex]];
+                }
+            } else if (layer.type === 'pathText') {
+                const objIndex = pathTextObjects.indexOf(layer.object);
+                if (objIndex !== -1 && objIndex < pathTextObjects.length - 1) {
+                    [pathTextObjects[objIndex], pathTextObjects[objIndex + 1]] =
+                    [pathTextObjects[objIndex + 1], pathTextObjects[objIndex]];
+                }
+            }
+
+            updateLayersList();
+            render();
+        }
+
+        function moveLayerDown(index) {
+            if (index <= 0) return; // 既に最下位
+
+            const layer = layers[index];
+
+            // 元の配列内での位置を特定して移動
+            if (layer.type === 'shape') {
+                const objIndex = shapeObjects.indexOf(layer.object);
+                if (objIndex !== -1 && objIndex > 0) {
+                    // 配列内で1つ前に移動（描画順序が前=背面）
+                    [shapeObjects[objIndex], shapeObjects[objIndex - 1]] =
+                    [shapeObjects[objIndex - 1], shapeObjects[objIndex]];
+                }
+            } else if (layer.type === 'text') {
+                const objIndex = textObjects.indexOf(layer.object);
+                if (objIndex !== -1 && objIndex > 0) {
+                    [textObjects[objIndex], textObjects[objIndex - 1]] =
+                    [textObjects[objIndex - 1], textObjects[objIndex]];
+                }
+            } else if (layer.type === 'pathText') {
+                const objIndex = pathTextObjects.indexOf(layer.object);
+                if (objIndex !== -1 && objIndex > 0) {
+                    [pathTextObjects[objIndex], pathTextObjects[objIndex - 1]] =
+                    [pathTextObjects[objIndex - 1], pathTextObjects[objIndex]];
+                }
+            }
+
+            updateLayersList();
+            render();
+        }
+
+        function deleteLayer(index) {
+            const layer = layers[index];
+
+            // 元の配列から削除
+            if (layer.type === 'shape') {
+                const objIndex = shapeObjects.indexOf(layer.object);
+                if (objIndex !== -1) {
+                    shapeObjects.splice(objIndex, 1);
+                }
+            } else if (layer.type === 'text') {
+                const objIndex = textObjects.indexOf(layer.object);
+                if (objIndex !== -1) {
+                    textObjects.splice(objIndex, 1);
+                }
+            } else if (layer.type === 'pathText') {
+                const objIndex = pathTextObjects.indexOf(layer.object);
+                if (objIndex !== -1) {
+                    pathTextObjects.splice(objIndex, 1);
+                }
+            }
+
+            // 選択中のオブジェクトだった場合は選択解除
+            if (selectedObject === layer.object) {
+                selectedObject = null;
+            }
+
+            updateLayersList();
+            render();
         }
 
         // キャンバス解像度変更
@@ -2702,6 +3004,14 @@
             // カーソル描画（入力中の場合）
             if (isTyping && selectedObject && cursorVisible) {
                 drawCursor();
+            }
+
+            // オブジェクト数が変わった場合、または選択オブジェクトが変わった場合、レイヤーリストを更新
+            const currentObjectCount = shapeObjects.length + textObjects.length + pathTextObjects.length;
+            if (currentObjectCount !== lastObjectCount || selectedObject !== lastSelectedObject) {
+                lastObjectCount = currentObjectCount;
+                lastSelectedObject = selectedObject;
+                updateLayersList();
             }
         }
 
