@@ -79,6 +79,8 @@
         /* 左側パネル（レイヤーとセーフマージン） */
         .left-panel {
             width: 280px;
+            min-width: 200px;
+            max-width: 600px;
             background: #252525;
             border-right: 1px solid #000;
             overflow-y: auto;
@@ -86,6 +88,7 @@
             display: flex;
             flex-direction: column;
             gap: 16px;
+            position: relative;
         }
 
         /* キャンバスエリア */
@@ -118,10 +121,13 @@
         /* 右側プロパティパネル */
         .properties-panel {
             width: 280px;
+            min-width: 200px;
+            max-width: 600px;
             background: #252525;
             border-left: 1px solid #000;
             overflow-y: auto;
             padding: 12px;
+            position: relative;
         }
 
         .property-section {
@@ -458,6 +464,33 @@
         .bottom-toolbar .toolbar-separator {
             height: 32px;
         }
+
+        /* リサイズハンドル */
+        .resize-handle {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 5px;
+            cursor: ew-resize;
+            z-index: 1000;
+            background: transparent;
+        }
+
+        .resize-handle:hover {
+            background: rgba(0, 102, 204, 0.3);
+        }
+
+        .resize-handle.resizing {
+            background: rgba(0, 102, 204, 0.5);
+        }
+
+        .resize-handle-left {
+            right: 0;
+        }
+
+        .resize-handle-right {
+            left: 0;
+        }
     </style>
 </head>
 <body>
@@ -552,6 +585,8 @@
                         </div>
                     </div>
                 </div>
+                <!-- リサイズハンドル -->
+                <div class="resize-handle resize-handle-left" id="leftPanelResizeHandle"></div>
             </div>
 
             <!-- キャンバスエリア -->
@@ -561,6 +596,8 @@
 
             <!-- 右側プロパティパネル -->
             <div class="properties-panel">
+                <!-- リサイズハンドル -->
+                <div class="resize-handle resize-handle-right" id="rightPanelResizeHandle"></div>
                 <h3 style="font-size: 12px; margin-bottom: 12px; color: #0066cc;">プロパティ</h3>
 
                 <!-- 変形セクション -->
@@ -767,9 +804,27 @@
                         </div>
                         <div class="property-grid-3">
                             <div class="property-row">
+                                <label>タイプ</label>
+                                <select id="stroke1_type">
+                                    <option value="edge">エッジ</option>
+                                    <option value="depth">奥行き</option>
+                                    <option value="drop">ドロップ</option>
+                                </select>
+                            </div>
+                            <div class="property-row">
                                 <label>サイズ</label>
                                 <input type="number" id="stroke1_size" value="8" min="0" max="200" step="0.1">
                             </div>
+                            <div class="property-row">
+                                <label>ジョイン</label>
+                                <select id="stroke1_join">
+                                    <option value="round">丸</option>
+                                    <option value="miter">角</option>
+                                    <option value="bevel">面取</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="property-grid-3" style="margin-top: 4px;">
                             <div class="property-row">
                                 <label>カラー</label>
                                 <input type="color" id="stroke1_color" value="#000000">
@@ -778,6 +833,10 @@
                                 <label>不透明度 (%)</label>
                                 <input type="number" id="stroke1_opacity" value="100" min="0" max="100" step="0.1">
                             </div>
+                            <div class="property-row">
+                                <label>角度 (°)</label>
+                                <input type="number" id="stroke1_angle" value="45" min="0" max="360" step="1">
+                            </div>
                         </div>
 
                         <div class="property-row" style="margin-top: 12px;">
@@ -785,9 +844,27 @@
                         </div>
                         <div class="property-grid-3">
                             <div class="property-row">
+                                <label>タイプ</label>
+                                <select id="stroke2_type">
+                                    <option value="edge">エッジ</option>
+                                    <option value="depth">奥行き</option>
+                                    <option value="drop">ドロップ</option>
+                                </select>
+                            </div>
+                            <div class="property-row">
                                 <label>サイズ</label>
                                 <input type="number" id="stroke2_size" value="50" min="0" max="200" step="0.1">
                             </div>
+                            <div class="property-row">
+                                <label>ジョイン</label>
+                                <select id="stroke2_join">
+                                    <option value="round">丸</option>
+                                    <option value="miter">角</option>
+                                    <option value="bevel">面取</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="property-grid-3" style="margin-top: 4px;">
                             <div class="property-row">
                                 <label>カラー</label>
                                 <input type="color" id="stroke2_color" value="#ffffff">
@@ -796,6 +873,10 @@
                                 <label>不透明度 (%)</label>
                                 <input type="number" id="stroke2_opacity" value="100" min="0" max="100" step="0.1">
                             </div>
+                            <div class="property-row">
+                                <label>角度 (°)</label>
+                                <input type="number" id="stroke2_angle" value="45" min="0" max="360" step="1">
+                            </div>
                         </div>
 
                         <div class="property-row" style="margin-top: 12px;">
@@ -803,9 +884,27 @@
                         </div>
                         <div class="property-grid-3">
                             <div class="property-row">
+                                <label>タイプ</label>
+                                <select id="stroke3_type">
+                                    <option value="edge">エッジ</option>
+                                    <option value="depth">奥行き</option>
+                                    <option value="drop">ドロップ</option>
+                                </select>
+                            </div>
+                            <div class="property-row">
                                 <label>サイズ</label>
                                 <input type="number" id="stroke3_size" value="68" min="0" max="200" step="0.1">
                             </div>
+                            <div class="property-row">
+                                <label>ジョイン</label>
+                                <select id="stroke3_join">
+                                    <option value="round">丸</option>
+                                    <option value="miter">角</option>
+                                    <option value="bevel">面取</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="property-grid-3" style="margin-top: 4px;">
                             <div class="property-row">
                                 <label>カラー</label>
                                 <input type="color" id="stroke3_color" value="#000000">
@@ -814,6 +913,10 @@
                                 <label>不透明度 (%)</label>
                                 <input type="number" id="stroke3_opacity" value="100" min="0" max="100" step="0.1">
                             </div>
+                            <div class="property-row">
+                                <label>角度 (°)</label>
+                                <input type="number" id="stroke3_angle" value="45" min="0" max="360" step="1">
+                            </div>
                         </div>
 
                         <div class="property-row" style="margin-top: 12px;">
@@ -821,9 +924,27 @@
                         </div>
                         <div class="property-grid-3">
                             <div class="property-row">
+                                <label>タイプ</label>
+                                <select id="stroke4_type">
+                                    <option value="edge">エッジ</option>
+                                    <option value="depth">奥行き</option>
+                                    <option value="drop">ドロップ</option>
+                                </select>
+                            </div>
+                            <div class="property-row">
                                 <label>サイズ</label>
                                 <input type="number" id="stroke4_size" value="78" min="0" max="200" step="0.1">
                             </div>
+                            <div class="property-row">
+                                <label>ジョイン</label>
+                                <select id="stroke4_join">
+                                    <option value="round">丸</option>
+                                    <option value="miter">角</option>
+                                    <option value="bevel">面取</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="property-grid-3" style="margin-top: 4px;">
                             <div class="property-row">
                                 <label>カラー</label>
                                 <input type="color" id="stroke4_color" value="#000000">
@@ -831,6 +952,10 @@
                             <div class="property-row">
                                 <label>不透明度 (%)</label>
                                 <input type="number" id="stroke4_opacity" value="100" min="0" max="100" step="0.1">
+                            </div>
+                            <div class="property-row">
+                                <label>角度 (°)</label>
+                                <input type="number" id="stroke4_angle" value="45" min="0" max="360" step="1">
                             </div>
                         </div>
                     </div>
@@ -965,6 +1090,92 @@
             cursorVisible = !cursorVisible;
             if (isTyping) render();
         }, 530);
+
+        // パネルリサイズ機能
+        function setupPanelResize() {
+            const leftPanel = document.querySelector('.left-panel');
+            const rightPanel = document.querySelector('.properties-panel');
+            const leftHandle = document.getElementById('leftPanelResizeHandle');
+            const rightHandle = document.getElementById('rightPanelResizeHandle');
+
+            let isResizing = false;
+            let currentHandle = null;
+            let startX = 0;
+            let startWidth = 0;
+
+            function startResize(e, handle, panel) {
+                isResizing = true;
+                currentHandle = handle;
+                startX = e.clientX;
+                startWidth = panel.offsetWidth;
+                handle.classList.add('resizing');
+                document.body.style.cursor = 'ew-resize';
+                e.preventDefault();
+            }
+
+            function doResize(e) {
+                if (!isResizing) return;
+
+                const panel = currentHandle === leftHandle ? leftPanel : rightPanel;
+                const delta = currentHandle === leftHandle ?
+                    (e.clientX - startX) :
+                    (startX - e.clientX);
+
+                const newWidth = Math.max(200, Math.min(600, startWidth + delta));
+                panel.style.width = newWidth + 'px';
+
+                e.preventDefault();
+            }
+
+            function stopResize() {
+                if (isResizing) {
+                    isResizing = false;
+                    if (currentHandle) {
+                        currentHandle.classList.remove('resizing');
+                    }
+                    currentHandle = null;
+                    document.body.style.cursor = '';
+                }
+            }
+
+            leftHandle.addEventListener('mousedown', (e) => startResize(e, leftHandle, leftPanel));
+            rightHandle.addEventListener('mousedown', (e) => startResize(e, rightHandle, rightPanel));
+            document.addEventListener('mousemove', doResize);
+            document.addEventListener('mouseup', stopResize);
+        }
+
+        // キャンバスサイズ調整
+        function updateCanvasSize() {
+            const canvasArea = document.querySelector('.canvas-area');
+            const rect = canvasArea.getBoundingClientRect();
+
+            // キャンバスを実際の表示領域に合わせる
+            const displayWidth = rect.width;
+            const displayHeight = rect.height;
+
+            // アスペクト比を保持しながら、領域に収まる最大サイズを計算
+            const canvasAspect = canvas.width / canvas.height;
+            const areaAspect = displayWidth / displayHeight;
+
+            let newWidth, newHeight;
+            if (areaAspect > canvasAspect) {
+                newHeight = displayHeight;
+                newWidth = newHeight * canvasAspect;
+            } else {
+                newWidth = displayWidth;
+                newHeight = newWidth / canvasAspect;
+            }
+
+            canvas.style.width = newWidth + 'px';
+            canvas.style.height = newHeight + 'px';
+        }
+
+        // ウィンドウリサイズイベント
+        window.addEventListener('resize', updateCanvasSize);
+
+        // 初期化
+        setupPanelResize();
+        updateCanvasSize();
 
         // ツール切り替え
         document.getElementById('selectTool').addEventListener('click', () => {
@@ -1350,10 +1561,10 @@
             'prop_kerning', 'prop_tracking', 'prop_rotation', 'prop_vertical',
             'prop_leading', 'prop_slant', 'prop_underline', 'prop_smallCaps', 'prop_smallCapsSize',
             'fill_color', 'fill_opacity', 'fill_enabled',
-            'stroke1_enabled', 'stroke1_size', 'stroke1_color', 'stroke1_opacity',
-            'stroke2_enabled', 'stroke2_size', 'stroke2_color', 'stroke2_opacity',
-            'stroke3_enabled', 'stroke3_size', 'stroke3_color', 'stroke3_opacity',
-            'stroke4_enabled', 'stroke4_size', 'stroke4_color', 'stroke4_opacity',
+            'stroke1_enabled', 'stroke1_type', 'stroke1_size', 'stroke1_join', 'stroke1_color', 'stroke1_opacity', 'stroke1_angle',
+            'stroke2_enabled', 'stroke2_type', 'stroke2_size', 'stroke2_join', 'stroke2_color', 'stroke2_opacity', 'stroke2_angle',
+            'stroke3_enabled', 'stroke3_type', 'stroke3_size', 'stroke3_join', 'stroke3_color', 'stroke3_opacity', 'stroke3_angle',
+            'stroke4_enabled', 'stroke4_type', 'stroke4_size', 'stroke4_join', 'stroke4_color', 'stroke4_opacity', 'stroke4_angle',
             'shadow_enabled', 'shadow_color', 'shadow_opacity', 'shadow_distance', 'shadow_angle', 'shadow_size', 'shadow_blur'
         ];
 
@@ -1492,27 +1703,39 @@
                 selectedObject.strokes = [
                     {
                         enabled: document.getElementById('stroke1_enabled').checked,
+                        type: document.getElementById('stroke1_type').value || 'edge',
                         size: parseInt(document.getElementById('stroke1_size').value) || 0,
+                        join: document.getElementById('stroke1_join').value || 'round',
                         color: document.getElementById('stroke1_color').value,
-                        opacity: parseInt(document.getElementById('stroke1_opacity').value) || 100
+                        opacity: parseInt(document.getElementById('stroke1_opacity').value) || 100,
+                        angle: parseInt(document.getElementById('stroke1_angle').value) || 45
                     },
                     {
                         enabled: document.getElementById('stroke2_enabled').checked,
+                        type: document.getElementById('stroke2_type').value || 'edge',
                         size: parseInt(document.getElementById('stroke2_size').value) || 0,
+                        join: document.getElementById('stroke2_join').value || 'round',
                         color: document.getElementById('stroke2_color').value,
-                        opacity: parseInt(document.getElementById('stroke2_opacity').value) || 100
+                        opacity: parseInt(document.getElementById('stroke2_opacity').value) || 100,
+                        angle: parseInt(document.getElementById('stroke2_angle').value) || 45
                     },
                     {
                         enabled: document.getElementById('stroke3_enabled').checked,
+                        type: document.getElementById('stroke3_type').value || 'edge',
                         size: parseInt(document.getElementById('stroke3_size').value) || 0,
+                        join: document.getElementById('stroke3_join').value || 'round',
                         color: document.getElementById('stroke3_color').value,
-                        opacity: parseInt(document.getElementById('stroke3_opacity').value) || 100
+                        opacity: parseInt(document.getElementById('stroke3_opacity').value) || 100,
+                        angle: parseInt(document.getElementById('stroke3_angle').value) || 45
                     },
                     {
                         enabled: document.getElementById('stroke4_enabled').checked,
+                        type: document.getElementById('stroke4_type').value || 'edge',
                         size: parseInt(document.getElementById('stroke4_size').value) || 0,
+                        join: document.getElementById('stroke4_join').value || 'round',
                         color: document.getElementById('stroke4_color').value,
-                        opacity: parseInt(document.getElementById('stroke4_opacity').value) || 100
+                        opacity: parseInt(document.getElementById('stroke4_opacity').value) || 100,
+                        angle: parseInt(document.getElementById('stroke4_angle').value) || 45
                     }
                 ];
 
@@ -1530,27 +1753,39 @@
                 selectedObject.strokes = [
                     {
                         enabled: document.getElementById('stroke1_enabled').checked,
+                        type: document.getElementById('stroke1_type').value || 'edge',
                         size: parseInt(document.getElementById('stroke1_size').value) || 0,
+                        join: document.getElementById('stroke1_join').value || 'round',
                         color: document.getElementById('stroke1_color').value,
-                        opacity: parseInt(document.getElementById('stroke1_opacity').value) || 100
+                        opacity: parseInt(document.getElementById('stroke1_opacity').value) || 100,
+                        angle: parseInt(document.getElementById('stroke1_angle').value) || 45
                     },
                     {
                         enabled: document.getElementById('stroke2_enabled').checked,
+                        type: document.getElementById('stroke2_type').value || 'edge',
                         size: parseInt(document.getElementById('stroke2_size').value) || 0,
+                        join: document.getElementById('stroke2_join').value || 'round',
                         color: document.getElementById('stroke2_color').value,
-                        opacity: parseInt(document.getElementById('stroke2_opacity').value) || 100
+                        opacity: parseInt(document.getElementById('stroke2_opacity').value) || 100,
+                        angle: parseInt(document.getElementById('stroke2_angle').value) || 45
                     },
                     {
                         enabled: document.getElementById('stroke3_enabled').checked,
+                        type: document.getElementById('stroke3_type').value || 'edge',
                         size: parseInt(document.getElementById('stroke3_size').value) || 0,
+                        join: document.getElementById('stroke3_join').value || 'round',
                         color: document.getElementById('stroke3_color').value,
-                        opacity: parseInt(document.getElementById('stroke3_opacity').value) || 100
+                        opacity: parseInt(document.getElementById('stroke3_opacity').value) || 100,
+                        angle: parseInt(document.getElementById('stroke3_angle').value) || 45
                     },
                     {
                         enabled: document.getElementById('stroke4_enabled').checked,
+                        type: document.getElementById('stroke4_type').value || 'edge',
                         size: parseInt(document.getElementById('stroke4_size').value) || 0,
+                        join: document.getElementById('stroke4_join').value || 'round',
                         color: document.getElementById('stroke4_color').value,
-                        opacity: parseInt(document.getElementById('stroke4_opacity').value) || 100
+                        opacity: parseInt(document.getElementById('stroke4_opacity').value) || 100,
+                        angle: parseInt(document.getElementById('stroke4_angle').value) || 45
                     }
                 ];
                 // 後方互換性のため、単一のstrokeプロパティも保持
@@ -2941,24 +3176,36 @@
             if (!isShapeObject) {
                 if (selectedObject.strokes && selectedObject.strokes.length >= 4) {
                     document.getElementById('stroke1_enabled').checked = selectedObject.strokes[0].enabled;
+                    document.getElementById('stroke1_type').value = selectedObject.strokes[0].type || 'edge';
                     document.getElementById('stroke1_size').value = selectedObject.strokes[0].size;
+                    document.getElementById('stroke1_join').value = selectedObject.strokes[0].join || 'round';
                     document.getElementById('stroke1_color').value = selectedObject.strokes[0].color;
                     document.getElementById('stroke1_opacity').value = selectedObject.strokes[0].opacity || 100;
+                    document.getElementById('stroke1_angle').value = selectedObject.strokes[0].angle || 45;
 
                     document.getElementById('stroke2_enabled').checked = selectedObject.strokes[1].enabled;
+                    document.getElementById('stroke2_type').value = selectedObject.strokes[1].type || 'edge';
                     document.getElementById('stroke2_size').value = selectedObject.strokes[1].size;
+                    document.getElementById('stroke2_join').value = selectedObject.strokes[1].join || 'round';
                     document.getElementById('stroke2_color').value = selectedObject.strokes[1].color;
                     document.getElementById('stroke2_opacity').value = selectedObject.strokes[1].opacity || 100;
+                    document.getElementById('stroke2_angle').value = selectedObject.strokes[1].angle || 45;
 
                     document.getElementById('stroke3_enabled').checked = selectedObject.strokes[2].enabled;
+                    document.getElementById('stroke3_type').value = selectedObject.strokes[2].type || 'edge';
                     document.getElementById('stroke3_size').value = selectedObject.strokes[2].size;
+                    document.getElementById('stroke3_join').value = selectedObject.strokes[2].join || 'round';
                     document.getElementById('stroke3_color').value = selectedObject.strokes[2].color;
                     document.getElementById('stroke3_opacity').value = selectedObject.strokes[2].opacity || 100;
+                    document.getElementById('stroke3_angle').value = selectedObject.strokes[2].angle || 45;
 
                     document.getElementById('stroke4_enabled').checked = selectedObject.strokes[3].enabled;
+                    document.getElementById('stroke4_type').value = selectedObject.strokes[3].type || 'edge';
                     document.getElementById('stroke4_size').value = selectedObject.strokes[3].size;
+                    document.getElementById('stroke4_join').value = selectedObject.strokes[3].join || 'round';
                     document.getElementById('stroke4_color').value = selectedObject.strokes[3].color;
                     document.getElementById('stroke4_opacity').value = selectedObject.strokes[3].opacity || 100;
+                    document.getElementById('stroke4_angle').value = selectedObject.strokes[3].angle || 45;
                 }
 
                 if (selectedObject.shadow) {
@@ -2971,13 +3218,32 @@
                     document.getElementById('shadow_blur').value = selectedObject.shadow.blur || 0;
                 }
             } else {
-                // 図形オブジェクトのストローク設定（単一のstrokeプロパティ）
-                if (selectedObject.stroke) {
-                    // 図形のストロークをstroke1に表示
+                // 図形オブジェクトのストローク設定
+                if (selectedObject.strokes && selectedObject.strokes.length > 0) {
+                    // 複数ストローク対応
+                    for (let i = 0; i < 4; i++) {
+                        const strokeNum = i + 1;
+                        if (selectedObject.strokes[i]) {
+                            document.getElementById(`stroke${strokeNum}_enabled`).checked = selectedObject.strokes[i].enabled;
+                            document.getElementById(`stroke${strokeNum}_type`).value = selectedObject.strokes[i].type || 'edge';
+                            document.getElementById(`stroke${strokeNum}_size`).value = selectedObject.strokes[i].size;
+                            document.getElementById(`stroke${strokeNum}_join`).value = selectedObject.strokes[i].join || 'round';
+                            document.getElementById(`stroke${strokeNum}_color`).value = selectedObject.strokes[i].color;
+                            document.getElementById(`stroke${strokeNum}_opacity`).value = selectedObject.strokes[i].opacity || 100;
+                            document.getElementById(`stroke${strokeNum}_angle`).value = selectedObject.strokes[i].angle || 45;
+                        } else {
+                            document.getElementById(`stroke${strokeNum}_enabled`).checked = false;
+                        }
+                    }
+                } else if (selectedObject.stroke) {
+                    // 後方互換性: 単一ストローク
                     document.getElementById('stroke1_enabled').checked = selectedObject.stroke.enabled;
+                    document.getElementById('stroke1_type').value = selectedObject.stroke.type || 'edge';
                     document.getElementById('stroke1_size').value = selectedObject.stroke.size;
+                    document.getElementById('stroke1_join').value = selectedObject.stroke.join || 'round';
                     document.getElementById('stroke1_color').value = selectedObject.stroke.color;
                     document.getElementById('stroke1_opacity').value = selectedObject.stroke.opacity || 100;
+                    document.getElementById('stroke1_angle').value = selectedObject.stroke.angle || 45;
 
                     // 他のストロークは無効化
                     document.getElementById('stroke2_enabled').checked = false;
@@ -3642,6 +3908,150 @@
             ctx.setLineDash([]);
         }
 
+        // エッジ/奥行き/ドロップ対応のテキストストローク描画
+        function renderStrokesAdvanced(ctx, text, x, y, strokes, fontSize, renderTextFunc) {
+            if (!strokes || strokes.length === 0) return;
+
+            const enabledStrokes = strokes.filter(st => st.enabled && st.size > 0);
+            if (enabledStrokes.length === 0) return;
+
+            // 外側から内側へ描画
+            for (let i = enabledStrokes.length - 1; i >= 0; i--) {
+                const st = enabledStrokes[i];
+                let innerWidth = 0;
+                for (let j = 0; j < i; j++) {
+                    innerWidth += enabledStrokes[j].size;
+                }
+
+                ctx.save();
+                ctx.globalAlpha = (st.opacity || 100) / 100;
+                ctx.strokeStyle = st.color;
+                ctx.lineJoin = st.join || 'round';
+
+                if (st.type === 'depth') {
+                    // 奥行き: 角度とオフセットで段階的に描画
+                    const depthAngle = (st.angle || 45) * Math.PI / 180;
+                    const depthDx = Math.cos(depthAngle);
+                    const depthDy = Math.sin(depthAngle);
+
+                    for (let d = st.size; d > 0; d -= 0.5) {
+                        ctx.lineWidth = innerWidth + d;
+                        ctx.save();
+                        ctx.translate((innerWidth + d) * depthDx, (innerWidth + d) * depthDy);
+                        renderTextFunc(ctx);
+                        ctx.restore();
+                    }
+                } else if (st.type === 'drop') {
+                    // ドロップ: オフセットして塗りつぶし
+                    ctx.save();
+                    ctx.translate(innerWidth + st.size, innerWidth + st.size);
+                    ctx.fillStyle = st.color;
+                    ctx.globalAlpha = (st.opacity || 100) / 100;
+                    ctx.font = `${fontSize}px "${ctx.font.split('"')[1]}"`;
+                    ctx.fillText(text, x, y);
+                    ctx.restore();
+                } else {
+                    // エッジ: 内側のストロークと文字本体を含めて膨張
+                    const metrics = ctx.measureText(text);
+                    const totalStrokeWidth = enabledStrokes.reduce((sum, s) => sum + s.size, 0);
+                    const margin = Math.max(st.size * 6, totalStrokeWidth * 3);
+
+                    const tempCanvas = document.createElement('canvas');
+                    tempCanvas.width = Math.ceil(metrics.width + margin * 4);
+                    tempCanvas.height = Math.ceil(fontSize * 3 + margin * 4);
+                    const tempCtx = tempCanvas.getContext('2d');
+
+                    tempCtx.font = ctx.font;
+                    tempCtx.textBaseline = ctx.textBaseline;
+                    tempCtx.textAlign = ctx.textAlign;
+
+                    const tempX = tempCanvas.width / 2;
+                    const tempY = tempCanvas.height / 2;
+
+                    // 内側のストロークを一時キャンバスに描画
+                    for (let j = i - 1; j >= 0; j--) {
+                        const innerSt = enabledStrokes[j];
+                        let innerInnerWidth = 0;
+                        for (let k = 0; k < j; k++) {
+                            innerInnerWidth += enabledStrokes[k].size;
+                        }
+
+                        tempCtx.lineWidth = innerInnerWidth + innerSt.size;
+                        tempCtx.strokeStyle = innerSt.color;
+                        tempCtx.globalAlpha = (innerSt.opacity || 100) / 100;
+                        tempCtx.strokeText(text, tempX, tempY);
+                    }
+
+                    // 文字本体を描画（塗りがある場合）
+                    tempCtx.fillStyle = '#ffffff';
+                    tempCtx.globalAlpha = 1.0;
+                    tempCtx.fillText(text, tempX, tempY);
+
+                    // エッジキャンバスを作成：膨張処理
+                    const edgeCanvas = document.createElement('canvas');
+                    edgeCanvas.width = tempCanvas.width;
+                    edgeCanvas.height = tempCanvas.height;
+                    const edgeCtx = edgeCanvas.getContext('2d');
+
+                    const edgeSteps = Math.max(1, st.size);
+                    const joinType = st.join || 'round';
+
+                    if (joinType === 'miter') {
+                        // 角: 8方向膨張
+                        for (let step = 1; step <= edgeSteps; step += 1) {
+                            edgeCtx.globalAlpha = 1.0;
+                            edgeCtx.drawImage(tempCanvas, step, 0);
+                            edgeCtx.drawImage(tempCanvas, -step, 0);
+                            edgeCtx.drawImage(tempCanvas, 0, step);
+                            edgeCtx.drawImage(tempCanvas, 0, -step);
+                            edgeCtx.drawImage(tempCanvas, step, step);
+                            edgeCtx.drawImage(tempCanvas, step, -step);
+                            edgeCtx.drawImage(tempCanvas, -step, step);
+                            edgeCtx.drawImage(tempCanvas, -step, -step);
+                        }
+                    } else if (joinType === 'bevel') {
+                        // 面取り: 8方向
+                        const bevelStep = Math.PI / 4;
+                        for (let step = 1; step <= edgeSteps; step += 1) {
+                            edgeCtx.globalAlpha = 1.0;
+                            for (let angle = 0; angle < Math.PI * 2; angle += bevelStep) {
+                                const dx = Math.cos(angle) * step;
+                                const dy = Math.sin(angle) * step;
+                                edgeCtx.drawImage(tempCanvas, dx, dy);
+                            }
+                        }
+                    } else {
+                        // 丸: 64方向で滑らか
+                        const roundStep = Math.PI / 32;
+                        for (let step = 0.5; step <= edgeSteps; step += 0.5) {
+                            edgeCtx.globalAlpha = 1.0;
+                            for (let angle = 0; angle < Math.PI * 2; angle += roundStep) {
+                                const dx = Math.cos(angle) * step;
+                                const dy = Math.sin(angle) * step;
+                                edgeCtx.drawImage(tempCanvas, dx, dy);
+                            }
+                        }
+                    }
+
+                    // 元の内容を引いてエッジ部分のみを残す
+                    edgeCtx.globalCompositeOperation = 'destination-out';
+                    edgeCtx.globalAlpha = 1.0;
+                    edgeCtx.drawImage(tempCanvas, 0, 0);
+
+                    // エッジに色を適用
+                    edgeCtx.globalCompositeOperation = 'source-in';
+                    edgeCtx.fillStyle = st.color;
+                    edgeCtx.fillRect(0, 0, edgeCanvas.width, edgeCanvas.height);
+
+                    // メインキャンバスに描画
+                    ctx.globalAlpha = (st.opacity || 100) / 100;
+                    ctx.drawImage(edgeCanvas, x - tempX, y - tempY);
+                }
+
+                ctx.restore();
+            }
+        }
+
         function drawTextObject(obj, isSelected) {
             if (!obj.text && !isTyping) return;
 
@@ -3684,11 +4094,44 @@
                         for (let j = obj.strokes.length - 1; j >= 0; j--) {
                             const stroke = obj.strokes[j];
                             if (stroke.enabled && stroke.size > 0) {
-                                ctx.strokeStyle = stroke.color;
-                                ctx.lineWidth = stroke.size;
-                                ctx.lineJoin = 'round';
-                                ctx.miterLimit = 2;
-                                ctx.strokeText(char, 0, 0);
+                                const strokeType = stroke.type || 'edge';
+                                const strokeOpacity = (stroke.opacity || 100) / 100;
+
+                                if (strokeType === 'depth') {
+                                    // 奥行きタイプ: 角度とオフセットで描画
+                                    const depthAngle = (stroke.angle || 45) * Math.PI / 180;
+                                    const depthDx = Math.cos(depthAngle);
+                                    const depthDy = Math.sin(depthAngle);
+
+                                    for (let d = stroke.size; d > 0; d -= 0.5) {
+                                        ctx.save();
+                                        ctx.globalAlpha = strokeOpacity;
+                                        ctx.strokeStyle = stroke.color;
+                                        ctx.lineWidth = d;
+                                        ctx.lineJoin = stroke.join || 'round';
+                                        ctx.translate(d * depthDx, d * depthDy);
+                                        ctx.strokeText(char, 0, 0);
+                                        ctx.restore();
+                                    }
+                                } else if (strokeType === 'drop') {
+                                    // ドロップタイプ: オフセットして塗りつぶし
+                                    ctx.save();
+                                    ctx.globalAlpha = strokeOpacity;
+                                    ctx.fillStyle = stroke.color;
+                                    ctx.translate(stroke.size, stroke.size);
+                                    ctx.fillText(char, 0, 0);
+                                    ctx.restore();
+                                } else {
+                                    // エッジタイプ（デフォルト）: 標準的なストローク描画
+                                    ctx.save();
+                                    ctx.globalAlpha = strokeOpacity;
+                                    ctx.strokeStyle = stroke.color;
+                                    ctx.lineWidth = stroke.size;
+                                    ctx.lineJoin = stroke.join || 'round';
+                                    ctx.miterLimit = 2;
+                                    ctx.strokeText(char, 0, 0);
+                                    ctx.restore();
+                                }
                             }
                         }
                     }
@@ -3818,11 +4261,44 @@
                     for (let i = obj.strokes.length - 1; i >= 0; i--) {
                         const stroke = obj.strokes[i];
                         if (stroke.enabled && stroke.size > 0) {
-                            ctx.strokeStyle = stroke.color;
-                            ctx.lineWidth = stroke.size;
-                            ctx.lineJoin = 'round';
-                            ctx.miterLimit = 2;
-                            renderWithKerning((txt, x, y) => ctx.strokeText(txt, x, y));
+                            const strokeType = stroke.type || 'edge';
+                            const strokeOpacity = (stroke.opacity || 100) / 100;
+
+                            if (strokeType === 'depth') {
+                                // 奥行きタイプ: 角度とオフセットで描画
+                                const depthAngle = (stroke.angle || 45) * Math.PI / 180;
+                                const depthDx = Math.cos(depthAngle);
+                                const depthDy = Math.sin(depthAngle);
+
+                                for (let d = stroke.size; d > 0; d -= 0.5) {
+                                    ctx.save();
+                                    ctx.globalAlpha = strokeOpacity;
+                                    ctx.strokeStyle = stroke.color;
+                                    ctx.lineWidth = d;
+                                    ctx.lineJoin = stroke.join || 'round';
+                                    ctx.translate(d * depthDx, d * depthDy);
+                                    renderWithKerning((txt, x, y) => ctx.strokeText(txt, x, y));
+                                    ctx.restore();
+                                }
+                            } else if (strokeType === 'drop') {
+                                // ドロップタイプ: オフセットして塗りつぶし
+                                ctx.save();
+                                ctx.globalAlpha = strokeOpacity;
+                                ctx.fillStyle = stroke.color;
+                                ctx.translate(stroke.size, stroke.size);
+                                renderWithKerning((txt, x, y) => ctx.fillText(txt, x, y));
+                                ctx.restore();
+                            } else {
+                                // エッジタイプ（デフォルト）: 標準的なストローク描画
+                                ctx.save();
+                                ctx.globalAlpha = strokeOpacity;
+                                ctx.strokeStyle = stroke.color;
+                                ctx.lineWidth = stroke.size;
+                                ctx.lineJoin = stroke.join || 'round';
+                                ctx.miterLimit = 2;
+                                renderWithKerning((txt, x, y) => ctx.strokeText(txt, x, y));
+                                ctx.restore();
+                            }
                         }
                     }
                 }
