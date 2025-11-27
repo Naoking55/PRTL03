@@ -2059,12 +2059,9 @@
                         color: '#ffffff',
                         opacity: 100
                     },
-                    stroke: {
-                        enabled: true,
-                        size: 3,
-                        color: '#000000',
-                        opacity: 100
-                    }
+                    strokes: [
+                        { enabled: true, size: 3, color: '#000000', opacity: 100 }
+                    ]
                 };
             } else if (currentTool === 'select') {
                 // 以前選択されていたオブジェクトを記憶
@@ -2095,9 +2092,17 @@
                     dragTarget = handle;
                     dragStartObjX = selectedObject.x;
                     dragStartObjY = selectedObject.y;
-                    const metrics = measureText(selectedObject);
-                    dragStartWidth = metrics.width;
-                    dragStartHeight = metrics.height;
+
+                    // 図形オブジェクトの場合
+                    if (selectedObject.type && selectedObject.type !== 'pen') {
+                        dragStartWidth = selectedObject.width;
+                        dragStartHeight = selectedObject.height;
+                    } else {
+                        // テキストオブジェクトの場合
+                        const metrics = measureText(selectedObject);
+                        dragStartWidth = metrics.width;
+                        dragStartHeight = metrics.height;
+                    }
                 } else if (selectObjectAt(x, y)) {
                     // オブジェクト選択成功 - ドラッグ開始
                     isDragging = true;
@@ -2353,20 +2358,47 @@
         function resizeObject(handleType, dx, dy) {
             if (!selectedObject) return;
 
-            const newFontSize = selectedObject.fontSize;
+            // 図形オブジェクトの場合
+            if (selectedObject.type && selectedObject.type !== 'pen') {
+                // 図形のリサイズ処理
+                if (handleType === 'se') {
+                    // 右下: widthとheightを変更
+                    selectedObject.width = dragStartWidth + dx;
+                    selectedObject.height = dragStartHeight + dy;
+                } else if (handleType === 'ne') {
+                    // 右上: widthを増やし、heightを減らし、yを調整
+                    selectedObject.width = dragStartWidth + dx;
+                    selectedObject.height = dragStartHeight - dy;
+                    selectedObject.y = dragStartObjY + dy;
+                } else if (handleType === 'sw') {
+                    // 左下: widthを減らし、xを調整、heightを増やす
+                    selectedObject.width = dragStartWidth - dx;
+                    selectedObject.x = dragStartObjX + dx;
+                    selectedObject.height = dragStartHeight + dy;
+                } else if (handleType === 'nw') {
+                    // 左上: widthとheightを減らし、xとyを調整
+                    selectedObject.width = dragStartWidth - dx;
+                    selectedObject.x = dragStartObjX + dx;
+                    selectedObject.height = dragStartHeight - dy;
+                    selectedObject.y = dragStartObjY + dy;
+                }
+            } else {
+                // テキストオブジェクトの場合
+                const newFontSize = selectedObject.fontSize;
 
-            // フォントサイズを変更してリサイズ
-            if (handleType === 'se' || handleType === 'ne') {
-                // 右方向のリサイズ
-                const scaleFactor = (dragStartWidth + dx) / dragStartWidth;
-                selectedObject.fontSize = Math.max(10, Math.round(dragStartHeight * scaleFactor));
-            } else if (handleType === 'sw' || handleType === 'nw') {
-                // 左方向のリサイズ
-                const scaleFactor = (dragStartWidth - dx) / dragStartWidth;
-                selectedObject.fontSize = Math.max(10, Math.round(dragStartHeight * scaleFactor));
-                // 位置も調整
-                const metrics = measureText(selectedObject);
-                selectedObject.x = dragStartObjX + (dragStartWidth - metrics.width);
+                // フォントサイズを変更してリサイズ
+                if (handleType === 'se' || handleType === 'ne') {
+                    // 右方向のリサイズ
+                    const scaleFactor = (dragStartWidth + dx) / dragStartWidth;
+                    selectedObject.fontSize = Math.max(10, Math.round(dragStartHeight * scaleFactor));
+                } else if (handleType === 'sw' || handleType === 'nw') {
+                    // 左方向のリサイズ
+                    const scaleFactor = (dragStartWidth - dx) / dragStartWidth;
+                    selectedObject.fontSize = Math.max(10, Math.round(dragStartHeight * scaleFactor));
+                    // 位置も調整
+                    const metrics = measureText(selectedObject);
+                    selectedObject.x = dragStartObjX + (dragStartWidth - metrics.width);
+                }
             }
 
             updatePropertiesPanel();
@@ -2491,6 +2523,16 @@
                 }
 
                 return false;
+            }
+
+            // 線ツールの判定
+            if (obj.type === 'line') {
+                const startX = obj.x;
+                const startY = obj.y;
+                const endX = obj.x + obj.width;
+                const endY = obj.y + obj.height;
+                const dist = distanceToLineSegment(x, y, startX, startY, endX, endY);
+                return dist < 15;
             }
 
             const minX = Math.min(obj.x, obj.x + obj.width);
