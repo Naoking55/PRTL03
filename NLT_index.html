@@ -1471,6 +1471,19 @@
                             color: '#ffffff',
                             opacity: 100
                         },
+                        // 複数ストローク設定
+                        strokes: [
+                            {
+                                enabled: true,
+                                type: 'edge',  // 'edge', 'depth', 'drop'
+                                color: '#000000',
+                                size: 3,
+                                opacity: 100,
+                                angle: 0,  // depth/dropで使用（度数）
+                                join: 'round'  // 'round', 'miter', 'bevel'
+                            }
+                        ],
+                        // 後方互換性のための単一ストローク設定
                         stroke: {
                             enabled: true,
                             size: 3,
@@ -1493,6 +1506,7 @@
                         isDrawingPath = false;
                         currentPath = null;
                         selectedAnchorIndex = -1;
+                        setTool('select');  // ペン完成後、選択ツールに切り替え
                         render();
                     } else {
                         // 新しいアンカーポイントを追加
@@ -2144,6 +2158,7 @@
                     selectedAnchorIndex = -1;
                     isDraggingHandle = false;
                     draggedHandleType = null;
+                    setTool('select');  // ペン完成後、選択ツールに切り替え
                     render();
                 }
             } else if (selectedObject && !isTyping) {
@@ -2375,60 +2390,101 @@
 
             ctx.save();
 
-            // パスを描画
-            ctx.beginPath();
-            const firstAnchor = pathObj.anchors[0];
-            ctx.moveTo(firstAnchor.x, firstAnchor.y);
-
-            for (let i = 1; i < pathObj.anchors.length; i++) {
-                const prevAnchor = pathObj.anchors[i - 1];
-                const currAnchor = pathObj.anchors[i];
-
-                if (prevAnchor.handleOut && currAnchor.handleIn) {
-                    // ベジエ曲線
-                    const cp1x = prevAnchor.x + prevAnchor.handleOut.x;
-                    const cp1y = prevAnchor.y + prevAnchor.handleOut.y;
-                    const cp2x = currAnchor.x + currAnchor.handleIn.x;
-                    const cp2y = currAnchor.y + currAnchor.handleIn.y;
-                    ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, currAnchor.x, currAnchor.y);
-                } else if (prevAnchor.handleOut) {
-                    // 2次ベジエ曲線
-                    const cpx = prevAnchor.x + prevAnchor.handleOut.x;
-                    const cpy = prevAnchor.y + prevAnchor.handleOut.y;
-                    ctx.quadraticCurveTo(cpx, cpy, currAnchor.x, currAnchor.y);
-                } else {
-                    // 直線
-                    ctx.lineTo(currAnchor.x, currAnchor.y);
-                }
-            }
-
-            // パスを閉じる場合
-            if (pathObj.closed && pathObj.anchors.length > 2) {
-                const lastAnchor = pathObj.anchors[pathObj.anchors.length - 1];
+            // パスを描画する関数
+            const drawPath = () => {
+                ctx.beginPath();
                 const firstAnchor = pathObj.anchors[0];
+                ctx.moveTo(firstAnchor.x, firstAnchor.y);
 
-                if (lastAnchor.handleOut && firstAnchor.handleIn) {
-                    const cp1x = lastAnchor.x + lastAnchor.handleOut.x;
-                    const cp1y = lastAnchor.y + lastAnchor.handleOut.y;
-                    const cp2x = firstAnchor.x + firstAnchor.handleIn.x;
-                    const cp2y = firstAnchor.y + firstAnchor.handleIn.y;
-                    ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, firstAnchor.x, firstAnchor.y);
-                } else {
-                    ctx.lineTo(firstAnchor.x, firstAnchor.y);
+                for (let i = 1; i < pathObj.anchors.length; i++) {
+                    const prevAnchor = pathObj.anchors[i - 1];
+                    const currAnchor = pathObj.anchors[i];
+
+                    if (prevAnchor.handleOut && currAnchor.handleIn) {
+                        // ベジエ曲線
+                        const cp1x = prevAnchor.x + prevAnchor.handleOut.x;
+                        const cp1y = prevAnchor.y + prevAnchor.handleOut.y;
+                        const cp2x = currAnchor.x + currAnchor.handleIn.x;
+                        const cp2y = currAnchor.y + currAnchor.handleIn.y;
+                        ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, currAnchor.x, currAnchor.y);
+                    } else if (prevAnchor.handleOut) {
+                        // 2次ベジエ曲線
+                        const cpx = prevAnchor.x + prevAnchor.handleOut.x;
+                        const cpy = prevAnchor.y + prevAnchor.handleOut.y;
+                        ctx.quadraticCurveTo(cpx, cpy, currAnchor.x, currAnchor.y);
+                    } else {
+                        // 直線
+                        ctx.lineTo(currAnchor.x, currAnchor.y);
+                    }
                 }
-                ctx.closePath();
-            }
 
-            // 塗りと線を適用
-            if (pathObj.fill && pathObj.fill.enabled) {
-                ctx.fillStyle = hexToRgba(pathObj.fill.color, pathObj.fill.opacity / 100);
-                ctx.fill();
-            }
+                // パスを閉じる場合
+                if (pathObj.closed && pathObj.anchors.length > 2) {
+                    const lastAnchor = pathObj.anchors[pathObj.anchors.length - 1];
+                    const firstAnchor = pathObj.anchors[0];
 
-            if (pathObj.stroke && pathObj.stroke.enabled) {
-                ctx.strokeStyle = hexToRgba(pathObj.stroke.color, pathObj.stroke.opacity / 100);
-                ctx.lineWidth = pathObj.stroke.size;
-                ctx.stroke();
+                    if (lastAnchor.handleOut && firstAnchor.handleIn) {
+                        const cp1x = lastAnchor.x + lastAnchor.handleOut.x;
+                        const cp1y = lastAnchor.y + lastAnchor.handleOut.y;
+                        const cp2x = firstAnchor.x + firstAnchor.handleIn.x;
+                        const cp2y = firstAnchor.y + firstAnchor.handleIn.y;
+                        ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, firstAnchor.x, firstAnchor.y);
+                    } else {
+                        ctx.lineTo(firstAnchor.x, firstAnchor.y);
+                    }
+                    ctx.closePath();
+                }
+            };
+
+            // 複数ストロークのレンダリング（外側から内側へ）
+            if (pathObj.strokes && pathObj.strokes.length > 0) {
+                // ストロークを幅でソート（大きい順）
+                const sortedStrokes = [...pathObj.strokes].sort((a, b) => (b.size || 0) - (a.size || 0));
+
+                sortedStrokes.forEach(stroke => {
+                    if (!stroke.enabled) return;
+
+                    ctx.save();
+                    drawPath();
+
+                    // ストロークタイプに応じて描画
+                    if (stroke.type === 'depth' || stroke.type === 'drop') {
+                        // 奥行き/ドロップシャドウ: オフセットして描画
+                        const angle = (stroke.angle || 0) * Math.PI / 180;
+                        const offset = stroke.size / 2;
+                        ctx.translate(
+                            Math.cos(angle) * offset,
+                            Math.sin(angle) * offset
+                        );
+                        drawPath();
+                    }
+
+                    ctx.strokeStyle = hexToRgba(stroke.color, stroke.opacity / 100);
+                    ctx.lineWidth = stroke.size;
+                    ctx.lineCap = 'round';
+                    ctx.lineJoin = stroke.join || 'round';
+                    ctx.stroke();
+                    ctx.restore();
+                });
+
+                // 塗りつぶし（最後に描画）
+                if (pathObj.fill && pathObj.fill.enabled) {
+                    drawPath();
+                    ctx.fillStyle = hexToRgba(pathObj.fill.color, pathObj.fill.opacity / 100);
+                    ctx.fill();
+                }
+            } else {
+                // 後方互換性: 単一ストローク
+                drawPath();
+                if (pathObj.fill && pathObj.fill.enabled) {
+                    ctx.fillStyle = hexToRgba(pathObj.fill.color, pathObj.fill.opacity / 100);
+                    ctx.fill();
+                }
+                if (pathObj.stroke && pathObj.stroke.enabled) {
+                    ctx.strokeStyle = hexToRgba(pathObj.stroke.color, pathObj.stroke.opacity / 100);
+                    ctx.lineWidth = pathObj.stroke.size;
+                    ctx.stroke();
+                }
             }
 
             // アンカーポイントとハンドルを表示

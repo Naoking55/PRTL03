@@ -1802,65 +1802,27 @@
                     });
                 } else if (obj.type === 'penPath' && obj.path) {
                     const absPath = obj.path.map(p => ({ x: p.x + obj.x, y: p.y + obj.y, cp1: p.cp1 ? { x: p.cp1.x + obj.x, y: p.cp1.y + obj.y } : null, cp2: p.cp2 ? { x: p.cp2.x + obj.x, y: p.cp2.y + obj.y } : null }));
-
-                    const drawPath = () => {
-                        ctx.beginPath();
-                        ctx.moveTo(absPath[0].x, absPath[0].y);
-                        for (let i = 1; i < absPath.length; i++) {
-                            const prev = absPath[i - 1];
-                            const curr = absPath[i];
-                            if (prev.cp2 || curr.cp1) {
-                                const cp1 = prev.cp2 || { x: prev.x, y: prev.y };
-                                const cp2 = curr.cp1 || { x: curr.x, y: curr.y };
-                                ctx.bezierCurveTo(cp1.x, cp1.y, cp2.x, cp2.y, curr.x, curr.y);
-                            } else {
-                                ctx.lineTo(curr.x, curr.y);
-                            }
+                    ctx.beginPath();
+                    ctx.moveTo(absPath[0].x, absPath[0].y);
+                    for (let i = 1; i < absPath.length; i++) {
+                        const prev = absPath[i - 1];
+                        const curr = absPath[i];
+                        if (prev.cp2 || curr.cp1) {
+                            const cp1 = prev.cp2 || { x: prev.x, y: prev.y };
+                            const cp2 = curr.cp1 || { x: curr.x, y: curr.y };
+                            ctx.bezierCurveTo(cp1.x, cp1.y, cp2.x, cp2.y, curr.x, curr.y);
+                        } else {
+                            ctx.lineTo(curr.x, curr.y);
                         }
-                        if (obj.closed) ctx.closePath();
-                    };
-
-                    // 複数ストロークのレンダリング
-                    if (obj.strokes && obj.strokes.length > 0) {
-                        const sortedStrokes = [...obj.strokes].sort((a, b) => (b.width || 0) - (a.width || 0));
-                        sortedStrokes.forEach(stroke => {
-                            if (!stroke.enabled) return;
-                            ctx.save();
-                            drawPath();
-                            if (stroke.type === 'depth' || stroke.type === 'drop') {
-                                const angle = (stroke.angle || 0) * Math.PI / 180;
-                                const offset = stroke.width / 2;
-                                ctx.translate(Math.cos(angle) * offset, Math.sin(angle) * offset);
-                                drawPath();
-                            }
-                            ctx.globalAlpha = (obj.opacity || 100) / 100 * (stroke.opacity || 100) / 100;
-                            ctx.strokeStyle = stroke.color || '#ffffff';
-                            ctx.lineWidth = stroke.width || 3;
-                            ctx.lineCap = 'round';
-                            ctx.lineJoin = stroke.join || 'round';
-                            ctx.stroke();
-                            ctx.restore();
-                        });
-                        if (obj.fillType !== 'none') {
-                            drawPath();
-                            ctx.globalAlpha = (obj.opacity || 100) / 100 * (obj.fillOpacity || 100) / 100;
-                            ctx.fillStyle = obj.fill || '#ffffff';
-                            ctx.fill();
-                        }
-                    } else {
-                        // 後方互換性
-                        drawPath();
-                        if (obj.fillType !== 'none') {
-                            ctx.globalAlpha = (obj.fillOpacity || 100) / 100;
-                            ctx.fillStyle = obj.fill || '#ffffff';
-                            ctx.fill();
-                        }
-                        ctx.globalAlpha = (obj.strokeOpacity || 100) / 100;
-                        ctx.strokeStyle = obj.stroke || '#ffffff';
-                        ctx.lineWidth = obj.strokeWidth || 3;
-                        ctx.stroke();
                     }
-                    ctx.globalAlpha = 1.0;
+                    if (obj.closed) ctx.closePath();
+                    if (obj.fillType !== 'none') {
+                        ctx.fillStyle = obj.fill || '#ffffff';
+                        ctx.fill();
+                    }
+                    ctx.strokeStyle = obj.stroke || '#ffffff';
+                    ctx.lineWidth = obj.strokeWidth || 3;
+                    ctx.stroke();
                 } else if (obj.chars) {
                     drawTextObject(ctx, obj);
                 }
@@ -2677,11 +2639,9 @@
                         if (obj) {
                             enterEditMode(obj.id);
                             cursorPos = getCharIndexAt(obj, x, y);
-                            render();
                         } else {
                             createTextObject('', x, y);
                             enterEditMode(textObjects[textObjects.length - 1].id);
-                            render();
                         }
                     }
                 } else if (obj) {
@@ -2691,7 +2651,6 @@
                 } else {
                     createTextObject('', x, y);
                     enterEditMode(textObjects[textObjects.length - 1].id);
-                    render();
                 }
             } else if (currentTool === 'textV') {
                 // 縦書きテキスト
@@ -2760,7 +2719,6 @@
                 updateLayerList();
                 pathPoints = [];
                 isDrawingPath = false;
-                setTool('select');  // ペン完成後、選択ツールに切り替え
                 render();
                 return;
             }
@@ -2778,7 +2736,6 @@
                 }
                 pathPoints = [];
                 isDrawingPath = false;
-                setTool('select');  // パス上文字完成後、選択ツールに切り替え
                 render();
                 return;
             }
@@ -2933,7 +2890,6 @@
                 const h = Math.abs(tempShape.y2 - tempShape.y1);
                 if (w > minSize || h > minSize) {
                     createShapeObject(tempShape);
-                    setTool('select');  // 図形作成後、選択ツールに切り替え
                 }
                 isDrawingShape = false;
                 tempShape = null;
@@ -3406,19 +3362,7 @@
                 fillType: 'none',
                 fill: '#ffffff',
                 fillOpacity: 100,
-                // 複数ストローク設定（レガシータイトル互換）
-                strokes: [
-                    {
-                        enabled: true,
-                        type: 'edge',  // 'edge', 'depth', 'drop'
-                        color: '#ffffff',
-                        width: 3,
-                        opacity: 100,
-                        angle: 0,  // depth/dropで使用（度数）
-                        join: 'round'  // 'round', 'miter', 'bevel'
-                    }
-                ],
-                // 後方互換性のための単一ストローク設定
+                // ストローク設定
                 stroke: '#ffffff',
                 strokeWidth: 3,
                 strokeOpacity: 100
@@ -5730,78 +5674,36 @@
                         cp2: p.cp2 ? { x: p.cp2.x + obj.x, y: p.cp2.y + obj.y } : null
                     }));
 
-                    // パスを描画する関数
-                    const drawPath = () => {
-                        ctx.beginPath();
-                        ctx.moveTo(absPath[0].x, absPath[0].y);
-                        for (let i = 1; i < absPath.length; i++) {
-                            const prev = absPath[i - 1];
-                            const curr = absPath[i];
-                            if (prev.cp2 || curr.cp1) {
-                                const cp1 = prev.cp2 || { x: prev.x, y: prev.y };
-                                const cp2 = curr.cp1 || { x: curr.x, y: curr.y };
-                                ctx.bezierCurveTo(cp1.x, cp1.y, cp2.x, cp2.y, curr.x, curr.y);
-                            } else {
-                                ctx.lineTo(curr.x, curr.y);
-                            }
+                    ctx.beginPath();
+                    ctx.moveTo(absPath[0].x, absPath[0].y);
+                    for (let i = 1; i < absPath.length; i++) {
+                        const prev = absPath[i - 1];
+                        const curr = absPath[i];
+                        // ベジェ曲線または直線を描画
+                        if (prev.cp2 || curr.cp1) {
+                            const cp1 = prev.cp2 || { x: prev.x, y: prev.y };
+                            const cp2 = curr.cp1 || { x: curr.x, y: curr.y };
+                            ctx.bezierCurveTo(cp1.x, cp1.y, cp2.x, cp2.y, curr.x, curr.y);
+                        } else {
+                            ctx.lineTo(curr.x, curr.y);
                         }
-                        if (obj.closed) ctx.closePath();
-                    };
-
-                    // 複数ストロークのレンダリング（外側から内側へ）
-                    if (obj.strokes && obj.strokes.length > 0) {
-                        // ストロークを幅でソート（大きい順）
-                        const sortedStrokes = [...obj.strokes].sort((a, b) => (b.width || 0) - (a.width || 0));
-
-                        sortedStrokes.forEach(stroke => {
-                            if (!stroke.enabled) return;
-
-                            ctx.save();
-                            drawPath();
-
-                            // ストロークタイプに応じて描画
-                            if (stroke.type === 'depth' || stroke.type === 'drop') {
-                                // 奥行き/ドロップシャドウ: オフセットして描画
-                                const angle = (stroke.angle || 0) * Math.PI / 180;
-                                const offset = stroke.width / 2;
-                                ctx.translate(
-                                    Math.cos(angle) * offset,
-                                    Math.sin(angle) * offset
-                                );
-                                drawPath();
-                            }
-
-                            ctx.globalAlpha = (obj.opacity || 100) / 100 * (stroke.opacity || 100) / 100;
-                            ctx.strokeStyle = stroke.color || '#ffffff';
-                            ctx.lineWidth = stroke.width || 3;
-                            ctx.lineCap = 'round';
-                            ctx.lineJoin = stroke.join || 'round';
-                            ctx.stroke();
-                            ctx.restore();
-                        });
-
-                        // 塗りつぶし（最後に描画）
-                        if (obj.fillType !== 'none') {
-                            drawPath();
-                            ctx.globalAlpha = (obj.opacity || 100) / 100 * (obj.fillOpacity || 100) / 100;
-                            ctx.fillStyle = obj.fill || '#ffffff';
-                            ctx.fill();
-                        }
-                    } else {
-                        // 後方互換性: 単一ストローク
-                        drawPath();
-                        if (obj.fillType !== 'none') {
-                            ctx.globalAlpha = (obj.opacity || 100) / 100 * (obj.fillOpacity || 100) / 100;
-                            ctx.fillStyle = obj.fill || '#ffffff';
-                            ctx.fill();
-                        }
-                        ctx.globalAlpha = (obj.opacity || 100) / 100 * (obj.strokeOpacity || 100) / 100;
-                        ctx.strokeStyle = obj.stroke || '#ffffff';
-                        ctx.lineWidth = obj.strokeWidth || 3;
-                        ctx.lineCap = 'round';
-                        ctx.lineJoin = 'round';
-                        ctx.stroke();
                     }
+                    if (obj.closed) ctx.closePath();
+
+                    // Fill
+                    if (obj.fillType !== 'none') {
+                        ctx.globalAlpha = (obj.opacity || 100) / 100 * (obj.fillOpacity || 100) / 100;
+                        ctx.fillStyle = obj.fill || '#ffffff';
+                        ctx.fill();
+                    }
+
+                    // Stroke
+                    ctx.globalAlpha = (obj.opacity || 100) / 100 * (obj.strokeOpacity || 100) / 100;
+                    ctx.strokeStyle = obj.stroke || '#ffffff';
+                    ctx.lineWidth = obj.strokeWidth || 3;
+                    ctx.lineCap = 'round';
+                    ctx.lineJoin = 'round';
+                    ctx.stroke();
 
                     // Selection box and control points
                     if (selectedObjIds.includes(obj.id)) {
