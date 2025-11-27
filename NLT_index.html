@@ -1,0 +1,4039 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NLT - Neo Legacy Title Editor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #2d2d2d;
+            color: #e0e0e0;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        /* メインコンテナ */
+        .main-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        /* 上部ツールバー */
+        .toolbar {
+            background: #1e1e1e;
+            padding: 8px 12px;
+            border-bottom: 1px solid #000;
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .tool-btn {
+            width: 32px;
+            height: 32px;
+            background: #3a3a3a;
+            border: 1px solid #555;
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #aaa;
+            font-size: 18px;
+            transition: all 0.2s;
+        }
+
+        .tool-btn:hover {
+            background: #4a4a4a;
+            color: #fff;
+        }
+
+        .tool-btn.active {
+            background: #0066cc;
+            color: #fff;
+            border-color: #0077ee;
+        }
+
+        .toolbar-separator {
+            width: 1px;
+            height: 24px;
+            background: #555;
+            margin: 0 4px;
+        }
+
+        /* コンテンツエリア */
+        .content-area {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+        }
+
+        /* 左側ツールバー（レガシータイトルと同じレイアウト） */
+        .left-toolbar {
+            width: 50px;
+            background: #1e1e1e;
+            border-right: 1px solid #000;
+            display: flex;
+            flex-direction: column;
+            padding: 8px 0;
+            gap: 4px;
+            align-items: center;
+        }
+
+        /* キャンバスエリア */
+        .canvas-area {
+            flex: 1;
+            background: #141414;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        #canvas {
+            background: repeating-conic-gradient(
+                #2a2a2a 0% 25%,
+                #1e1e1e 0% 50%
+            ) 50% / 16px 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+            cursor: crosshair;
+            max-width: 100%;
+            max-height: 100%;
+        }
+
+        #canvas.selection-mode {
+            cursor: default;
+        }
+
+        /* 右側プロパティパネル */
+        .properties-panel {
+            width: 280px;
+            background: #252525;
+            border-left: 1px solid #000;
+            overflow-y: auto;
+            padding: 12px;
+        }
+
+        .property-section {
+            margin-bottom: 16px;
+            background: #2d2d2d;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .property-section-header {
+            background: #1e1e1e;
+            padding: 8px 12px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #aaa;
+            cursor: pointer;
+            user-select: none;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .property-section-header:hover {
+            background: #252525;
+        }
+
+        .property-section-header::after {
+            content: '▼';
+            font-size: 8px;
+            transition: transform 0.2s;
+        }
+
+        .property-section-header.collapsed::after {
+            transform: rotate(-90deg);
+        }
+
+        .property-section-content {
+            padding: 12px;
+            display: block;
+        }
+
+        .property-section-content.hidden {
+            display: none;
+        }
+
+        .property-row {
+            margin-bottom: 10px;
+        }
+
+        .property-row label {
+            display: block;
+            font-size: 11px;
+            color: #aaa;
+            margin-bottom: 4px;
+        }
+
+        .property-row input,
+        .property-row select {
+            width: 100%;
+            padding: 6px 8px;
+            background: #1a1a1a;
+            border: 1px solid #444;
+            border-radius: 3px;
+            color: #fff;
+            font-size: 12px;
+        }
+
+        .property-row input:focus,
+        .property-row select:focus {
+            outline: none;
+            border-color: #0066cc;
+        }
+
+        .property-row input[type="color"] {
+            height: 32px;
+            padding: 2px;
+            cursor: pointer;
+        }
+
+        .property-row input[type="range"] {
+            padding: 0;
+            accent-color: #0066cc;
+        }
+
+        .property-row input[type="checkbox"] {
+            width: auto;
+            margin-right: 6px;
+            accent-color: #0066cc;
+        }
+
+        .property-grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .property-grid-3 {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 6px;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 8px;
+            background: #3a3a3a;
+            border: 1px solid #555;
+            border-radius: 4px;
+            color: #e0e0e0;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn:hover {
+            background: #4a4a4a;
+        }
+
+        .btn-primary {
+            background: #0066cc;
+            border-color: #0077ee;
+            color: #fff;
+        }
+
+        .btn-primary:hover {
+            background: #0077ee;
+        }
+
+        .value-display {
+            font-size: 10px;
+            color: #666;
+            margin-top: 2px;
+        }
+
+        /* ツールチップ */
+        .tooltip {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.9);
+            color: #fff;
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-size: 11px;
+            pointer-events: none;
+            z-index: 1000;
+            display: none;
+        }
+
+        /* 隠しIME入力フィールド */
+        #imeInput {
+            position: absolute;
+            padding: 4px;
+            margin: 0;
+            border: 1px solid transparent;
+            background: transparent;
+            color: transparent;
+            outline: none;
+            font-size: 16px;
+            z-index: -1;
+            opacity: 0;
+            pointer-events: none;
+            width: 200px;
+            height: 30px;
+        }
+
+        #imeInput.active {
+            z-index: 9999;
+            opacity: 0.01; /* ほぼ透明だが入力可能 */
+            pointer-events: auto;
+            color: rgba(255, 255, 255, 0.1); /* 微かに見える */
+            caret-color: transparent; /* カーソルを透明に */
+        }
+
+        /* スクロールバーのスタイル */
+        ::-webkit-scrollbar {
+            width: 12px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #1a1a1a;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #4a4a4a;
+            border-radius: 6px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #5a5a5a;
+        }
+
+        /* テキストオブジェクトの選択ハンドル */
+        .text-selection-box {
+            position: absolute;
+            border: 2px solid #0066cc;
+            pointer-events: none;
+            z-index: 100;
+        }
+
+        .resize-handle {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background: #fff;
+            border: 1px solid #0066cc;
+            pointer-events: all;
+            cursor: nwse-resize;
+        }
+
+        .resize-handle.nw { top: -4px; left: -4px; cursor: nw-resize; }
+        .resize-handle.ne { top: -4px; right: -4px; cursor: ne-resize; }
+        .resize-handle.sw { bottom: -4px; left: -4px; cursor: sw-resize; }
+        .resize-handle.se { bottom: -4px; right: -4px; cursor: se-resize; }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <!-- 上部ツールバー -->
+        <div class="toolbar">
+            <span style="font-size: 11px; color: #888;">解像度:</span>
+            <input type="number" id="canvasWidth" value="1920" min="1" style="width: 70px; padding: 4px; background: #3a3a3a; border: 1px solid #555; border-radius: 3px; color: #fff; font-size: 11px;">
+            <span style="font-size: 11px; color: #888;">×</span>
+            <input type="number" id="canvasHeight" value="1080" min="1" style="width: 70px; padding: 4px; background: #3a3a3a; border: 1px solid #555; border-radius: 3px; color: #fff; font-size: 11px;">
+            <div class="toolbar-separator"></div>
+            <div class="tool-btn" onclick="zoomIn()" title="拡大 (Ctrl++)">
+                +
+            </div>
+            <div class="tool-btn" onclick="zoomOut()" title="縮小 (Ctrl+-)">
+                −
+            </div>
+            <div class="tool-btn" onclick="fitToScreen()" title="画面に合わせる (Ctrl+0)">
+                ⊡
+            </div>
+            <div class="tool-btn" onclick="resetView()" title="ビューリセット (Ctrl+R)">
+                ⟲
+            </div>
+            <div class="toolbar-separator"></div>
+            <div class="tool-btn" onclick="alignCenter()" title="中央揃え（横）">
+                ⬌
+            </div>
+            <div class="tool-btn" onclick="alignMiddle()" title="中央揃え（縦）">
+                ⬍
+            </div>
+            <div class="toolbar-separator"></div>
+            <div class="tool-btn" onclick="bringToFront()" title="最前面へ (Ctrl+])">
+                ⬆
+            </div>
+            <div class="tool-btn" onclick="sendToBack()" title="最背面へ (Ctrl+[)">
+                ⬇
+            </div>
+            <div class="tool-btn" onclick="bringForward()" title="前面へ">
+                ↑
+            </div>
+            <div class="tool-btn" onclick="sendBackward()" title="背面へ">
+                ↓
+            </div>
+            <div class="toolbar-separator"></div>
+            <button class="btn btn-primary" onclick="exportPRTL()" style="width: auto; padding: 6px 12px;">PRTL書き出し</button>
+        </div>
+
+        <!-- コンテンツエリア -->
+        <div class="content-area">
+            <!-- 左側ツールバー (レガシータイトルと同じレイアウト) -->
+            <div class="left-toolbar">
+                <div class="tool-btn active" id="selectTool" title="選択ツール (V)">
+                    ➤
+                </div>
+                <div class="tool-btn" id="textTool" title="テキストツール (T)">
+                    T
+                </div>
+                <div class="tool-btn" id="textVTool" title="縦書きテキストツール">
+                    T↓
+                </div>
+                <div class="tool-btn" id="pathTextTool" title="パス上文字ツール (Shift+T)">
+                    ⌇
+                </div>
+                <div class="tool-btn" id="rectangleTool" title="矩形ツール (R)">
+                    ▭
+                </div>
+                <div class="tool-btn" id="roundRectTool" title="角丸矩形ツール (U)">
+                    ▢
+                </div>
+                <div class="tool-btn" id="ellipseTool" title="楕円ツール (E)">
+                    ○
+                </div>
+                <div class="tool-btn" id="lineTool" title="線ツール (L)">
+                    ╱
+                </div>
+                <div class="tool-btn" id="penTool" title="ペンツール (P)">
+                    ✎
+                </div>
+                <div class="tool-btn" id="chamferRectTool" title="斜角長方形ツール (B)">
+                    ▭
+                </div>
+                <div class="tool-btn" id="triangleTool" title="三角形ツール (A)">
+                    △
+                </div>
+                <div class="tool-btn" id="arcTool" title="円弧ツール (C)">
+                    ◠
+                </div>
+            </div>
+
+            <!-- キャンバスエリア -->
+            <div class="canvas-area">
+                <canvas id="canvas" width="1920" height="1080"></canvas>
+            </div>
+
+            <!-- 右側プロパティパネル -->
+            <div class="properties-panel">
+                <h3 style="font-size: 12px; margin-bottom: 12px; color: #0066cc;">プロパティ</h3>
+
+                <!-- キャンバス設定セクション -->
+                <div class="property-section">
+                    <div class="property-section-header">キャンバス設定</div>
+                    <div class="property-section-content">
+                        <h4 style="font-size: 10px; color: #888; margin: 8px 0 4px;">セーフマージン</h4>
+                        <div class="property-row">
+                            <label><input type="checkbox" id="safeMarginEnabled" checked onchange="render()">表示</label>
+                        </div>
+                        <div class="property-grid-2">
+                            <div class="property-row">
+                                <label>アクション %</label>
+                                <input type="number" id="actionSafeMargin" min="0" max="20" value="5" onchange="render()">
+                            </div>
+                            <div class="property-row">
+                                <label>タイトル %</label>
+                                <input type="number" id="titleSafeMargin" min="0" max="20" value="10" onchange="render()">
+                            </div>
+                        </div>
+                        <div class="property-grid-2">
+                            <div class="property-row">
+                                <label>色</label>
+                                <input type="color" id="safeMarginColor" value="#ffffff" onchange="render()">
+                            </div>
+                            <div class="property-row">
+                                <label>不透明度 %</label>
+                                <input type="number" id="safeMarginOpacity" min="0" max="100" value="50" onchange="render()">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 変形セクション -->
+                <div class="property-section">
+                    <div class="property-section-header">変形</div>
+                    <div class="property-section-content">
+                        <div class="property-grid-2">
+                            <div class="property-row">
+                                <label>X座標</label>
+                                <input type="number" id="prop_x" value="960" step="0.1">
+                            </div>
+                            <div class="property-row">
+                                <label>Y座標</label>
+                                <input type="number" id="prop_y" value="540" step="0.1">
+                            </div>
+                        </div>
+                        <div class="property-grid-2">
+                            <div class="property-row">
+                                <label>幅</label>
+                                <input type="number" id="prop_width" value="500" step="0.1" readonly>
+                            </div>
+                            <div class="property-row">
+                                <label>高さ</label>
+                                <input type="number" id="prop_height" value="100" step="0.1" readonly>
+                            </div>
+                        </div>
+                        <div class="property-row">
+                            <label>回転 (度)</label>
+                            <input type="number" id="prop_rotation" value="0" step="0.1">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- プロパティセクション -->
+                <div class="property-section">
+                    <div class="property-section-header">フォント</div>
+                    <div class="property-section-content">
+                        <div class="property-row">
+                            <label>フォントファミリー</label>
+                            <select id="prop_fontFamily">
+                                <option value="Yu Gothic UI">Yu Gothic UI</option>
+                                <option value="Arial">Arial</option>
+                                <option value="Meiryo">Meiryo</option>
+                                <option value="MS Gothic">MS Gothic</option>
+                                <option value="Hiragino Sans">Hiragino Sans</option>
+                            </select>
+                        </div>
+                        <div class="property-row">
+                            <label>フォントスタイル</label>
+                            <select id="prop_fontStyle">
+                                <option value="Regular">Regular</option>
+                                <option value="Bold">Bold</option>
+                                <option value="Italic">Italic</option>
+                            </select>
+                        </div>
+                        <div class="property-row">
+                            <label>フォントサイズ</label>
+                            <input type="number" id="prop_fontSize" value="100" min="1" max="500" step="0.1">
+                        </div>
+                        <div class="property-row">
+                            <label>縦横比 (%)</label>
+                            <input type="range" id="prop_scaleX" value="100" min="10" max="200" step="1">
+                            <div class="value-display" id="scaleXValue">100%</div>
+                        </div>
+                        <div class="property-row">
+                            <label>カーニング</label>
+                            <input type="number" id="prop_kerning" value="0" step="1">
+                        </div>
+                        <div class="property-row">
+                            <label>トラッキング</label>
+                            <input type="number" id="prop_tracking" value="0" step="1">
+                        </div>
+                        <div class="property-row">
+                            <label>ベースラインシフト</label>
+                            <input type="number" id="prop_baselineShift" value="0" step="1">
+                        </div>
+                        <div class="property-row">
+                            <label>行間</label>
+                            <input type="number" id="prop_leading" value="0" step="0.1">
+                        </div>
+                        <div class="property-row">
+                            <label>傾き (度)</label>
+                            <input type="number" id="prop_slant" value="0" step="0.1" min="-45" max="45">
+                        </div>
+                        <div class="property-row">
+                            <label><input type="checkbox" id="prop_underline">下線</label>
+                        </div>
+                        <div class="property-row">
+                            <label><input type="checkbox" id="prop_smallCaps">スモールキャップス</label>
+                        </div>
+                        <div class="property-row">
+                            <label>スモールキャップスサイズ (%)</label>
+                            <input type="number" id="prop_smallCapsSize" value="75" min="10" max="100">
+                        </div>
+                        <div class="property-row">
+                            <label><input type="checkbox" id="prop_vertical">縦書き</label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 塗りセクション -->
+                <div class="property-section">
+                    <div class="property-section-header">塗り</div>
+                    <div class="property-section-content">
+                        <div class="property-row">
+                            <label><input type="checkbox" id="fill_enabled" checked>有効</label>
+                        </div>
+                        <div class="property-row">
+                            <label>塗りタイプ</label>
+                            <select id="fill_type">
+                                <option value="solid">ベタ塗り</option>
+                                <option value="gradient-linear">線形グラデーション</option>
+                                <option value="gradient-radial">円形グラデーション</option>
+                                <option value="sheen">光沢</option>
+                            </select>
+                        </div>
+                        <div id="solidFillControls">
+                            <div class="property-grid-2">
+                                <div class="property-row">
+                                    <label>カラー</label>
+                                    <input type="color" id="fill_color" value="#fdff00">
+                                </div>
+                                <div class="property-row">
+                                    <label>不透明度 (%)</label>
+                                    <input type="number" id="fill_opacity" value="100" min="0" max="100">
+                                </div>
+                            </div>
+                        </div>
+                        <div id="gradientFillControls" style="display: none;">
+                            <div class="property-row">
+                                <label>開始色</label>
+                                <input type="color" id="gradient_color1" value="#fdff00">
+                            </div>
+                            <div class="property-row">
+                                <label>終了色</label>
+                                <input type="color" id="gradient_color2" value="#ff6600">
+                            </div>
+                            <div class="property-row">
+                                <label>中間色を追加</label>
+                                <input type="checkbox" id="gradient_use_color3">
+                            </div>
+                            <div class="property-row" id="gradient_color3_row" style="display: none;">
+                                <label>中間色</label>
+                                <input type="color" id="gradient_color3" value="#ffaa00">
+                            </div>
+                            <div class="property-row" id="gradient_color3_position_row" style="display: none;">
+                                <label>中間色位置 (%)</label>
+                                <input type="number" id="gradient_color3_position" value="50" min="0" max="100">
+                            </div>
+                            <div class="property-row" id="gradient_angle_row">
+                                <label>角度 (度)</label>
+                                <input type="number" id="gradient_angle" value="0" min="0" max="360">
+                            </div>
+                            <div class="property-row">
+                                <label>不透明度 (%)</label>
+                                <input type="number" id="gradient_opacity" value="100" min="0" max="100">
+                            </div>
+                            <div class="property-row">
+                                <label>開始位置 (%)</label>
+                                <input type="number" id="gradient_ratio_start" value="0" min="0" max="100">
+                            </div>
+                            <div class="property-row">
+                                <label>終了位置 (%)</label>
+                                <input type="number" id="gradient_ratio_end" value="100" min="0" max="100">
+                            </div>
+                            <div class="property-row">
+                                <label>ぼかし (px)</label>
+                                <input type="number" id="gradient_blur" value="0" min="0" max="50">
+                            </div>
+                        </div>
+                        <div id="sheenFillControls" style="display: none;">
+                            <div class="property-grid-2">
+                                <div class="property-row">
+                                    <label>ベース色</label>
+                                    <input type="color" id="sheen_base_color" value="#000000">
+                                </div>
+                                <div class="property-row">
+                                    <label>ハイライト色</label>
+                                    <input type="color" id="sheen_highlight_color" value="#ffffff">
+                                </div>
+                            </div>
+                            <div class="property-row">
+                                <label>光沢サイズ (%)</label>
+                                <input type="number" id="sheen_size" value="10" min="0" max="100">
+                            </div>
+                            <div class="property-row">
+                                <label>光沢角度 (度)</label>
+                                <input type="number" id="sheen_angle" value="0" min="0" max="360">
+                            </div>
+                            <div class="property-row">
+                                <label>不透明度 (%)</label>
+                                <input type="number" id="sheen_opacity" value="100" min="0" max="100">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ストロークセクション -->
+                <div class="property-section">
+                    <div class="property-section-header">ストローク</div>
+                    <div class="property-section-content">
+                        <div class="property-row">
+                            <label><input type="checkbox" id="stroke1_enabled">ストローク1</label>
+                        </div>
+                        <div class="property-grid-3">
+                            <div class="property-row">
+                                <label>サイズ</label>
+                                <input type="number" id="stroke1_size" value="8" min="0" max="200" step="0.1">
+                            </div>
+                            <div class="property-row">
+                                <label>カラー</label>
+                                <input type="color" id="stroke1_color" value="#000000">
+                            </div>
+                            <div class="property-row">
+                                <label>不透明度 (%)</label>
+                                <input type="number" id="stroke1_opacity" value="100" min="0" max="100" step="0.1">
+                            </div>
+                        </div>
+
+                        <div class="property-row" style="margin-top: 12px;">
+                            <label><input type="checkbox" id="stroke2_enabled">ストローク2</label>
+                        </div>
+                        <div class="property-grid-3">
+                            <div class="property-row">
+                                <label>サイズ</label>
+                                <input type="number" id="stroke2_size" value="50" min="0" max="200" step="0.1">
+                            </div>
+                            <div class="property-row">
+                                <label>カラー</label>
+                                <input type="color" id="stroke2_color" value="#ffffff">
+                            </div>
+                            <div class="property-row">
+                                <label>不透明度 (%)</label>
+                                <input type="number" id="stroke2_opacity" value="100" min="0" max="100" step="0.1">
+                            </div>
+                        </div>
+
+                        <div class="property-row" style="margin-top: 12px;">
+                            <label><input type="checkbox" id="stroke3_enabled">ストローク3</label>
+                        </div>
+                        <div class="property-grid-3">
+                            <div class="property-row">
+                                <label>サイズ</label>
+                                <input type="number" id="stroke3_size" value="68" min="0" max="200" step="0.1">
+                            </div>
+                            <div class="property-row">
+                                <label>カラー</label>
+                                <input type="color" id="stroke3_color" value="#000000">
+                            </div>
+                            <div class="property-row">
+                                <label>不透明度 (%)</label>
+                                <input type="number" id="stroke3_opacity" value="100" min="0" max="100" step="0.1">
+                            </div>
+                        </div>
+
+                        <div class="property-row" style="margin-top: 12px;">
+                            <label><input type="checkbox" id="stroke4_enabled">ストローク4</label>
+                        </div>
+                        <div class="property-grid-3">
+                            <div class="property-row">
+                                <label>サイズ</label>
+                                <input type="number" id="stroke4_size" value="78" min="0" max="200" step="0.1">
+                            </div>
+                            <div class="property-row">
+                                <label>カラー</label>
+                                <input type="color" id="stroke4_color" value="#000000">
+                            </div>
+                            <div class="property-row">
+                                <label>不透明度 (%)</label>
+                                <input type="number" id="stroke4_opacity" value="100" min="0" max="100" step="0.1">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 影セクション -->
+                <div class="property-section">
+                    <div class="property-section-header">影</div>
+                    <div class="property-section-content">
+                        <div class="property-row">
+                            <label><input type="checkbox" id="shadow_enabled">有効</label>
+                        </div>
+                        <div class="property-grid-2">
+                            <div class="property-row">
+                                <label>カラー</label>
+                                <input type="color" id="shadow_color" value="#000000">
+                            </div>
+                            <div class="property-row">
+                                <label>不透明度 (%)</label>
+                                <input type="number" id="shadow_opacity" value="50" min="0" max="100">
+                            </div>
+                        </div>
+                        <div class="property-grid-2">
+                            <div class="property-row">
+                                <label>距離</label>
+                                <input type="number" id="shadow_distance" value="10" min="0" max="100" step="0.1">
+                            </div>
+                            <div class="property-row">
+                                <label>角度 (度)</label>
+                                <input type="number" id="shadow_angle" value="135" min="-180" max="180" step="0.1">
+                            </div>
+                        </div>
+                        <div class="property-grid-2">
+                            <div class="property-row">
+                                <label>サイズ (%)</label>
+                                <input type="number" id="shadow_size" value="90" min="0" max="200" step="0.1">
+                            </div>
+                            <div class="property-row">
+                                <label>ぼかし</label>
+                                <input type="number" id="shadow_blur" value="0" min="0" max="100" step="0.1">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 隠しIME入力用 -->
+    <input type="text" id="imeInput" autocomplete="off">
+
+    <script>
+        // グローバル変数
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        let currentTool = 'select'; // 'select', 'text', 'rectangle', 'roundRect', 'ellipse', 'line', 'pen', 'chamferRect', 'triangle', 'arc'
+        let textObjects = []; // { text, x, y, fontSize, fontFamily, scaleX, ... }
+        let pathTextObjects = []; // { text, path, fontSize, fontFamily, ... }
+        let shapeObjects = []; // { type, x, y, width, height, ... }
+        let selectedObject = null;
+        let isTyping = false;
+        let cursorPosition = 0;
+        let selectionStart = 0;
+        let isComposing = false; // IME変換中かどうか
+        let selectionEnd = 0;
+
+        // ビューポート制御
+        let viewportScale = 1;
+        let viewportOffsetX = 0;
+        let viewportOffsetY = 0;
+
+        // カーソル点滅用
+        let cursorVisible = true;
+        setInterval(() => {
+            cursorVisible = !cursorVisible;
+            if (isTyping) render();
+        }, 530);
+
+        // ツール切り替え
+        document.getElementById('selectTool').addEventListener('click', () => {
+            switchTool('select');
+        });
+
+        document.getElementById('textTool').addEventListener('click', () => {
+            switchTool('text');
+        });
+
+        document.getElementById('textVTool').addEventListener('click', () => {
+            switchTool('textV');
+        });
+
+        document.getElementById('pathTextTool').addEventListener('click', () => {
+            switchTool('pathText');
+        });
+
+        document.getElementById('rectangleTool').addEventListener('click', () => {
+            switchTool('rectangle');
+        });
+
+        document.getElementById('roundRectTool').addEventListener('click', () => {
+            switchTool('roundRect');
+        });
+
+        document.getElementById('ellipseTool').addEventListener('click', () => {
+            switchTool('ellipse');
+        });
+
+        document.getElementById('lineTool').addEventListener('click', () => {
+            switchTool('line');
+        });
+
+        document.getElementById('penTool').addEventListener('click', () => {
+            switchTool('pen');
+        });
+
+        document.getElementById('chamferRectTool').addEventListener('click', () => {
+            switchTool('chamferRect');
+        });
+
+        document.getElementById('triangleTool').addEventListener('click', () => {
+            switchTool('triangle');
+        });
+
+        document.getElementById('arcTool').addEventListener('click', () => {
+            switchTool('arc');
+        });
+
+        function switchTool(tool) {
+            // テキスト編集中の場合は終了（空のテキストは削除される）
+            if (isTyping && tool !== 'text' && tool !== 'textV') {
+                isTyping = false;
+                const imeInput = document.getElementById('imeInput');
+                imeInput.classList.remove('active');
+                imeInput.blur();
+
+                // 空のテキストオブジェクトを削除
+                if (selectedObject && selectedObject.text.trim() === '') {
+                    const index = textObjects.indexOf(selectedObject);
+                    if (index !== -1) {
+                        textObjects.splice(index, 1);
+                        selectedObject = null;
+                    }
+                }
+                render();
+            }
+
+            currentTool = tool;
+
+            // 全ツールのactiveクラスを削除
+            document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
+
+            // 選択されたツールをアクティブに
+            if (tool === 'select') {
+                document.getElementById('selectTool').classList.add('active');
+                canvas.classList.add('selection-mode');
+                canvas.style.cursor = 'default';
+            } else if (tool === 'text') {
+                document.getElementById('textTool').classList.add('active');
+                canvas.classList.remove('selection-mode');
+                canvas.style.cursor = 'crosshair';
+            } else if (tool === 'textV') {
+                document.getElementById('textVTool').classList.add('active');
+                canvas.classList.remove('selection-mode');
+                canvas.style.cursor = 'crosshair';
+            } else if (tool === 'pathText') {
+                document.getElementById('pathTextTool').classList.add('active');
+                canvas.classList.remove('selection-mode');
+                canvas.style.cursor = 'crosshair';
+            } else if (tool === 'rectangle') {
+                document.getElementById('rectangleTool').classList.add('active');
+                canvas.classList.remove('selection-mode');
+                canvas.style.cursor = 'crosshair';
+            } else if (tool === 'roundRect') {
+                document.getElementById('roundRectTool').classList.add('active');
+                canvas.classList.remove('selection-mode');
+                canvas.style.cursor = 'crosshair';
+            } else if (tool === 'ellipse') {
+                document.getElementById('ellipseTool').classList.add('active');
+                canvas.classList.remove('selection-mode');
+                canvas.style.cursor = 'crosshair';
+            } else if (tool === 'line') {
+                document.getElementById('lineTool').classList.add('active');
+                canvas.classList.remove('selection-mode');
+                canvas.style.cursor = 'crosshair';
+            } else if (tool === 'pen') {
+                document.getElementById('penTool').classList.add('active');
+                canvas.classList.remove('selection-mode');
+                canvas.style.cursor = 'crosshair';
+            } else if (tool === 'chamferRect') {
+                document.getElementById('chamferRectTool').classList.add('active');
+                canvas.classList.remove('selection-mode');
+                canvas.style.cursor = 'crosshair';
+            } else if (tool === 'triangle') {
+                document.getElementById('triangleTool').classList.add('active');
+                canvas.classList.remove('selection-mode');
+                canvas.style.cursor = 'crosshair';
+            } else if (tool === 'arc') {
+                document.getElementById('arcTool').classList.add('active');
+                canvas.classList.remove('selection-mode');
+                canvas.style.cursor = 'crosshair';
+            }
+        }
+
+        // キャンバス解像度変更
+        document.getElementById('canvasWidth').addEventListener('change', function() {
+            canvas.width = parseInt(this.value);
+            render();
+        });
+
+        document.getElementById('canvasHeight').addEventListener('change', function() {
+            canvas.height = parseInt(this.value);
+            render();
+        });
+
+        // 縦横比スライダーの値表示
+        document.getElementById('prop_scaleX').addEventListener('input', function() {
+            document.getElementById('scaleXValue').textContent = this.value + '%';
+            if (selectedObject) {
+                selectedObject.scaleX = parseInt(this.value);
+                render();
+            }
+        });
+
+        // プロパティ変更時のリアルタイム更新
+        const propertyInputs = [
+            'prop_x', 'prop_y', 'prop_fontSize', 'prop_fontFamily',
+            'prop_kerning', 'prop_tracking', 'prop_rotation', 'prop_vertical',
+            'prop_leading', 'prop_slant', 'prop_underline', 'prop_smallCaps', 'prop_smallCapsSize',
+            'fill_color', 'fill_opacity', 'fill_enabled',
+            'stroke1_enabled', 'stroke1_size', 'stroke1_color', 'stroke1_opacity',
+            'stroke2_enabled', 'stroke2_size', 'stroke2_color', 'stroke2_opacity',
+            'stroke3_enabled', 'stroke3_size', 'stroke3_color', 'stroke3_opacity',
+            'stroke4_enabled', 'stroke4_size', 'stroke4_color', 'stroke4_opacity',
+            'shadow_enabled', 'shadow_color', 'shadow_opacity', 'shadow_distance', 'shadow_angle', 'shadow_size', 'shadow_blur'
+        ];
+
+        propertyInputs.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.addEventListener('input', updateSelectedObjectFromProperties);
+                el.addEventListener('change', updateSelectedObjectFromProperties);
+            }
+        });
+
+        // 塗りタイプの変更イベント
+        document.getElementById('fill_type').addEventListener('change', function() {
+            const fillType = this.value;
+            const solidControls = document.getElementById('solidFillControls');
+            const gradientControls = document.getElementById('gradientFillControls');
+            const sheenControls = document.getElementById('sheenFillControls');
+
+            if (fillType === 'solid') {
+                solidControls.style.display = 'block';
+                gradientControls.style.display = 'none';
+                sheenControls.style.display = 'none';
+            } else if (fillType === 'gradient-linear' || fillType === 'gradient-radial') {
+                solidControls.style.display = 'none';
+                gradientControls.style.display = 'block';
+                sheenControls.style.display = 'none';
+                // 円形グラデーションの場合は角度を非表示
+                document.getElementById('gradient_angle_row').style.display =
+                    fillType === 'gradient-linear' ? 'flex' : 'none';
+            } else if (fillType === 'sheen') {
+                solidControls.style.display = 'none';
+                gradientControls.style.display = 'none';
+                sheenControls.style.display = 'block';
+            } else {
+                solidControls.style.display = 'block';
+                gradientControls.style.display = 'none';
+                sheenControls.style.display = 'none';
+            }
+
+            updateSelectedObjectFromProperties();
+        });
+
+        // グラデーション中間色のチェックボックス
+        document.getElementById('gradient_use_color3').addEventListener('change', function() {
+            const useColor3 = this.checked;
+            document.getElementById('gradient_color3_row').style.display = useColor3 ? 'flex' : 'none';
+            document.getElementById('gradient_color3_position_row').style.display = useColor3 ? 'flex' : 'none';
+            updateSelectedObjectFromProperties();
+        });
+
+        // グラデーション関連の入力イベント
+        ['gradient_color1', 'gradient_color2', 'gradient_color3', 'gradient_color3_position',
+         'gradient_angle', 'gradient_opacity', 'gradient_ratio_start', 'gradient_ratio_end', 'gradient_blur'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.addEventListener('input', updateSelectedObjectFromProperties);
+                el.addEventListener('change', updateSelectedObjectFromProperties);
+            }
+        });
+
+        // 光沢関連の入力イベント
+        ['sheen_base_color', 'sheen_highlight_color', 'sheen_size', 'sheen_angle', 'sheen_opacity'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.addEventListener('input', updateSelectedObjectFromProperties);
+                el.addEventListener('change', updateSelectedObjectFromProperties);
+            }
+        });
+
+        function updateSelectedObjectFromProperties() {
+            if (!selectedObject) return;
+
+            // 図形オブジェクトかどうかを判定
+            const isShapeObject = selectedObject.type &&
+                ['rectangle', 'roundRect', 'ellipse', 'polygon', 'star'].includes(selectedObject.type);
+
+            selectedObject.x = parseFloat(document.getElementById('prop_x').value) || 0;
+            selectedObject.y = parseFloat(document.getElementById('prop_y').value) || 0;
+
+            // テキストオブジェクトのプロパティのみ更新
+            if (!isShapeObject) {
+                selectedObject.fontSize = parseInt(document.getElementById('prop_fontSize').value) || 72;
+                selectedObject.fontFamily = document.getElementById('prop_fontFamily').value;
+                selectedObject.scaleX = parseInt(document.getElementById('prop_scaleX').value) || 100;
+                selectedObject.kerning = parseInt(document.getElementById('prop_kerning').value) || 0;
+                selectedObject.tracking = parseInt(document.getElementById('prop_tracking').value) || 0;
+                selectedObject.baselineShift = parseFloat(document.getElementById('prop_baselineShift').value) || 0;
+                selectedObject.rotation = parseFloat(document.getElementById('prop_rotation').value) || 0;
+                selectedObject.vertical = document.getElementById('prop_vertical').checked;
+                selectedObject.leading = parseFloat(document.getElementById('prop_leading').value) || 0;
+                selectedObject.slant = parseFloat(document.getElementById('prop_slant').value) || 0;
+                selectedObject.underline = document.getElementById('prop_underline').checked;
+                selectedObject.smallCaps = document.getElementById('prop_smallCaps').checked;
+                selectedObject.smallCapsSize = parseInt(document.getElementById('prop_smallCapsSize').value) || 75;
+            }
+
+            const fillType = document.getElementById('fill_type').value;
+            selectedObject.fill = {
+                enabled: document.getElementById('fill_enabled').checked,
+                type: fillType,
+                color: document.getElementById('fill_color').value,
+                opacity: parseInt(document.getElementById('fill_opacity').value) || 100
+            };
+
+            // グラデーション設定
+            if (fillType === 'gradient-linear' || fillType === 'gradient-radial') {
+                selectedObject.fill.gradient = {
+                    type: fillType,
+                    color1: document.getElementById('gradient_color1').value,
+                    color2: document.getElementById('gradient_color2').value,
+                    useColor3: document.getElementById('gradient_use_color3').checked,
+                    color3: document.getElementById('gradient_color3').value,
+                    color3Position: parseInt(document.getElementById('gradient_color3_position').value) || 50,
+                    angle: parseInt(document.getElementById('gradient_angle').value) || 0,
+                    opacity: parseInt(document.getElementById('gradient_opacity').value) || 100,
+                    ratioStart: parseInt(document.getElementById('gradient_ratio_start').value) || 0,
+                    ratioEnd: parseInt(document.getElementById('gradient_ratio_end').value) || 100,
+                    blur: parseInt(document.getElementById('gradient_blur').value) || 0
+                };
+            }
+
+            // 光沢設定
+            if (fillType === 'sheen') {
+                selectedObject.fill.sheen = {
+                    baseColor: document.getElementById('sheen_base_color').value,
+                    highlightColor: document.getElementById('sheen_highlight_color').value,
+                    size: parseInt(document.getElementById('sheen_size').value) || 10,
+                    angle: parseInt(document.getElementById('sheen_angle').value) || 0,
+                    opacity: parseInt(document.getElementById('sheen_opacity').value) || 100
+                };
+            }
+
+            // ストロークとシャドウの更新
+            if (!isShapeObject) {
+                // テキストオブジェクトの場合、複数のストロークを配列で管理
+                selectedObject.strokes = [
+                    {
+                        enabled: document.getElementById('stroke1_enabled').checked,
+                        size: parseInt(document.getElementById('stroke1_size').value) || 0,
+                        color: document.getElementById('stroke1_color').value,
+                        opacity: parseInt(document.getElementById('stroke1_opacity').value) || 100
+                    },
+                    {
+                        enabled: document.getElementById('stroke2_enabled').checked,
+                        size: parseInt(document.getElementById('stroke2_size').value) || 0,
+                        color: document.getElementById('stroke2_color').value,
+                        opacity: parseInt(document.getElementById('stroke2_opacity').value) || 100
+                    },
+                    {
+                        enabled: document.getElementById('stroke3_enabled').checked,
+                        size: parseInt(document.getElementById('stroke3_size').value) || 0,
+                        color: document.getElementById('stroke3_color').value,
+                        opacity: parseInt(document.getElementById('stroke3_opacity').value) || 100
+                    },
+                    {
+                        enabled: document.getElementById('stroke4_enabled').checked,
+                        size: parseInt(document.getElementById('stroke4_size').value) || 0,
+                        color: document.getElementById('stroke4_color').value,
+                        opacity: parseInt(document.getElementById('stroke4_opacity').value) || 100
+                    }
+                ];
+
+                selectedObject.shadow = {
+                    enabled: document.getElementById('shadow_enabled').checked,
+                    color: document.getElementById('shadow_color').value,
+                    opacity: parseInt(document.getElementById('shadow_opacity').value) || 50,
+                    distance: parseInt(document.getElementById('shadow_distance').value) || 10,
+                    angle: parseInt(document.getElementById('shadow_angle').value) || -45,
+                    size: parseInt(document.getElementById('shadow_size').value) || 90,
+                    blur: parseInt(document.getElementById('shadow_blur').value) || 0
+                };
+            } else {
+                // 図形オブジェクトの場合、単一のstrokeプロパティ
+                selectedObject.stroke = {
+                    enabled: document.getElementById('stroke1_enabled').checked,
+                    size: parseInt(document.getElementById('stroke1_size').value) || 0,
+                    color: document.getElementById('stroke1_color').value,
+                    opacity: parseInt(document.getElementById('stroke1_opacity').value) || 100
+                };
+            }
+
+            render();
+        }
+
+        // マウスイベント処理
+        let isDragging = false;
+        let dragStartX = 0;
+        let dragStartY = 0;
+        let dragTarget = null; // 'object' or 'handle-nw', 'handle-ne', etc.
+        let dragStartObjX = 0;
+        let dragStartObjY = 0;
+        let dragStartWidth = 0;
+        let dragStartHeight = 0;
+        let isCreatingShape = false;
+        let currentShape = null;
+        let isDrawingPen = false; // ペンツールで描画中
+        let penPoints = []; // ペンツールの描画ポイント
+        let renderScheduled = false; // render()のスケジュール管理
+
+        canvas.addEventListener('mousedown', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = (e.clientX - rect.left) * (canvas.width / rect.width);
+            const y = (e.clientY - rect.top) * (canvas.height / rect.height);
+
+            dragStartX = x;
+            dragStartY = y;
+
+            if (currentTool === 'pathText') {
+                // パス上文字ツール: 既存のパス（線またはペンツール）を選択
+                let selectedPath = null;
+                let pathPoints = [];
+
+                // shapeObjectsから線またはペンツールのパスを探す（後ろから）
+                for (let i = shapeObjects.length - 1; i >= 0; i--) {
+                    const obj = shapeObjects[i];
+
+                    if (obj.type === 'line') {
+                        // 線ツールで作成された線: 線に近いかチェック
+                        const startX = obj.x;
+                        const startY = obj.y;
+                        const endX = obj.x + obj.width;
+                        const endY = obj.y + obj.height;
+
+                        // 線との距離を計算
+                        const dist = distanceToLineSegment(x, y, startX, startY, endX, endY);
+                        if (dist < 30) {
+                            selectedPath = obj;
+                            pathPoints = [
+                                { x: startX, y: startY },
+                                { x: endX, y: endY }
+                            ];
+                            break;
+                        }
+                    } else if (obj.type === 'pen') {
+                        // ペンツールで作成されたパス: パス上の点に近いかチェック
+                        if (obj.points && obj.points.length > 0) {
+                            for (let j = 0; j < obj.points.length; j++) {
+                                const p = obj.points[j];
+                                const dist = Math.sqrt((x - p.x) ** 2 + (y - p.y) ** 2);
+                                if (dist < 30) {
+                                    selectedPath = obj;
+                                    pathPoints = [...obj.points];
+                                    break;
+                                }
+                            }
+                            if (selectedPath) break;
+                        }
+                    }
+                }
+
+                // パスが見つかった場合、パス上文字オブジェクトを作成
+                if (selectedPath && pathPoints.length >= 2) {
+                    const newPathText = {
+                        text: '',
+                        path: pathPoints,
+                        fontSize: 100,
+                        fontFamily: 'Yu Gothic UI',
+                        scaleX: 100,
+                        kerning: 0,
+                        tracking: 0,
+                        baselineShift: 0,
+                        rotation: 0,
+                        leading: 0,
+                        slant: 0,
+                        underline: false,
+                        smallCaps: false,
+                        smallCapsSize: 75,
+                        fill: {
+                            enabled: true,
+                            type: 'solid',
+                            color: '#fdff00',
+                            opacity: 100
+                        },
+                        strokes: [
+                            { enabled: false, size: 8, color: '#000000', opacity: 100 },
+                            { enabled: false, size: 50, color: '#ffffff', opacity: 100 },
+                            { enabled: false, size: 68, color: '#000000', opacity: 100 },
+                            { enabled: false, size: 78, color: '#000000', opacity: 100 }
+                        ],
+                        shadow: {
+                            enabled: false,
+                            color: '#000000',
+                            opacity: 50,
+                            distance: 10,
+                            angle: 135,
+                            size: 90,
+                            blur: 0
+                        }
+                    };
+
+                    pathTextObjects.push(newPathText);
+                    selectedObject = newPathText;
+                    updatePropertiesPanel();
+                    startTyping();
+                    render();
+                }
+            } else if (currentTool === 'text') {
+                // まず既存のテキストオブジェクトをクリックしたか確認
+                let clickedExistingText = false;
+                for (let i = textObjects.length - 1; i >= 0; i--) {
+                    const obj = textObjects[i];
+                    const metrics = measureText(obj);
+
+                    if (x >= obj.x - 10 && x <= obj.x + metrics.width + 10 &&
+                        y >= obj.y - 10 && y <= obj.y + metrics.height + 10) {
+                        // 既存のテキストをクリックした
+                        selectedObject = obj;
+                        updatePropertiesPanel();
+                        startTyping();
+                        clickedExistingText = true;
+                        break;
+                    }
+                }
+
+                // 既存のテキストをクリックしていない場合のみ新しいテキストを作成
+                if (!clickedExistingText) {
+                    // 空のテキストオブジェクトを削除
+                    for (let i = textObjects.length - 1; i >= 0; i--) {
+                        if (textObjects[i].text.trim() === '') {
+                            textObjects.splice(i, 1);
+                        }
+                    }
+
+                    // 新しいテキストオブジェクトを作成
+                    const newText = {
+                        text: '',
+                        x: x,
+                        y: y,
+                        fontSize: 100,
+                        fontFamily: 'Yu Gothic UI',
+                        scaleX: 100,
+                        kerning: 0,
+                        tracking: 0,
+                        rotation: 0,
+                        vertical: false,
+                        leading: 0,
+                        slant: 0,
+                        underline: false,
+                        smallCaps: false,
+                        smallCapsSize: 75,
+                        fill: {
+                            enabled: true,
+                            type: 'solid',
+                            color: '#fdff00',
+                            opacity: 100
+                        },
+                        strokes: [
+                            { enabled: false, size: 8, color: '#000000', opacity: 100 },
+                            { enabled: false, size: 50, color: '#ffffff', opacity: 100 },
+                            { enabled: false, size: 68, color: '#000000', opacity: 100 },
+                            { enabled: false, size: 78, color: '#000000', opacity: 100 }
+                        ],
+                        shadow: {
+                            enabled: false,
+                            color: '#000000',
+                            opacity: 50,
+                            distance: 10,
+                            angle: 135,
+                            size: 90,
+                            blur: 0
+                        }
+                    };
+
+                    textObjects.push(newText);
+                    selectedObject = newText;
+                    updatePropertiesPanel();
+                    startTyping();
+                }
+            } else if (currentTool === 'textV') {
+                // まず既存のテキストオブジェクトをクリックしたか確認
+                let clickedExistingText = false;
+                for (let i = textObjects.length - 1; i >= 0; i--) {
+                    const obj = textObjects[i];
+                    const metrics = measureText(obj);
+
+                    if (x >= obj.x - 10 && x <= obj.x + metrics.width + 10 &&
+                        y >= obj.y - 10 && y <= obj.y + metrics.height + 10) {
+                        // 既存のテキストをクリックした
+                        selectedObject = obj;
+                        updatePropertiesPanel();
+                        startTyping();
+                        clickedExistingText = true;
+                        break;
+                    }
+                }
+
+                // 既存のテキストをクリックしていない場合のみ新しいテキストを作成
+                if (!clickedExistingText) {
+                    // 空のテキストオブジェクトを削除
+                    for (let i = textObjects.length - 1; i >= 0; i--) {
+                        if (textObjects[i].text.trim() === '') {
+                            textObjects.splice(i, 1);
+                        }
+                    }
+
+                    // 新しい縦書きテキストオブジェクトを作成
+                    const newText = {
+                        text: '',
+                        x: x,
+                        y: y,
+                        fontSize: 100,
+                        fontFamily: 'Yu Gothic UI',
+                        scaleX: 100,
+                        kerning: 0,
+                        tracking: 0,
+                        rotation: 0,
+                        vertical: true,
+                        leading: 0,
+                        slant: 0,
+                        underline: false,
+                        smallCaps: false,
+                        smallCapsSize: 75,
+                        fill: {
+                            enabled: true,
+                            type: 'solid',
+                            color: '#fdff00',
+                            opacity: 100
+                        },
+                        strokes: [
+                            { enabled: false, size: 8, color: '#000000', opacity: 100 },
+                            { enabled: false, size: 50, color: '#ffffff', opacity: 100 },
+                            { enabled: false, size: 68, color: '#000000', opacity: 100 },
+                            { enabled: false, size: 78, color: '#000000', opacity: 100 }
+                        ],
+                        shadow: {
+                            enabled: false,
+                            color: '#000000',
+                            opacity: 50,
+                            distance: 10,
+                            angle: 135,
+                            size: 90,
+                            blur: 0
+                        }
+                    };
+
+                    textObjects.push(newText);
+                    selectedObject = newText;
+                    updatePropertiesPanel();
+                    startTyping();
+                }
+            } else if (currentTool === 'pen') {
+                // ペンツール: フリーハンド描画開始
+                isDrawingPen = true;
+                penPoints = [{ x, y }];
+            } else if (currentTool === 'rectangle' || currentTool === 'roundRect' || currentTool === 'ellipse' || currentTool === 'line' || currentTool === 'chamferRect' || currentTool === 'triangle' || currentTool === 'arc') {
+                // 図形作成開始
+                isCreatingShape = true;
+                currentShape = {
+                    type: currentTool,
+                    x: x,
+                    y: y,
+                    width: 0,
+                    height: 0,
+                    radius: 20, // 角丸矩形・斜角長方形用
+                    startAngle: 0, // 円弧用
+                    endAngle: 90, // 円弧用
+                    rotation: 0,
+                    fill: {
+                        enabled: true,
+                        type: 'solid',
+                        color: '#ffffff',
+                        opacity: 100
+                    },
+                    stroke: {
+                        enabled: true,
+                        size: 3,
+                        color: '#000000',
+                        opacity: 100
+                    }
+                };
+            } else if (currentTool === 'select') {
+                // 以前選択されていたオブジェクトを記憶
+                const previouslySelected = selectedObject;
+                const wasTyping = isTyping;
+
+                // テキスト入力中の場合は一時的に終了
+                if (isTyping) {
+                    isTyping = false;
+                    const imeInput = document.getElementById('imeInput');
+                    imeInput.classList.remove('active');
+                    imeInput.blur();
+
+                    // 空のテキストオブジェクトを削除
+                    if (selectedObject && selectedObject.text === '') {
+                        const index = textObjects.indexOf(selectedObject);
+                        if (index > -1) {
+                            textObjects.splice(index, 1);
+                        }
+                        selectedObject = null;
+                    }
+                }
+
+                // ハンドルクリックチェック
+                const handle = getHandleAt(x, y);
+                if (handle && selectedObject) {
+                    isDragging = true;
+                    dragTarget = handle;
+                    dragStartObjX = selectedObject.x;
+                    dragStartObjY = selectedObject.y;
+                    const metrics = measureText(selectedObject);
+                    dragStartWidth = metrics.width;
+                    dragStartHeight = metrics.height;
+                } else if (selectObjectAt(x, y)) {
+                    // オブジェクト選択成功 - ドラッグ開始
+                    isDragging = true;
+                    dragTarget = 'object';
+                    dragStartObjX = selectedObject.x;
+                    dragStartObjY = selectedObject.y;
+                }
+            }
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = (e.clientX - rect.left) * (canvas.width / rect.width);
+            const y = (e.clientY - rect.top) * (canvas.height / rect.height);
+
+            if (isDrawingPen) {
+                // ペンツール: ポイントを追加
+                penPoints.push({ x, y });
+                scheduleRender();
+            } else if (isCreatingShape && currentShape) {
+                // 図形のサイズを更新
+                currentShape.width = x - currentShape.x;
+                currentShape.height = y - currentShape.y;
+                scheduleRender();
+            } else if (isDragging && selectedObject) {
+                const dx = x - dragStartX;
+                const dy = y - dragStartY;
+
+                if (dragTarget === 'object') {
+                    // オブジェクトを移動
+                    selectedObject.x = dragStartObjX + dx;
+                    selectedObject.y = dragStartObjY + dy;
+                    updatePropertiesPanel();
+                    scheduleRender();
+                } else if (dragTarget && dragTarget.startsWith('handle-')) {
+                    const handleType = dragTarget.replace('handle-', '');
+                    if (handleType === 'rotate') {
+                        // 回転処理
+                        rotateObject(x, y);
+                    } else {
+                        // リサイズ処理
+                        resizeObject(handleType, dx, dy);
+                    }
+                }
+            } else {
+                // カーソル形状を更新
+                if (currentTool === 'select' && selectedObject) {
+                    const handle = getHandleAt(x, y);
+                    if (handle) {
+                        const handleType = handle.replace('handle-', '');
+                        if (handleType === 'rotate') {
+                            canvas.style.cursor = 'grab';
+                        } else if (handleType === 'nw' || handleType === 'se') {
+                            canvas.style.cursor = 'nwse-resize';
+                        } else if (handleType === 'ne' || handleType === 'sw') {
+                            canvas.style.cursor = 'nesw-resize';
+                        }
+                    } else {
+                        // オブジェクト上かチェック
+                        const metrics = measureText(selectedObject);
+                        if (x >= selectedObject.x - 10 && x <= selectedObject.x + metrics.width + 10 &&
+                            y >= selectedObject.y - metrics.height && y <= selectedObject.y + 10) {
+                            canvas.style.cursor = 'move';
+                        } else {
+                            canvas.style.cursor = 'default';
+                        }
+                    }
+                }
+            }
+        });
+
+        canvas.addEventListener('mouseup', () => {
+            if (isDrawingPen) {
+                // ペンツール: 描画を確定
+                if (penPoints.length > 1) {
+                    const penShape = {
+                        type: 'pen',
+                        points: [...penPoints],
+                        x: 0,
+                        y: 0,
+                        width: 0,
+                        height: 0,
+                        fill: {
+                            enabled: false,
+                            type: 'solid',
+                            color: '#ffffff',
+                            opacity: 100
+                        },
+                        stroke: {
+                            enabled: true,
+                            size: 3,
+                            color: '#000000',
+                            opacity: 100
+                        }
+                    };
+                    shapeObjects.push(penShape);
+                }
+                isDrawingPen = false;
+                penPoints = [];
+                render();
+            } else if (isCreatingShape && currentShape) {
+                // 図形を確定
+                if (Math.abs(currentShape.width) > 5 || Math.abs(currentShape.height) > 5) {
+                    shapeObjects.push(currentShape);
+                }
+                isCreatingShape = false;
+                currentShape = null;
+                render();
+            }
+
+            isDragging = false;
+            dragTarget = null;
+        });
+
+        canvas.addEventListener('dblclick', (e) => {
+            if (currentTool === 'select' && selectedObject) {
+                // ダブルクリックでテキスト編集モード
+                startTyping();
+            }
+        });
+
+        function getHandleAt(x, y) {
+            if (!selectedObject) return null;
+
+            const handleSize = 6;
+
+            // 図形オブジェクトの場合
+            if (selectedObject.type) {
+                const minX = Math.min(selectedObject.x, selectedObject.x + selectedObject.width);
+                const minY = Math.min(selectedObject.y, selectedObject.y + selectedObject.height);
+                const maxX = Math.max(selectedObject.x, selectedObject.x + selectedObject.width);
+                const maxY = Math.max(selectedObject.y, selectedObject.y + selectedObject.height);
+
+                const handles = {
+                    'handle-rotate': [minX + (maxX - minX) / 2, minY - 22],
+                    'handle-nw': [minX - 2, minY - 2],
+                    'handle-ne': [maxX + 2, minY - 2],
+                    'handle-sw': [minX - 2, maxY + 2],
+                    'handle-se': [maxX + 2, maxY + 2]
+                };
+
+                for (const [name, [hx, hy]] of Object.entries(handles)) {
+                    if (Math.abs(x - hx) <= handleSize && Math.abs(y - hy) <= handleSize) {
+                        return name;
+                    }
+                }
+            } else {
+                // テキストオブジェクトの場合
+                const metrics = measureText(selectedObject);
+                const handles = {
+                    'handle-rotate': [selectedObject.x + metrics.width / 2, selectedObject.y - 22],
+                    'handle-nw': [selectedObject.x - 2, selectedObject.y - 2],
+                    'handle-ne': [selectedObject.x + metrics.width + 2, selectedObject.y - 2],
+                    'handle-sw': [selectedObject.x - 2, selectedObject.y + metrics.height + 2],
+                    'handle-se': [selectedObject.x + metrics.width + 2, selectedObject.y + metrics.height + 2]
+                };
+
+                for (const [name, [hx, hy]] of Object.entries(handles)) {
+                    if (Math.abs(x - hx) <= handleSize && Math.abs(y - hy) <= handleSize) {
+                        return name;
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        function resizeObject(handleType, dx, dy) {
+            if (!selectedObject) return;
+
+            const newFontSize = selectedObject.fontSize;
+
+            // フォントサイズを変更してリサイズ
+            if (handleType === 'se' || handleType === 'ne') {
+                // 右方向のリサイズ
+                const scaleFactor = (dragStartWidth + dx) / dragStartWidth;
+                selectedObject.fontSize = Math.max(10, Math.round(dragStartHeight * scaleFactor));
+            } else if (handleType === 'sw' || handleType === 'nw') {
+                // 左方向のリサイズ
+                const scaleFactor = (dragStartWidth - dx) / dragStartWidth;
+                selectedObject.fontSize = Math.max(10, Math.round(dragStartHeight * scaleFactor));
+                // 位置も調整
+                const metrics = measureText(selectedObject);
+                selectedObject.x = dragStartObjX + (dragStartWidth - metrics.width);
+            }
+
+            updatePropertiesPanel();
+            render();
+        }
+
+        function rotateObject(x, y) {
+            if (!selectedObject) return;
+
+            // オブジェクトの中心点を計算
+            let centerX, centerY;
+            if (selectedObject.type) {
+                // 図形オブジェクト
+                const minX = Math.min(selectedObject.x, selectedObject.x + selectedObject.width);
+                const minY = Math.min(selectedObject.y, selectedObject.y + selectedObject.height);
+                const maxX = Math.max(selectedObject.x, selectedObject.x + selectedObject.width);
+                const maxY = Math.max(selectedObject.y, selectedObject.y + selectedObject.height);
+                centerX = minX + (maxX - minX) / 2;
+                centerY = minY + (maxY - minY) / 2;
+            } else {
+                // テキストオブジェクト
+                const metrics = measureText(selectedObject);
+                centerX = selectedObject.x + metrics.width / 2;
+                centerY = selectedObject.y + metrics.height / 2;
+            }
+
+            // マウス位置と中心点からの角度を計算
+            const angle = Math.atan2(y - centerY, x - centerX) * 180 / Math.PI;
+            // 角度を調整（上向きを0度とする）
+            selectedObject.rotation = angle + 90;
+
+            updatePropertiesPanel();
+            render();
+        }
+
+        function selectObjectAt(x, y) {
+            // テキストオブジェクトをチェック（後ろから）
+            for (let i = textObjects.length - 1; i >= 0; i--) {
+                const obj = textObjects[i];
+
+                // テキストが空の場合はスキップ（編集中以外）
+                if (obj.text.trim() === '' && obj !== selectedObject) {
+                    continue;
+                }
+
+                const metrics = measureText(obj);
+
+                if (x >= obj.x - 10 && x <= obj.x + metrics.width + 10 &&
+                    y >= obj.y - 10 && y <= obj.y + metrics.height + 10) {
+                    selectedObject = obj;
+                    updatePropertiesPanel();
+                    render();
+                    return true;
+                }
+            }
+
+            // パス上文字オブジェクトをチェック（後ろから）
+            for (let i = pathTextObjects.length - 1; i >= 0; i--) {
+                const obj = pathTextObjects[i];
+                if (obj.path && obj.path.length > 0) {
+                    // パスポイントの近くをクリックしたかチェック
+                    for (let j = 0; j < obj.path.length; j++) {
+                        const p = obj.path[j];
+                        const dist = Math.sqrt((x - p.x) ** 2 + (y - p.y) ** 2);
+                        if (dist < 20) {
+                            selectedObject = obj;
+                            updatePropertiesPanel();
+                            render();
+                            return true;
+                        }
+                    }
+                }
+            }
+
+            // 図形オブジェクトをチェック（後ろから）
+            for (let i = shapeObjects.length - 1; i >= 0; i--) {
+                const obj = shapeObjects[i];
+                if (isPointInShape(x, y, obj)) {
+                    selectedObject = obj;
+                    render();
+                    return true;
+                }
+            }
+
+            // 何も選択されなかった
+            selectedObject = null;
+            render();
+            return false;
+        }
+
+        // 図形内の点かどうかを判定する関数
+        function isPointInShape(x, y, obj) {
+            const minX = Math.min(obj.x, obj.x + obj.width);
+            const minY = Math.min(obj.y, obj.y + obj.height);
+            const maxX = Math.max(obj.x, obj.x + obj.width);
+            const maxY = Math.max(obj.y, obj.y + obj.height);
+
+            // まず矩形範囲外ならfalse
+            if (x < minX - 10 || x > maxX + 10 || y < minY - 10 || y > maxY + 10) {
+                return false;
+            }
+
+            // 図形タイプごとの詳細な判定
+            if (obj.type === 'rectangle') {
+                return true; // 矩形範囲内ならOK
+            } else if (obj.type === 'roundRect') {
+                // 角丸矩形は簡易的に矩形として扱う
+                return true;
+            } else if (obj.type === 'ellipse') {
+                // 楕円の判定
+                const centerX = obj.x + obj.width / 2;
+                const centerY = obj.y + obj.height / 2;
+                const radiusX = Math.abs(obj.width) / 2;
+                const radiusY = Math.abs(obj.height) / 2;
+                const dx = (x - centerX) / radiusX;
+                const dy = (y - centerY) / radiusY;
+                return (dx * dx + dy * dy) <= 1.1; // 10%のマージンを追加
+            } else if (obj.type === 'polygon') {
+                // 正多角形の判定
+                const sides = obj.sides || 5;
+                const centerX = obj.x + obj.width / 2;
+                const centerY = obj.y + obj.height / 2;
+                const radius = Math.min(Math.abs(obj.width), Math.abs(obj.height)) / 2;
+
+                // Canvas APIのisPointInPathを使用
+                ctx.beginPath();
+                for (let i = 0; i < sides; i++) {
+                    const angle = (Math.PI * 2 * i / sides) - Math.PI / 2;
+                    const px = centerX + radius * Math.cos(angle);
+                    const py = centerY + radius * Math.sin(angle);
+                    if (i === 0) ctx.moveTo(px, py);
+                    else ctx.lineTo(px, py);
+                }
+                ctx.closePath();
+                return ctx.isPointInPath(x, y);
+            } else if (obj.type === 'star') {
+                // 星形の判定
+                const points = (obj.sides || 5) * 2;
+                const centerX = obj.x + obj.width / 2;
+                const centerY = obj.y + obj.height / 2;
+                const outerRadius = Math.min(Math.abs(obj.width), Math.abs(obj.height)) / 2;
+                const innerRadius = outerRadius * 0.4;
+
+                // Canvas APIのisPointInPathを使用
+                ctx.beginPath();
+                for (let i = 0; i < points; i++) {
+                    const angle = (Math.PI * 2 * i / points) - Math.PI / 2;
+                    const radius = i % 2 === 0 ? outerRadius : innerRadius;
+                    const px = centerX + radius * Math.cos(angle);
+                    const py = centerY + radius * Math.sin(angle);
+                    if (i === 0) ctx.moveTo(px, py);
+                    else ctx.lineTo(px, py);
+                }
+                ctx.closePath();
+                return ctx.isPointInPath(x, y);
+            }
+
+            return true; // デフォルトは矩形判定
+        }
+
+        function startTyping() {
+            if (!selectedObject) return;
+
+            isTyping = true;
+            isComposing = false; // 入力開始時にリセット
+            cursorPosition = selectedObject.text.length;
+
+            // IME入力をフォーカス（Canvas上で透明に）
+            const imeInput = document.getElementById('imeInput');
+            const rect = canvas.getBoundingClientRect();
+
+            // Canvas上のテキストオブジェクトの位置にIME入力を配置
+            let objX, objY;
+            if (selectedObject.path && selectedObject.path.length > 0) {
+                // パス上文字の場合、パスの最初のポイントを使用
+                objX = selectedObject.path[0].x;
+                objY = selectedObject.path[0].y;
+            } else {
+                // 通常のテキストの場合
+                objX = selectedObject.x;
+                objY = selectedObject.y;
+            }
+
+            imeInput.style.left = (rect.left + objX * (rect.width / canvas.width)) + 'px';
+            imeInput.style.top = (rect.top + objY * (rect.height / canvas.height)) + 'px';
+
+            imeInput.value = selectedObject.text;
+            imeInput.classList.add('active');
+
+            // 少し遅延させてフォーカス（他のイベントが完了してから）
+            setTimeout(() => {
+                if (isTyping) { // まだタイピング中の場合のみフォーカス
+                    imeInput.focus();
+                    imeInput.select();
+                    console.log('✅ テキスト入力開始:', selectedObject.text);
+                }
+            }, 50); // 遅延を50msに増加
+        }
+
+        // IME入力処理
+        document.getElementById('imeInput').addEventListener('input', (e) => {
+            if (selectedObject && isTyping) {
+                selectedObject.text = e.target.value;
+                cursorPosition = e.target.selectionStart;
+                selectionStart = e.target.selectionStart;
+                selectionEnd = e.target.selectionEnd;
+                render();
+            }
+        });
+
+        // 選択範囲の変更を追跡
+        document.getElementById('imeInput').addEventListener('select', (e) => {
+            if (selectedObject && isTyping) {
+                selectionStart = e.target.selectionStart;
+                selectionEnd = e.target.selectionEnd;
+                cursorPosition = e.target.selectionStart;
+                render();
+            }
+        });
+
+        document.getElementById('imeInput').addEventListener('click', (e) => {
+            if (selectedObject && isTyping) {
+                selectionStart = e.target.selectionStart;
+                selectionEnd = e.target.selectionEnd;
+                cursorPosition = e.target.selectionStart;
+                render();
+            }
+        });
+
+        // IME変換開始
+        document.getElementById('imeInput').addEventListener('compositionstart', (e) => {
+            isComposing = true;
+            console.log('🎌 IME変換開始');
+        });
+
+        // IME変換終了
+        document.getElementById('imeInput').addEventListener('compositionend', (e) => {
+            isComposing = false;
+            console.log('🎌 IME変換終了');
+            if (selectedObject) {
+                selectedObject.text = e.target.value;
+                render();
+            }
+        });
+
+        // IME入力のblurイベント
+        document.getElementById('imeInput').addEventListener('blur', (e) => {
+            console.log('🔵 IME入力フィールドがblur, isComposing:', isComposing);
+
+            // IME変換中の場合はblurを無視
+            if (isComposing) {
+                console.log('⚠️ IME変換中のためblurを無視');
+                // フォーカスを戻す
+                setTimeout(() => {
+                    if (isTyping) {
+                        e.target.focus();
+                    }
+                }, 10);
+                return;
+            }
+
+            if (isTyping) {
+                isTyping = false;
+                e.target.classList.remove('active');
+
+                // 空のテキストオブジェクトを削除（レガシータイトルと同じ動作）
+                if (selectedObject && selectedObject.text.trim() === '') {
+                    const index = textObjects.indexOf(selectedObject);
+                    if (index > -1) {
+                        textObjects.splice(index, 1);
+                        selectedObject = null;
+                        console.log('🗑️ 空のテキストオブジェクトを削除');
+                    }
+                } else if (selectedObject) {
+                    console.log('✅ テキスト入力完了:', selectedObject.text);
+                }
+
+                render();
+            }
+        });
+
+        // キーボードイベント
+        document.addEventListener('keydown', (e) => {
+            if (isTyping && selectedObject) {
+                if (e.key === 'Escape') {
+                    isTyping = false;
+                    const imeInput = document.getElementById('imeInput');
+                    imeInput.blur();
+                    imeInput.classList.remove('active');
+                    render();
+                }
+            } else if (selectedObject && !isTyping) {
+                // 選択モードでのキーボードショートカット
+                if (e.key === 'Delete' || e.key === 'Backspace') {
+                    const index = textObjects.indexOf(selectedObject);
+                    if (index > -1) {
+                        textObjects.splice(index, 1);
+                        selectedObject = null;
+                        render();
+                    }
+                } else if (e.key === 'Enter') {
+                    startTyping();
+                }
+            }
+        });
+
+        function updatePropertiesPanel() {
+            if (!selectedObject) return;
+
+            // 図形オブジェクトかどうかを判定
+            const isShapeObject = selectedObject.type &&
+                ['rectangle', 'roundRect', 'ellipse', 'polygon', 'star'].includes(selectedObject.type);
+
+            document.getElementById('prop_x').value = selectedObject.x.toFixed(1);
+            document.getElementById('prop_y').value = selectedObject.y.toFixed(1);
+
+            // テキストオブジェクトのプロパティ
+            if (!isShapeObject) {
+                document.getElementById('prop_fontSize').value = selectedObject.fontSize;
+                document.getElementById('prop_fontFamily').value = selectedObject.fontFamily;
+                document.getElementById('prop_scaleX').value = selectedObject.scaleX;
+                document.getElementById('scaleXValue').textContent = selectedObject.scaleX + '%';
+                document.getElementById('prop_kerning').value = selectedObject.kerning;
+                document.getElementById('prop_tracking').value = selectedObject.tracking;
+                document.getElementById('prop_baselineShift').value = selectedObject.baselineShift || 0;
+                document.getElementById('prop_rotation').value = selectedObject.rotation;
+                document.getElementById('prop_vertical').checked = selectedObject.vertical || false;
+                document.getElementById('prop_leading').value = selectedObject.leading || 0;
+                document.getElementById('prop_slant').value = selectedObject.slant || 0;
+                document.getElementById('prop_underline').checked = selectedObject.underline || false;
+                document.getElementById('prop_smallCaps').checked = selectedObject.smallCaps || false;
+                document.getElementById('prop_smallCapsSize').value = selectedObject.smallCapsSize || 75;
+            }
+
+            document.getElementById('fill_enabled').checked = selectedObject.fill.enabled;
+            document.getElementById('fill_color').value = selectedObject.fill.color;
+            document.getElementById('fill_opacity').value = selectedObject.fill.opacity;
+
+            // 塗りタイプとグラデーション設定を更新
+            if (selectedObject.fill.type) {
+                document.getElementById('fill_type').value = selectedObject.fill.type;
+
+                // UIの表示切り替え
+                const fillType = selectedObject.fill.type;
+                const solidControls = document.getElementById('solidFillControls');
+                const gradientControls = document.getElementById('gradientFillControls');
+
+                if (fillType === 'gradient-linear' || fillType === 'gradient-radial') {
+                    solidControls.style.display = 'none';
+                    gradientControls.style.display = 'block';
+
+                    // グラデーション値を更新
+                    if (selectedObject.fill.gradient) {
+                        const g = selectedObject.fill.gradient;
+                        document.getElementById('gradient_color1').value = g.color1 || '#fdff00';
+                        document.getElementById('gradient_color2').value = g.color2 || '#ff6600';
+                        document.getElementById('gradient_use_color3').checked = g.useColor3 || false;
+                        document.getElementById('gradient_color3').value = g.color3 || '#ffaa00';
+                        document.getElementById('gradient_color3_position').value = g.color3Position || 50;
+                        document.getElementById('gradient_angle').value = g.angle || 0;
+                        document.getElementById('gradient_opacity').value = g.opacity || 100;
+                        document.getElementById('gradient_ratio_start').value = g.ratioStart || 0;
+                        document.getElementById('gradient_ratio_end').value = g.ratioEnd || 100;
+                        document.getElementById('gradient_blur').value = g.blur || 0;
+
+                        // 中間色の表示制御
+                        document.getElementById('gradient_color3_row').style.display = g.useColor3 ? 'flex' : 'none';
+                        document.getElementById('gradient_color3_position_row').style.display = g.useColor3 ? 'flex' : 'none';
+                    }
+
+                    // 角度の表示制御
+                    document.getElementById('gradient_angle_row').style.display =
+                        fillType === 'gradient-linear' ? 'flex' : 'none';
+                } else {
+                    solidControls.style.display = 'block';
+                    gradientControls.style.display = 'none';
+                }
+            }
+
+            // ストロークとシャドウはテキストオブジェクトのみ
+            if (!isShapeObject) {
+                if (selectedObject.strokes && selectedObject.strokes.length >= 4) {
+                    document.getElementById('stroke1_enabled').checked = selectedObject.strokes[0].enabled;
+                    document.getElementById('stroke1_size').value = selectedObject.strokes[0].size;
+                    document.getElementById('stroke1_color').value = selectedObject.strokes[0].color;
+                    document.getElementById('stroke1_opacity').value = selectedObject.strokes[0].opacity || 100;
+
+                    document.getElementById('stroke2_enabled').checked = selectedObject.strokes[1].enabled;
+                    document.getElementById('stroke2_size').value = selectedObject.strokes[1].size;
+                    document.getElementById('stroke2_color').value = selectedObject.strokes[1].color;
+                    document.getElementById('stroke2_opacity').value = selectedObject.strokes[1].opacity || 100;
+
+                    document.getElementById('stroke3_enabled').checked = selectedObject.strokes[2].enabled;
+                    document.getElementById('stroke3_size').value = selectedObject.strokes[2].size;
+                    document.getElementById('stroke3_color').value = selectedObject.strokes[2].color;
+                    document.getElementById('stroke3_opacity').value = selectedObject.strokes[2].opacity || 100;
+
+                    document.getElementById('stroke4_enabled').checked = selectedObject.strokes[3].enabled;
+                    document.getElementById('stroke4_size').value = selectedObject.strokes[3].size;
+                    document.getElementById('stroke4_color').value = selectedObject.strokes[3].color;
+                    document.getElementById('stroke4_opacity').value = selectedObject.strokes[3].opacity || 100;
+                }
+
+                if (selectedObject.shadow) {
+                    document.getElementById('shadow_enabled').checked = selectedObject.shadow.enabled;
+                    document.getElementById('shadow_color').value = selectedObject.shadow.color;
+                    document.getElementById('shadow_opacity').value = selectedObject.shadow.opacity;
+                    document.getElementById('shadow_distance').value = selectedObject.shadow.distance;
+                    document.getElementById('shadow_angle').value = selectedObject.shadow.angle;
+                    document.getElementById('shadow_size').value = selectedObject.shadow.size || 90;
+                    document.getElementById('shadow_blur').value = selectedObject.shadow.blur || 0;
+                }
+            } else {
+                // 図形オブジェクトのストローク設定（単一のstrokeプロパティ）
+                if (selectedObject.stroke) {
+                    // 図形のストロークをstroke1に表示
+                    document.getElementById('stroke1_enabled').checked = selectedObject.stroke.enabled;
+                    document.getElementById('stroke1_size').value = selectedObject.stroke.size;
+                    document.getElementById('stroke1_color').value = selectedObject.stroke.color;
+                    document.getElementById('stroke1_opacity').value = selectedObject.stroke.opacity || 100;
+
+                    // 他のストロークは無効化
+                    document.getElementById('stroke2_enabled').checked = false;
+                    document.getElementById('stroke3_enabled').checked = false;
+                    document.getElementById('stroke4_enabled').checked = false;
+                }
+            }
+        }
+
+        function measureText(obj) {
+            ctx.font = `${obj.fontSize}px "${obj.fontFamily}"`;
+
+            if (obj.vertical) {
+                // 縦書きの場合
+                const charCount = (obj.text || '―').length;
+                return {
+                    width: obj.fontSize * (obj.scaleX / 100),
+                    height: obj.fontSize * charCount
+                };
+            } else {
+                // 横書きの場合
+                const text = obj.text || '|';
+                const metrics = ctx.measureText(text);
+                let width = metrics.width;
+
+                // カーニングを考慮した幅
+                const kerning = obj.kerning || 0;
+                if (kerning !== 0 && text.length > 1) {
+                    width += kerning * (text.length - 1);
+                }
+
+                return {
+                    width: width * (obj.scaleX / 100),
+                    height: obj.fontSize
+                };
+            }
+        }
+
+        // requestAnimationFrameを使ったスムーズな描画
+        function scheduleRender() {
+            if (!renderScheduled) {
+                renderScheduled = true;
+                requestAnimationFrame(() => {
+                    renderScheduled = false;
+                    render();
+                });
+            }
+        }
+
+        function render() {
+            // チェッカーボード背景を描画（レガシータイトルと同じ）
+            drawCheckerboardBackground();
+
+            // セーフマージン描画
+            if (document.getElementById('safeMarginEnabled').checked) {
+                drawSafeMargins();
+            }
+
+            // 全図形オブジェクトを描画
+            shapeObjects.forEach(obj => {
+                drawShapeObject(obj, obj === selectedObject);
+            });
+
+            // 図形作成中の場合
+            if (isCreatingShape && currentShape) {
+                drawShapeObject(currentShape, false);
+            }
+
+            // ペンツールで描画中の場合
+            if (isDrawingPen && penPoints.length > 0) {
+                ctx.save();
+                ctx.strokeStyle = '#000000';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(penPoints[0].x, penPoints[0].y);
+                for (let i = 1; i < penPoints.length; i++) {
+                    ctx.lineTo(penPoints[i].x, penPoints[i].y);
+                }
+                ctx.stroke();
+                ctx.restore();
+            }
+
+            // 全テキストオブジェクトを描画
+            textObjects.forEach(obj => {
+                drawTextObject(obj, obj === selectedObject);
+            });
+
+            // 全パス上文字オブジェクトを描画
+            pathTextObjects.forEach(obj => {
+                drawPathTextObject(obj, obj === selectedObject);
+            });
+
+            // テキスト選択範囲の描画（入力中の場合）
+            if (isTyping && selectedObject && selectionStart !== selectionEnd) {
+                drawTextSelection();
+            }
+
+            // カーソル描画（入力中の場合）
+            if (isTyping && selectedObject && cursorVisible) {
+                drawCursor();
+            }
+        }
+
+        function drawShapeObject(obj, isSelected) {
+            ctx.save();
+
+            const x = obj.x;
+            const y = obj.y;
+            const w = obj.width;
+            const h = obj.height;
+
+            // 回転を適用
+            if (obj.rotation && obj.rotation !== 0) {
+                const centerX = x + w / 2;
+                const centerY = y + h / 2;
+                ctx.translate(centerX, centerY);
+                ctx.rotate(obj.rotation * Math.PI / 180);
+                ctx.translate(-centerX, -centerY);
+            }
+
+            // 塗り
+            if (obj.fill && obj.fill.enabled) {
+                if (obj.fill.type === 'gradient-linear' && obj.fill.gradient) {
+                    // 線形グラデーション
+                    const grad = obj.fill.gradient;
+                    const angle = (grad.angle || 0) * Math.PI / 180;
+                    const centerX = x + w / 2;
+                    const centerY = y + h / 2;
+                    const length = Math.sqrt(w * w + h * h) / 2;
+                    const x0 = centerX - length * Math.cos(angle);
+                    const y0 = centerY - length * Math.sin(angle);
+                    const x1 = centerX + length * Math.cos(angle);
+                    const y1 = centerY + length * Math.sin(angle);
+
+                    const gradient = ctx.createLinearGradient(x0, y0, x1, y1);
+                    const opacity = (grad.opacity || 100) / 100;
+                    const ratioStart = (grad.ratioStart || 0) / 100;
+                    const ratioEnd = (grad.ratioEnd || 100) / 100;
+
+                    // ratioStartとratioEndを考慮したカラーストップ
+                    gradient.addColorStop(ratioStart, hexToRgba(grad.color1, opacity));
+                    if (grad.useColor3 && grad.color3) {
+                        const pos = ratioStart + (ratioEnd - ratioStart) * (grad.color3Position || 50) / 100;
+                        gradient.addColorStop(pos, hexToRgba(grad.color3, opacity));
+                    }
+                    gradient.addColorStop(ratioEnd, hexToRgba(grad.color2, opacity));
+
+                    // ぼかし効果を適用
+                    if (grad.blur && grad.blur > 0) {
+                        ctx.filter = `blur(${grad.blur}px)`;
+                    }
+
+                    ctx.fillStyle = gradient;
+                } else if (obj.fill.type === 'gradient-radial' && obj.fill.gradient) {
+                    // 円形グラデーション
+                    const grad = obj.fill.gradient;
+                    const centerX = x + w / 2;
+                    const centerY = y + h / 2;
+                    const radius = Math.max(Math.abs(w), Math.abs(h)) / 2;
+                    const ratioStart = (grad.ratioStart || 0) / 100;
+                    const ratioEnd = (grad.ratioEnd || 100) / 100;
+
+                    const gradient = ctx.createRadialGradient(
+                        centerX, centerY, radius * ratioStart,
+                        centerX, centerY, radius * ratioEnd
+                    );
+                    const opacity = (grad.opacity || 100) / 100;
+
+                    gradient.addColorStop(0, hexToRgba(grad.color1, opacity));
+                    if (grad.useColor3 && grad.color3) {
+                        const pos = (grad.color3Position || 50) / 100;
+                        gradient.addColorStop(pos, hexToRgba(grad.color3, opacity));
+                    }
+                    gradient.addColorStop(1, hexToRgba(grad.color2, opacity));
+
+                    // ぼかし効果を適用
+                    if (grad.blur && grad.blur > 0) {
+                        ctx.filter = `blur(${grad.blur}px)`;
+                    }
+
+                    ctx.fillStyle = gradient;
+                } else {
+                    // ベタ塗り
+                    const opacity = obj.fill.opacity / 100;
+                    if (opacity < 1) {
+                        const rgb = hexToRgb(obj.fill.color);
+                        ctx.fillStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${opacity})`;
+                    } else {
+                        ctx.fillStyle = obj.fill.color;
+                    }
+                }
+            }
+
+            // パス描画用のヘルパー関数
+            const drawShapePath = () => {
+                if (obj.type === 'rectangle') {
+                    ctx.beginPath();
+                    ctx.rect(x, y, w, h);
+                } else if (obj.type === 'roundRect') {
+                    const radius = Math.min(obj.radius || 20, Math.abs(w) / 2, Math.abs(h) / 2);
+                    ctx.beginPath();
+                    ctx.roundRect(x, y, w, h, radius);
+                } else if (obj.type === 'ellipse') {
+                    ctx.beginPath();
+                    ctx.ellipse(x + w/2, y + h/2, Math.abs(w/2), Math.abs(h/2), 0, 0, 2 * Math.PI);
+                } else if (obj.type === 'line') {
+                    ctx.beginPath();
+                    ctx.moveTo(x, y);
+                    ctx.lineTo(x + w, y + h);
+                } else if (obj.type === 'pen') {
+                    if (obj.points && obj.points.length > 1) {
+                        ctx.beginPath();
+                        ctx.moveTo(obj.points[0].x, obj.points[0].y);
+                        for (let i = 1; i < obj.points.length; i++) {
+                            ctx.lineTo(obj.points[i].x, obj.points[i].y);
+                        }
+                    }
+                } else if (obj.type === 'chamferRect') {
+                    const chamfer = Math.min(obj.radius || 20, Math.abs(w) / 2, Math.abs(h) / 2);
+                    ctx.beginPath();
+                    const x1 = x, y1 = y;
+                    const x2 = x + w, y2 = y + h;
+                    ctx.moveTo(x1 + chamfer, y1);
+                    ctx.lineTo(x2 - chamfer, y1);
+                    ctx.lineTo(x2, y1 + chamfer);
+                    ctx.lineTo(x2, y2 - chamfer);
+                    ctx.lineTo(x2 - chamfer, y2);
+                    ctx.lineTo(x1 + chamfer, y2);
+                    ctx.lineTo(x1, y2 - chamfer);
+                    ctx.lineTo(x1, y1 + chamfer);
+                    ctx.closePath();
+                } else if (obj.type === 'triangle') {
+                    ctx.beginPath();
+                    ctx.moveTo(x + w / 2, y);
+                    ctx.lineTo(x + w, y + h);
+                    ctx.lineTo(x, y + h);
+                    ctx.closePath();
+                }
+            };
+
+            // 塗りつぶし
+            if (obj.fill && obj.fill.enabled) {
+                drawShapePath();
+                if (obj.type === 'rectangle') {
+                    ctx.fillRect(x, y, w, h);
+                } else {
+                    ctx.fill();
+                }
+            }
+
+            // 複数ストローク対応（外側から内側へ）
+            if (obj.strokes && Array.isArray(obj.strokes)) {
+                const enabledStrokes = obj.strokes.filter(s => s.enabled && s.size > 0);
+                // 大きいサイズから小さいサイズへ描画（逆順）
+                for (let i = enabledStrokes.length - 1; i >= 0; i--) {
+                    const stroke = enabledStrokes[i];
+                    const strokeOpacity = (stroke.opacity || 100) / 100;
+                    if (strokeOpacity < 1) {
+                        const rgb = hexToRgb(stroke.color);
+                        ctx.strokeStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${strokeOpacity})`;
+                    } else {
+                        ctx.strokeStyle = stroke.color;
+                    }
+                    ctx.lineWidth = stroke.size;
+                    ctx.lineJoin = 'round';
+                    ctx.lineCap = 'round';
+                    drawShapePath();
+                    ctx.stroke();
+                }
+            } else if (obj.stroke && obj.stroke.enabled) {
+                // 単一ストローク（後方互換性のため）
+                const strokeOpacity = (obj.stroke.opacity || 100) / 100;
+                if (strokeOpacity < 1) {
+                    const rgb = hexToRgb(obj.stroke.color);
+                    ctx.strokeStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${strokeOpacity})`;
+                } else {
+                    ctx.strokeStyle = obj.stroke.color;
+                }
+                ctx.lineWidth = obj.stroke.size;
+                drawShapePath();
+                ctx.stroke();
+            }
+
+            // 円弧は特殊処理
+            if (obj.type === 'arc') {
+                // 円弧
+                const centerX = x + w / 2;
+                const centerY = y + h / 2;
+                const radiusX = Math.abs(w / 2);
+                const radiusY = Math.abs(h / 2);
+                const startAngle = (obj.startAngle || 0) * Math.PI / 180;
+                const endAngle = (obj.endAngle || 90) * Math.PI / 180;
+                ctx.beginPath();
+                ctx.ellipse(centerX, centerY, radiusX, radiusY, 0, startAngle, endAngle);
+                if (obj.stroke && obj.stroke.enabled) {
+                    ctx.stroke();
+                }
+                if (obj.fill && obj.fill.enabled) {
+                    ctx.lineTo(centerX, centerY);
+                    ctx.closePath();
+                    ctx.fill();
+                }
+            }
+
+            // フィルターをリセット
+            ctx.filter = 'none';
+
+            // 選択ボックス
+            if (isSelected) {
+                ctx.strokeStyle = '#0099ff';
+                ctx.lineWidth = 1;
+                ctx.setLineDash([]);
+
+                const minX = Math.min(x, x + w);
+                const minY = Math.min(y, y + h);
+                const maxX = Math.max(x, x + w);
+                const maxY = Math.max(y, y + h);
+
+                ctx.strokeRect(minX - 2, minY - 2, maxX - minX + 4, maxY - minY + 4);
+
+                // ハンドル
+                const handleSize = 6;
+                const handles = [
+                    [minX - 2, minY - 2],
+                    [maxX + 2, minY - 2],
+                    [minX - 2, maxY + 2],
+                    [maxX + 2, maxY + 2]
+                ];
+
+                ctx.fillStyle = '#ffffff';
+                ctx.strokeStyle = '#0099ff';
+                ctx.lineWidth = 1;
+                handles.forEach(([hx, hy]) => {
+                    ctx.fillRect(hx - handleSize/2, hy - handleSize/2, handleSize, handleSize);
+                    ctx.strokeRect(hx - handleSize/2, hy - handleSize/2, handleSize, handleSize);
+                });
+
+                // 回転ハンドル（上部中央から20px上）
+                const rotateHandleX = minX + (maxX - minX) / 2;
+                const rotateHandleY = minY - 22;
+
+                // 回転ハンドルへの接続線
+                ctx.beginPath();
+                ctx.moveTo(rotateHandleX, minY - 2);
+                ctx.lineTo(rotateHandleX, rotateHandleY + handleSize/2);
+                ctx.stroke();
+
+                // 回転ハンドル（円形）
+                ctx.beginPath();
+                ctx.arc(rotateHandleX, rotateHandleY, handleSize/2, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+            }
+
+            ctx.restore();
+        }
+
+        function drawCheckerboardBackground() {
+            const squareSize = 16;
+            const color1 = '#3a3a3a';
+            const color2 = '#2a2a2a';
+
+            for (let y = 0; y < canvas.height; y += squareSize) {
+                for (let x = 0; x < canvas.width; x += squareSize) {
+                    const isEven = ((x / squareSize) + (y / squareSize)) % 2 === 0;
+                    ctx.fillStyle = isEven ? color1 : color2;
+                    ctx.fillRect(x, y, squareSize, squareSize);
+                }
+            }
+        }
+
+        function drawSafeMargins() {
+            const actionMargin = parseFloat(document.getElementById('actionSafeMargin').value) / 100;
+            const titleMargin = parseFloat(document.getElementById('titleSafeMargin').value) / 100;
+            const marginColor = document.getElementById('safeMarginColor').value;
+            const opacity = parseFloat(document.getElementById('safeMarginOpacity').value) / 100;
+
+            const rgb = hexToRgb(marginColor);
+            ctx.strokeStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${opacity})`;
+            ctx.lineWidth = 1;
+            ctx.setLineDash([5, 5]);
+
+            // アクションセーフ
+            const actionX = canvas.width * actionMargin;
+            const actionY = canvas.height * actionMargin;
+            const actionW = canvas.width * (1 - actionMargin * 2);
+            const actionH = canvas.height * (1 - actionMargin * 2);
+            ctx.strokeRect(actionX, actionY, actionW, actionH);
+
+            // タイトルセーフ
+            const titleX = canvas.width * titleMargin;
+            const titleY = canvas.height * titleMargin;
+            const titleW = canvas.width * (1 - titleMargin * 2);
+            const titleH = canvas.height * (1 - titleMargin * 2);
+            ctx.strokeRect(titleX, titleY, titleW, titleH);
+
+            ctx.setLineDash([]);
+        }
+
+        function drawTextObject(obj, isSelected) {
+            if (!obj.text && !isTyping) return;
+
+            ctx.save();
+
+            // 描画設定
+            ctx.font = `${obj.fontSize}px "${obj.fontFamily}"`;
+            ctx.textBaseline = 'top';
+            ctx.textAlign = 'left';
+
+            const text = obj.text || (obj.vertical ? '―' : '|');
+
+            if (obj.vertical) {
+                // 縦書き描画
+                const chars = text.split('');
+                for (let i = 0; i < chars.length; i++) {
+                    ctx.save();
+
+                    // 各文字の位置
+                    const charY = obj.y + (i * obj.fontSize);
+                    ctx.translate(obj.x, charY);
+                    ctx.rotate(obj.rotation * Math.PI / 180);
+
+                    const char = chars[i];
+
+                    // シャドウ描画
+                    if (obj.shadow && obj.shadow.enabled) {
+                        const angle = obj.shadow.angle * Math.PI / 180;
+                        const offsetX = Math.cos(angle) * obj.shadow.distance;
+                        const offsetY = Math.sin(angle) * obj.shadow.distance;
+                        const opacity = obj.shadow.opacity / 100;
+
+                        const rgb = hexToRgb(obj.shadow.color);
+                        ctx.fillStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${opacity})`;
+                        ctx.fillText(char, offsetX, offsetY);
+                    }
+
+                    // ストローク描画
+                    if (obj.strokes) {
+                        for (let j = obj.strokes.length - 1; j >= 0; j--) {
+                            const stroke = obj.strokes[j];
+                            if (stroke.enabled && stroke.size > 0) {
+                                ctx.strokeStyle = stroke.color;
+                                ctx.lineWidth = stroke.size;
+                                ctx.lineJoin = 'round';
+                                ctx.miterLimit = 2;
+                                ctx.strokeText(char, 0, 0);
+                            }
+                        }
+                    }
+
+                    // 塗り描画
+                    if (obj.fill && obj.fill.enabled) {
+                        const fillType = obj.fill.type || 'solid';
+
+                        if (fillType === 'gradient-linear' || fillType === 'gradient-radial') {
+                            // グラデーション描画
+                            const gradient = obj.fill.gradient;
+                            if (gradient) {
+                                const charMetrics = ctx.measureText(char);
+                                const charWidth = obj.fontSize;
+                                const charHeight = obj.fontSize;
+
+                                let fillGradient;
+                                const ratioStart = (gradient.ratioStart || 0) / 100;
+                                const ratioEnd = (gradient.ratioEnd || 100) / 100;
+
+                                if (fillType === 'gradient-linear') {
+                                    const angle = (gradient.angle || 0) * Math.PI / 180;
+                                    const cos = Math.cos(angle);
+                                    const sin = Math.sin(angle);
+                                    const maxDist = Math.abs(charWidth * cos) + Math.abs(charHeight * sin);
+
+                                    const x1 = charWidth/2 - (cos * maxDist/2);
+                                    const y1 = charHeight/2 - (sin * maxDist/2);
+                                    const x2 = charWidth/2 + (cos * maxDist/2);
+                                    const y2 = charHeight/2 + (sin * maxDist/2);
+
+                                    fillGradient = ctx.createLinearGradient(x1, y1, x2, y2);
+                                } else {
+                                    const centerX = charWidth / 2;
+                                    const centerY = charHeight / 2;
+                                    const radius = Math.max(charWidth, charHeight) / 2;
+                                    fillGradient = ctx.createRadialGradient(
+                                        centerX, centerY, radius * ratioStart,
+                                        centerX, centerY, radius * ratioEnd
+                                    );
+                                }
+
+                                const opacity = (gradient.opacity || 100) / 100;
+                                const rgb1 = hexToRgb(gradient.color1);
+                                const rgb2 = hexToRgb(gradient.color2);
+
+                                fillGradient.addColorStop(ratioStart, `rgba(${rgb1.r}, ${rgb1.g}, ${rgb1.b}, ${opacity})`);
+
+                                if (gradient.useColor3) {
+                                    const rgb3 = hexToRgb(gradient.color3);
+                                    const color3Pos = (gradient.color3Position || 50) / 100;
+                                    const adjustedPos = ratioStart + (ratioEnd - ratioStart) * color3Pos;
+                                    fillGradient.addColorStop(adjustedPos, `rgba(${rgb3.r}, ${rgb3.g}, ${rgb3.b}, ${opacity})`);
+                                }
+
+                                fillGradient.addColorStop(ratioEnd, `rgba(${rgb2.r}, ${rgb2.g}, ${rgb2.b}, ${opacity})`);
+
+                                ctx.fillStyle = fillGradient;
+
+                                // ぼかし効果
+                                if (gradient.blur && gradient.blur > 0) {
+                                    ctx.filter = `blur(${gradient.blur}px)`;
+                                }
+                            } else {
+                                ctx.fillStyle = obj.fill.color;
+                            }
+                        } else {
+                            // ベタ塗り
+                            const opacity = obj.fill.opacity / 100;
+                            if (opacity < 1) {
+                                const rgb = hexToRgb(obj.fill.color);
+                                ctx.fillStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${opacity})`;
+                            } else {
+                                ctx.fillStyle = obj.fill.color;
+                            }
+                        }
+
+                        ctx.fillText(char, 0, 0);
+
+                        // ぼかしをリセット
+                        if (obj.fill.gradient && obj.fill.gradient.blur > 0) {
+                            ctx.filter = 'none';
+                        }
+                    }
+
+                    ctx.restore();
+                }
+            } else {
+                // 横書き描画
+                const scaleX = obj.scaleX / 100;
+                const kerning = obj.kerning || 0;
+                ctx.translate(obj.x, obj.y);
+                ctx.rotate(obj.rotation * Math.PI / 180);
+                ctx.scale(scaleX, 1);
+
+                // カーニングを考慮した文字位置の計算
+                const renderWithKerning = (renderFunc) => {
+                    if (kerning !== 0) {
+                        // カーニングありの場合、文字ごとに描画
+                        let xOffset = 0;
+                        for (let i = 0; i < text.length; i++) {
+                            const char = text[i];
+                            renderFunc(char, xOffset, 0);
+                            const charWidth = ctx.measureText(char).width;
+                            xOffset += charWidth + kerning;
+                        }
+                    } else {
+                        // カーニングなしの場合、一括描画
+                        renderFunc(text, 0, 0);
+                    }
+                };
+
+                // シャドウ描画
+                if (obj.shadow && obj.shadow.enabled) {
+                    const angle = obj.shadow.angle * Math.PI / 180;
+                    const offsetX = Math.cos(angle) * obj.shadow.distance / scaleX;
+                    const offsetY = Math.sin(angle) * obj.shadow.distance;
+                    const opacity = obj.shadow.opacity / 100;
+
+                    const rgb = hexToRgb(obj.shadow.color);
+                    ctx.fillStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${opacity})`;
+                    renderWithKerning((txt, x, y) => ctx.fillText(txt, x + offsetX, y + offsetY));
+                }
+
+                // ストローク描画（外側から内側へ）
+                if (obj.strokes) {
+                    for (let i = obj.strokes.length - 1; i >= 0; i--) {
+                        const stroke = obj.strokes[i];
+                        if (stroke.enabled && stroke.size > 0) {
+                            ctx.strokeStyle = stroke.color;
+                            ctx.lineWidth = stroke.size;
+                            ctx.lineJoin = 'round';
+                            ctx.miterLimit = 2;
+                            renderWithKerning((txt, x, y) => ctx.strokeText(txt, x, y));
+                        }
+                    }
+                }
+
+                // フェース（塗り）描画
+                if (obj.fill && obj.fill.enabled) {
+                    const fillType = obj.fill.type || 'solid';
+
+                    if (fillType === 'gradient-linear' || fillType === 'gradient-radial') {
+                        // グラデーション描画
+                        const gradient = obj.fill.gradient;
+                        if (gradient) {
+                            const metrics = ctx.measureText(text);
+                            const textWidth = metrics.width;
+                            const textHeight = obj.fontSize;
+
+                            let fillGradient;
+                            const ratioStart = (gradient.ratioStart || 0) / 100;
+                            const ratioEnd = (gradient.ratioEnd || 100) / 100;
+
+                            if (fillType === 'gradient-linear') {
+                                const angle = (gradient.angle || 0) * Math.PI / 180;
+                                const cos = Math.cos(angle);
+                                const sin = Math.sin(angle);
+                                const maxDist = Math.abs(textWidth * cos) + Math.abs(textHeight * sin);
+
+                                const x1 = textWidth/2 - (cos * maxDist/2);
+                                const y1 = textHeight/2 - (sin * maxDist/2);
+                                const x2 = textWidth/2 + (cos * maxDist/2);
+                                const y2 = textHeight/2 + (sin * maxDist/2);
+
+                                fillGradient = ctx.createLinearGradient(x1, y1, x2, y2);
+                            } else {
+                                const centerX = textWidth / 2;
+                                const centerY = textHeight / 2;
+                                const radius = Math.max(textWidth, textHeight) / 2;
+                                fillGradient = ctx.createRadialGradient(
+                                    centerX, centerY, radius * ratioStart,
+                                    centerX, centerY, radius * ratioEnd
+                                );
+                            }
+
+                            const opacity = (gradient.opacity || 100) / 100;
+                            const rgb1 = hexToRgb(gradient.color1);
+                            const rgb2 = hexToRgb(gradient.color2);
+
+                            fillGradient.addColorStop(ratioStart, `rgba(${rgb1.r}, ${rgb1.g}, ${rgb1.b}, ${opacity})`);
+
+                            if (gradient.useColor3) {
+                                const rgb3 = hexToRgb(gradient.color3);
+                                const color3Pos = (gradient.color3Position || 50) / 100;
+                                const adjustedPos = ratioStart + (ratioEnd - ratioStart) * color3Pos;
+                                fillGradient.addColorStop(adjustedPos, `rgba(${rgb3.r}, ${rgb3.g}, ${rgb3.b}, ${opacity})`);
+                            }
+
+                            fillGradient.addColorStop(ratioEnd, `rgba(${rgb2.r}, ${rgb2.g}, ${rgb2.b}, ${opacity})`);
+
+                            ctx.fillStyle = fillGradient;
+
+                            // ぼかし効果
+                            if (gradient.blur && gradient.blur > 0) {
+                                ctx.filter = `blur(${gradient.blur}px)`;
+                            }
+                        } else {
+                            ctx.fillStyle = obj.fill.color;
+                        }
+                    } else {
+                        // ベタ塗り
+                        const opacity = obj.fill.opacity / 100;
+                        if (opacity < 1) {
+                            const rgb = hexToRgb(obj.fill.color);
+                            ctx.fillStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${opacity})`;
+                        } else {
+                            ctx.fillStyle = obj.fill.color;
+                        }
+                    }
+
+                    renderWithKerning((txt, x, y) => ctx.fillText(txt, x, y));
+
+                    // ぼかしをリセット
+                    if (obj.fill.gradient && obj.fill.gradient.blur > 0) {
+                        ctx.filter = 'none';
+                    }
+                }
+            }
+
+            ctx.restore();
+
+            // 選択ボックス描画（レガシータイトルと同じスタイル）
+            if (isSelected) {
+                const metrics = measureText(obj);
+                ctx.strokeStyle = '#0099ff';
+                ctx.lineWidth = 1;
+                ctx.setLineDash([]);
+                ctx.strokeRect(obj.x - 2, obj.y - 2, metrics.width + 4, metrics.height + 4);
+
+                // ハンドル（レガシータイトル風）
+                const handleSize = 6;
+                const handles = [
+                    [obj.x - 2, obj.y - 2], // 左上
+                    [obj.x + metrics.width + 2, obj.y - 2], // 右上
+                    [obj.x - 2, obj.y + metrics.height + 2], // 左下
+                    [obj.x + metrics.width + 2, obj.y + metrics.height + 2], // 右下
+                ];
+
+                ctx.fillStyle = '#ffffff';
+                ctx.strokeStyle = '#0099ff';
+                ctx.lineWidth = 1;
+                handles.forEach(([hx, hy]) => {
+                    ctx.fillRect(hx - handleSize/2, hy - handleSize/2, handleSize, handleSize);
+                    ctx.strokeRect(hx - handleSize/2, hy - handleSize/2, handleSize, handleSize);
+                });
+
+                // 回転ハンドル（上部中央から20px上）
+                const rotateHandleX = obj.x + metrics.width / 2;
+                const rotateHandleY = obj.y - 22;
+
+                // 回転ハンドルへの接続線
+                ctx.beginPath();
+                ctx.moveTo(rotateHandleX, obj.y - 2);
+                ctx.lineTo(rotateHandleX, rotateHandleY + handleSize/2);
+                ctx.stroke();
+
+                // 回転ハンドル（円形）
+                ctx.beginPath();
+                ctx.arc(rotateHandleX, rotateHandleY, handleSize/2, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+            }
+        }
+
+        function drawPathTextObject(obj, isSelected) {
+            if (!obj.path || obj.path.length < 2) return;
+
+            ctx.save();
+            ctx.font = `${obj.fontSize}px "${obj.fontFamily}"`;
+            ctx.textBaseline = 'top';
+            ctx.textAlign = 'left';
+
+            const text = obj.text || '';
+            const scaleX = obj.scaleX / 100;
+
+            // パスの全長を計算
+            let totalLength = 0;
+            const pathSegments = [];
+            for (let i = 0; i < obj.path.length - 1; i++) {
+                const p1 = obj.path[i];
+                const p2 = obj.path[i + 1];
+                const dx = p2.x - p1.x;
+                const dy = p2.y - p1.y;
+                const segmentLength = Math.sqrt(dx * dx + dy * dy);
+                pathSegments.push({
+                    start: p1,
+                    end: p2,
+                    length: segmentLength,
+                    startDist: totalLength
+                });
+                totalLength += segmentLength;
+            }
+
+            // 各文字をパスに沿って配置
+            let currentDist = 0;
+            for (let i = 0; i < text.length; i++) {
+                const char = text[i];
+                const charWidth = ctx.measureText(char).width * scaleX;
+
+                // 現在の距離に対応するパスセグメントを見つける
+                let segment = null;
+                let segmentT = 0;
+                for (let j = 0; j < pathSegments.length; j++) {
+                    const seg = pathSegments[j];
+                    if (currentDist >= seg.startDist && currentDist <= seg.startDist + seg.length) {
+                        segment = seg;
+                        segmentT = (currentDist - seg.startDist) / seg.length;
+                        break;
+                    }
+                }
+
+                if (segment) {
+                    // 線形補間で文字の位置と角度を計算
+                    const x = segment.start.x + (segment.end.x - segment.start.x) * segmentT;
+                    const y = segment.start.y + (segment.end.y - segment.start.y) * segmentT;
+                    const angle = Math.atan2(segment.end.y - segment.start.y, segment.end.x - segment.start.x);
+
+                    ctx.save();
+                    ctx.translate(x, y);
+                    ctx.rotate(angle + obj.rotation * Math.PI / 180);
+                    ctx.scale(scaleX, 1);
+
+                    // ベースラインシフトを適用
+                    const baselineShift = obj.baselineShift || 0;
+
+                    // シャドウ描画
+                    if (obj.shadow && obj.shadow.enabled) {
+                        const shadowAngle = obj.shadow.angle * Math.PI / 180;
+                        const offsetX = Math.cos(shadowAngle) * obj.shadow.distance;
+                        const offsetY = Math.sin(shadowAngle) * obj.shadow.distance + baselineShift;
+                        const opacity = obj.shadow.opacity / 100;
+                        const rgb = hexToRgb(obj.shadow.color);
+                        ctx.fillStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${opacity})`;
+                        ctx.fillText(char, offsetX, offsetY);
+                    }
+
+                    // ストローク描画
+                    if (obj.strokes) {
+                        for (let j = obj.strokes.length - 1; j >= 0; j--) {
+                            const stroke = obj.strokes[j];
+                            if (stroke.enabled && stroke.size > 0) {
+                                ctx.strokeStyle = stroke.color;
+                                ctx.lineWidth = stroke.size;
+                                ctx.lineJoin = 'round';
+                                ctx.miterLimit = 2;
+                                ctx.strokeText(char, 0, baselineShift);
+                            }
+                        }
+                    }
+
+                    // 塗り描画
+                    if (obj.fill && obj.fill.enabled) {
+                        const fillType = obj.fill.type || 'solid';
+
+                        if (fillType === 'gradient-linear' || fillType === 'gradient-radial') {
+                            // グラデーション描画
+                            const gradient = obj.fill.gradient;
+                            if (gradient) {
+                                const charMetrics = ctx.measureText(char);
+                                const charWidth = obj.fontSize;
+                                const charHeight = obj.fontSize;
+
+                                let fillGradient;
+                                const ratioStart = (gradient.ratioStart || 0) / 100;
+                                const ratioEnd = (gradient.ratioEnd || 100) / 100;
+
+                                if (fillType === 'gradient-linear') {
+                                    const gradAngle = (gradient.angle || 0) * Math.PI / 180;
+                                    const cos = Math.cos(gradAngle);
+                                    const sin = Math.sin(gradAngle);
+                                    const maxDist = Math.abs(charWidth * cos) + Math.abs(charHeight * sin);
+
+                                    const x1 = charWidth/2 - (cos * maxDist/2);
+                                    const y1 = charHeight/2 - (sin * maxDist/2) + baselineShift;
+                                    const x2 = charWidth/2 + (cos * maxDist/2);
+                                    const y2 = charHeight/2 + (sin * maxDist/2) + baselineShift;
+
+                                    fillGradient = ctx.createLinearGradient(x1, y1, x2, y2);
+                                } else {
+                                    const centerX = charWidth / 2;
+                                    const centerY = charHeight / 2 + baselineShift;
+                                    const radius = Math.max(charWidth, charHeight) / 2;
+                                    fillGradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius);
+                                }
+
+                                const opacity = (gradient.opacity || 100) / 100;
+                                const rgb1 = hexToRgb(gradient.color1);
+                                const rgb2 = hexToRgb(gradient.color2);
+
+                                fillGradient.addColorStop(ratioStart, `rgba(${rgb1.r}, ${rgb1.g}, ${rgb1.b}, ${opacity})`);
+
+                                if (gradient.useColor3) {
+                                    const rgb3 = hexToRgb(gradient.color3);
+                                    const color3Pos = (gradient.color3Position || 50) / 100;
+                                    const adjustedPos = ratioStart + (ratioEnd - ratioStart) * color3Pos;
+                                    fillGradient.addColorStop(adjustedPos, `rgba(${rgb3.r}, ${rgb3.g}, ${rgb3.b}, ${opacity})`);
+                                }
+
+                                fillGradient.addColorStop(ratioEnd, `rgba(${rgb2.r}, ${rgb2.g}, ${rgb2.b}, ${opacity})`);
+
+                                ctx.fillStyle = fillGradient;
+                            }
+                        } else if (fillType === 'solid') {
+                            const opacity = obj.fill.opacity / 100;
+                            if (opacity < 1) {
+                                const rgb = hexToRgb(obj.fill.color);
+                                ctx.fillStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${opacity})`;
+                            } else {
+                                ctx.fillStyle = obj.fill.color;
+                            }
+                        } else {
+                            ctx.fillStyle = obj.fill.color;
+                        }
+                        ctx.fillText(char, 0, baselineShift);
+                    }
+
+                    ctx.restore();
+                }
+
+                currentDist += charWidth + (obj.kerning || 0);
+            }
+
+            ctx.restore();
+
+            // 選択時はパスを表示
+            if (isSelected) {
+                ctx.strokeStyle = '#0099ff';
+                ctx.lineWidth = 2;
+                ctx.setLineDash([5, 5]);
+                ctx.beginPath();
+                ctx.moveTo(obj.path[0].x, obj.path[0].y);
+                for (let i = 1; i < obj.path.length; i++) {
+                    ctx.lineTo(obj.path[i].x, obj.path[i].y);
+                }
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                // パスポイントを表示
+                obj.path.forEach(point => {
+                    ctx.fillStyle = '#ffffff';
+                    ctx.strokeStyle = '#0099ff';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.arc(point.x, point.y, 4, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.stroke();
+                });
+            }
+        }
+
+        function drawTextSelection() {
+            if (!selectedObject) return;
+
+            ctx.save();
+            ctx.font = `${selectedObject.fontSize}px "${selectedObject.fontFamily}"`;
+
+            const start = Math.min(selectionStart, selectionEnd);
+            const end = Math.max(selectionStart, selectionEnd);
+
+            const textBeforeSelection = selectedObject.text.substring(0, start);
+            const selectedText = selectedObject.text.substring(start, end);
+
+            const metricsBeforeSelection = ctx.measureText(textBeforeSelection);
+            const metricsSelectedText = ctx.measureText(selectedText);
+
+            const selectionX = selectedObject.x + metricsBeforeSelection.width * (selectedObject.scaleX / 100);
+            const selectionWidth = metricsSelectedText.width * (selectedObject.scaleX / 100);
+            const selectionY = selectedObject.y;
+            const selectionHeight = selectedObject.fontSize;
+
+            // 青いハイライト（レガシータイトルと同じ）
+            ctx.fillStyle = 'rgba(0, 102, 204, 0.3)';
+            ctx.fillRect(selectionX, selectionY, selectionWidth, selectionHeight);
+
+            ctx.restore();
+        }
+
+        function drawCursor() {
+            if (!selectedObject) return;
+
+            ctx.save();
+            ctx.font = `${selectedObject.fontSize}px "${selectedObject.fontFamily}"`;
+
+            // パス上文字の場合
+            if (selectedObject.path && selectedObject.path.length >= 2) {
+                const text = selectedObject.text || '';
+                const scaleX = selectedObject.scaleX / 100;
+
+                // パスの全長を計算
+                let totalLength = 0;
+                const pathSegments = [];
+                for (let i = 0; i < selectedObject.path.length - 1; i++) {
+                    const p1 = selectedObject.path[i];
+                    const p2 = selectedObject.path[i + 1];
+                    const dx = p2.x - p1.x;
+                    const dy = p2.y - p1.y;
+                    const segmentLength = Math.sqrt(dx * dx + dy * dy);
+                    pathSegments.push({
+                        start: p1,
+                        end: p2,
+                        length: segmentLength,
+                        startDist: totalLength
+                    });
+                    totalLength += segmentLength;
+                }
+
+                // カーソル位置までの距離を計算
+                let currentDist = 0;
+                for (let i = 0; i < cursorPosition && i < text.length; i++) {
+                    const char = text[i];
+                    const charWidth = ctx.measureText(char).width * scaleX;
+                    currentDist += charWidth + (selectedObject.kerning || 0);
+                }
+
+                // カーソル位置のパスセグメントを見つける
+                let segment = null;
+                let segmentT = 0;
+                for (let j = 0; j < pathSegments.length; j++) {
+                    const seg = pathSegments[j];
+                    if (currentDist >= seg.startDist && currentDist <= seg.startDist + seg.length) {
+                        segment = seg;
+                        segmentT = (currentDist - seg.startDist) / seg.length;
+                        break;
+                    }
+                }
+
+                // カーソルを描画
+                if (segment) {
+                    const x = segment.start.x + (segment.end.x - segment.start.x) * segmentT;
+                    const y = segment.start.y + (segment.end.y - segment.start.y) * segmentT;
+                    const angle = Math.atan2(segment.end.y - segment.start.y, segment.end.x - segment.start.x);
+
+                    ctx.save();
+                    ctx.translate(x, y);
+                    ctx.rotate(angle + selectedObject.rotation * Math.PI / 180);
+
+                    ctx.strokeStyle = '#ffffff';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.moveTo(0, 0);
+                    ctx.lineTo(0, selectedObject.fontSize);
+                    ctx.stroke();
+
+                    ctx.restore();
+                } else if (cursorPosition === 0) {
+                    // カーソルが先頭の場合
+                    const p = selectedObject.path[0];
+                    const p2 = selectedObject.path[1];
+                    const angle = Math.atan2(p2.y - p.y, p2.x - p.x);
+
+                    ctx.save();
+                    ctx.translate(p.x, p.y);
+                    ctx.rotate(angle + selectedObject.rotation * Math.PI / 180);
+
+                    ctx.strokeStyle = '#ffffff';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.moveTo(0, 0);
+                    ctx.lineTo(0, selectedObject.fontSize);
+                    ctx.stroke();
+
+                    ctx.restore();
+                }
+            } else {
+                // 通常のテキストの場合
+                const textBeforeCursor = selectedObject.text.substring(0, cursorPosition);
+                const metrics = ctx.measureText(textBeforeCursor);
+                const cursorX = selectedObject.x + metrics.width * (selectedObject.scaleX / 100);
+                const cursorY = selectedObject.y;
+
+                // より目立つカーソル（レガシータイトルと同じ）
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(cursorX, cursorY);
+                ctx.lineTo(cursorX, cursorY + selectedObject.fontSize);
+                ctx.stroke();
+            }
+
+            ctx.restore();
+        }
+
+        function hexToRgb(hex) {
+            const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+            return result ? {
+                r: parseInt(result[1], 16),
+                g: parseInt(result[2], 16),
+                b: parseInt(result[3], 16)
+            } : { r: 0, g: 0, b: 0 };
+        }
+
+        function hexToRgba(hex, alpha = 1) {
+            const rgb = hexToRgb(hex);
+            return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`;
+        }
+
+        // 点から線分への最短距離を計算
+        function distanceToLineSegment(px, py, x1, y1, x2, y2) {
+            const dx = x2 - x1;
+            const dy = y2 - y1;
+            const lengthSquared = dx * dx + dy * dy;
+
+            if (lengthSquared === 0) {
+                // 線分が点の場合
+                return Math.sqrt((px - x1) ** 2 + (py - y1) ** 2);
+            }
+
+            // 線分上の最も近い点のパラメータt (0 <= t <= 1)
+            let t = ((px - x1) * dx + (py - y1) * dy) / lengthSquared;
+            t = Math.max(0, Math.min(1, t));
+
+            // 線分上の最も近い点
+            const nearestX = x1 + t * dx;
+            const nearestY = y1 + t * dy;
+
+            // 点から最も近い点までの距離
+            return Math.sqrt((px - nearestX) ** 2 + (py - nearestY) ** 2);
+        }
+
+        // プロパティセクションの折りたたみ
+        document.querySelectorAll('.property-section-header').forEach(header => {
+            header.addEventListener('click', () => {
+                header.classList.toggle('collapsed');
+                const content = header.nextElementSibling;
+                content.classList.toggle('hidden');
+            });
+        });
+
+        // PRTL書き出し（既存のPRTLGeneratorV2を使用）
+        function exportPRTL() {
+            if (textObjects.length === 0) {
+                alert('テキストオブジェクトがありません');
+                return;
+            }
+
+            // 最初のテキストオブジェクトを使用（複数対応は後で実装）
+            const obj = textObjects[0];
+
+            const config = {
+                width: canvas.width,
+                height: canvas.height,
+                text: obj.text,
+                fontFamily: obj.fontFamily,
+                fontSize: obj.fontSize,
+                scaleX: obj.scaleX,
+                kerning: obj.kerning || 0,
+                posX: obj.x,
+                posY: obj.y,
+                textAlign: 'left',
+                fillType: obj.fill.type || 'solid',
+                fillColor: obj.fill.color,
+                fillGradient: obj.fill.gradient,
+                stroke4_enabled: obj.strokes[3].enabled,
+                stroke4_size: obj.strokes[3].size,
+                stroke4_color: obj.strokes[3].color,
+                stroke3_enabled: obj.strokes[2].enabled,
+                stroke3_size: obj.strokes[2].size,
+                stroke3_color: obj.strokes[2].color,
+                stroke2_enabled: obj.strokes[1].enabled,
+                stroke2_size: obj.strokes[1].size,
+                stroke2_color: obj.strokes[1].color,
+                stroke1_enabled: obj.strokes[0].enabled,
+                stroke1_size: obj.strokes[0].size,
+                stroke1_color: obj.strokes[0].color,
+                shadow_enabled: obj.shadow.enabled,
+                shadow_offset: obj.shadow.distance,
+                shadow_angle: obj.shadow.angle,
+                shadow_color: obj.shadow.color,
+                shadow_opacity: obj.shadow.opacity
+            };
+
+            const generator = new PRTLGeneratorV2();
+            const prtlXML = generator.generatePRTL(config);
+
+            // UTF-8エンコード
+            const encoder = new TextEncoder();
+            const utf8Array = encoder.encode(prtlXML);
+
+            const blob = new Blob([utf8Array], { type: 'application/octet-stream' });
+            const link = document.createElement('a');
+            link.download = `NLT_${Date.now()}.prtl`;
+            link.href = URL.createObjectURL(blob);
+            link.click();
+
+            console.log('✅ PRTL書き出し完了');
+        }
+
+        // PRTLGeneratorV2クラス（既存のものを再利用）
+        class PRTLGeneratorV2 {
+            constructor() {
+                this.nextStyleID = 4096;
+                this.nextShaderID = 4096;
+                this.nextTextDescID = 4096;
+            }
+
+            generatePRTL(config) {
+                const width = config.width || 1920;
+                const height = config.height || 1080;
+
+                const textDescriptions = this._buildTextDescriptions(config);
+                const shaders = this._buildShaders(config);
+                const styles = this._buildStyles(config);
+                const layers = this._buildLayers(config);
+
+                return this._buildPRTLDocument(width, height, textDescriptions, shaders, styles, layers);
+            }
+
+            _buildPRTLDocument(width, height, textDescriptions, shaders, styles, layers) {
+                return `<?xml version="1.0" encoding="UTF-16" ?>` +
+                    `<Adobe_Root>` +
+                        `<Adobe_Title>` +
+                            `<Version>20080702</Version>` +
+                            `<Motion_Settings>` +
+                                `<Play_Forward>true</Play_Forward>` +
+                                `<Start_on_Screen>false</Start_on_Screen>` +
+                                `<Pre_Roll>0</Pre_Roll>` +
+                                `<Ease_In>0</Ease_In>` +
+                                `<End_off_Screen>false</End_off_Screen>` +
+                                `<Post_Roll>0</Post_Roll>` +
+                                `<Ease_Out>0</Ease_Out>` +
+                            `</Motion_Settings>` +
+                        `</Adobe_Title>` +
+                        `<InscriberLayouts Version="1.0">` +
+                            `<Layout>` +
+                                this._buildLayoutHeader(width, height) +
+                                textDescriptions +
+                                styles +
+                                shaders +
+                                this._buildTextures() +
+                                this._buildLogos() +
+                                layers +
+                                this._buildVLS() +
+                            `</Layout>` +
+                        `</InscriberLayouts>` +
+                    `</Adobe_Root>`;
+            }
+
+            _buildLayoutHeader(width, height) {
+                return `<LayoutEffectInfo Version="2">` +
+                        `<EffectType>0</EffectType>` +
+                        `<Indic>false</Indic>` +
+                        `<Ligatures>false</Ligatures>` +
+                        `<HindiDigits>false</HindiDigits>` +
+                    `</LayoutEffectInfo>` +
+                    `<LayoutDimension Version="2">` +
+                        `<pXPIXELS>${width}</pXPIXELS>` +
+                        `<pYLINES>${height}</pYLINES>` +
+                        `<pSCREENAR>1</pSCREENAR>` +
+                        `<growthDirection>growRightDown</growthDirection>` +
+                    `</LayoutDimension>` +
+                    `<LayoutAttributes>` +
+                        `<SafeTitleArea>` +
+                            `<left>0.1</left><top>0.1</top><right>0.9</right><bottom>0.9</bottom>` +
+                        `</SafeTitleArea>` +
+                        `<SafeActionArea>` +
+                            `<left>0.05</left><top>0.05</top><right>0.95</right><bottom>0.95</bottom>` +
+                        `</SafeActionArea>` +
+                    `</LayoutAttributes>` +
+                    `<Background Version="4">` +
+                        `<ShaderReference>4098</ShaderReference>` +
+                        `<On>false</On>` +
+                        `<paintingRange>normalLayout</paintingRange>` +
+                    `</Background>` +
+                    `<DefaultStyle><Reference>${this.nextStyleID}</Reference></DefaultStyle>` +
+                    `<DefaultTextDescription><Reference>${this.nextTextDescID}</Reference></DefaultTextDescription>` +
+                    `<GraphicObjectDefaults>` +
+                        `<endCapType>square</endCapType>` +
+                        `<joinTypeClosed>round</joinTypeClosed>` +
+                        `<joinTypeOpen>round</joinTypeOpen>` +
+                        `<lineWidth>5</lineWidth>` +
+                        `<miterLimit>5</miterLimit>` +
+                        `<windBeziers>false</windBeziers>` +
+                        `<roundCornerFillets>37.5 37.5 37.5 37.5 37.5 37.5 37.5 37.5 </roundCornerFillets>` +
+                        `<clippedCornerFillets>37.5 37.5 37.5 37.5 37.5 37.5 37.5 37.5 </clippedCornerFillets>` +
+                    `</GraphicObjectDefaults>` +
+                    this._buildTextChainDefaults();
+            }
+
+            _buildTextChainDefaults() {
+                const defaults = `<leading>0</leading>` +
+                    `<boxCanGrow>false</boxCanGrow>` +
+                    `<wordWrap>true</wordWrap>` +
+                    `<lockedLinesX>false</lockedLinesX>` +
+                    `<lockedLinesY>false</lockedLinesY>` +
+                    `<Alignment>left</Alignment>` +
+                    `<tabModeStyle>Word</tabModeStyle>` +
+                    `<implicitTabSpacing>100</implicitTabSpacing>` +
+                    `<implicitTabType>left</implicitTabType>` +
+                    `<rtl>false</rtl>` +
+                    `<tabs></tabs>`;
+
+                return `<TextChainDefaults>` +
+                    `<normal>${defaults}</normal>` +
+                    `<boxNormal>${defaults.replace('<wordWrap>true</wordWrap>', '<wordWrap>true</wordWrap>').replace('<lockedLinesX>false</lockedLinesX>', '<lockedLinesX>true</lockedLinesX>').replace('<lockedLinesY>false</lockedLinesY>', '<lockedLinesY>true</lockedLinesY>')}</boxNormal>` +
+                    `<blockNormal>${defaults.replace('<wordWrap>true</wordWrap>', '<wordWrap>false</wordWrap>').replace('<lockedLinesX>false</lockedLinesX>', '<lockedLinesX>true</lockedLinesX>').replace('<lockedLinesY>false</lockedLinesY>', '<lockedLinesY>true</lockedLinesY>')}</blockNormal>` +
+                    `<spline>${defaults}</spline>` +
+                `</TextChainDefaults>`;
+            }
+
+            _buildTextDescriptions(config) {
+                const ref = this.nextTextDescID;
+                const fontFamily = config.fontFamily || 'Yu Gothic UI';
+                const fontSize = config.fontSize || 72;
+                const scaleX = config.scaleX || 100;
+                const kerning = config.kerning || 0;
+
+                return `<TextDescriptions Version="4">` +
+                    `<TextDescription Reference="${ref}">` +
+                        `<TypeSpec>` +
+                            `<size>${fontSize * 8}</size>` +
+                            `<txHeight>${fontSize}</txHeight>` +
+                            `<txKern>${kerning}</txKern>` +
+                            `<baselineShift>0</baselineShift>` +
+                            `<leading>0</leading>` +
+                            `<txSCaps>${fontSize}</txSCaps>` +
+                            `<txSCapsOn>false</txSCapsOn>` +
+                            `<txSlant>0</txSlant>` +
+                            `<txUnderline>false</txUnderline>` +
+                            `<txWidth>${scaleX}</txWidth>` +
+                            `<linked>false</linked>` +
+                            `<fiBold>0</fiBold>` +
+                            `<fiItalic>0</fiItalic>` +
+                            `<fifullName>${this._escapeXML(fontFamily)}</fifullName>` +
+                            `<fifontFamilyName>${this._escapeXML(fontFamily)}</fifontFamilyName>` +
+                            `<fifontStyle>Regular</fifontStyle>` +
+                            `<fifontType>5</fifontType>` +
+                            `<ficategory>1</ficategory>` +
+                        `</TypeSpec>` +
+                    `</TextDescription>` +
+                `</TextDescriptions>`;
+            }
+
+            _buildStyles(config) {
+                const styleID = this.nextStyleID;
+                const textDescRef = this.nextTextDescID;
+
+                let fragments = '';
+                let shaderRefs = {};
+                let nextPainter = 10;
+                let nextShaderRef = this.nextShaderID;
+
+                if (config.stroke4_enabled) {
+                    fragments += `<Fragment>` +
+                        `<size>${config.stroke4_size}</size>` +
+                        `<offset>0</offset>` +
+                        `<angle>0</angle>` +
+                        `<ghost>false</ghost>` +
+                        `<isExtendedShadowFragment>false</isExtendedShadowFragment>` +
+                        `<eFragmentType>2</eFragmentType>` +
+                        `<fragmentOff>false</fragmentOff>` +
+                        `<placeHolder>false</placeHolder>` +
+                        `<annotation>4</annotation>` +
+                        `<placeHolderShaderIndex>4294967295</placeHolderShaderIndex>` +
+                        `<painterMix>${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} </painterMix>` +
+                    `</Fragment>`;
+                    shaderRefs[nextPainter++] = nextShaderRef++;
+                }
+
+                if (config.stroke3_enabled) {
+                    fragments += `<Fragment>` +
+                        `<size>${config.stroke3_size}</size>` +
+                        `<offset>0</offset>` +
+                        `<angle>0</angle>` +
+                        `<ghost>false</ghost>` +
+                        `<isExtendedShadowFragment>false</isExtendedShadowFragment>` +
+                        `<eFragmentType>2</eFragmentType>` +
+                        `<fragmentOff>false</fragmentOff>` +
+                        `<placeHolder>false</placeHolder>` +
+                        `<annotation>3</annotation>` +
+                        `<placeHolderShaderIndex>4294967295</placeHolderShaderIndex>` +
+                        `<painterMix>${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} </painterMix>` +
+                    `</Fragment>`;
+                    shaderRefs[nextPainter++] = nextShaderRef++;
+                }
+
+                if (config.stroke2_enabled) {
+                    fragments += `<Fragment>` +
+                        `<size>${config.stroke2_size}</size>` +
+                        `<offset>0</offset>` +
+                        `<angle>0</angle>` +
+                        `<ghost>false</ghost>` +
+                        `<isExtendedShadowFragment>false</isExtendedShadowFragment>` +
+                        `<eFragmentType>2</eFragmentType>` +
+                        `<fragmentOff>false</fragmentOff>` +
+                        `<placeHolder>false</placeHolder>` +
+                        `<annotation>2</annotation>` +
+                        `<placeHolderShaderIndex>4294967295</placeHolderShaderIndex>` +
+                        `<painterMix>${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} </painterMix>` +
+                    `</Fragment>`;
+                    shaderRefs[nextPainter++] = nextShaderRef++;
+                }
+
+                if (config.stroke1_enabled) {
+                    fragments += `<Fragment>` +
+                        `<size>${config.stroke1_size}</size>` +
+                        `<offset>0</offset>` +
+                        `<angle>0</angle>` +
+                        `<ghost>false</ghost>` +
+                        `<isExtendedShadowFragment>false</isExtendedShadowFragment>` +
+                        `<eFragmentType>2</eFragmentType>` +
+                        `<fragmentOff>false</fragmentOff>` +
+                        `<placeHolder>false</placeHolder>` +
+                        `<annotation>1</annotation>` +
+                        `<placeHolderShaderIndex>4294967295</placeHolderShaderIndex>` +
+                        `<painterMix>${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} ${nextPainter} </painterMix>` +
+                    `</Fragment>`;
+                    shaderRefs[nextPainter++] = nextShaderRef++;
+                }
+
+                fragments += `<Fragment>` +
+                    `<size>0</size>` +
+                    `<offset>0</offset>` +
+                    `<angle>0</angle>` +
+                    `<ghost>false</ghost>` +
+                    `<isExtendedShadowFragment>false</isExtendedShadowFragment>` +
+                    `<eFragmentType>0</eFragmentType>` +
+                    `<fragmentOff>false</fragmentOff>` +
+                    `<placeHolder>false</placeHolder>` +
+                    `<annotation>65538</annotation>` +
+                    `<placeHolderShaderIndex>4294967295</placeHolderShaderIndex>` +
+                    `<painterMix>15 15 15 15 15 15 15 15 15 15 15 15 15 15 15 15 </painterMix>` +
+                `</Fragment>`;
+                shaderRefs[15] = nextShaderRef++;
+
+                const shadowOff = config.shadow_enabled ? 'false' : 'true';
+                fragments += `<Fragment>` +
+                    `<size>0</size>` +
+                    `<offset>${config.shadow_offset || 10}</offset>` +
+                    `<angle>${config.shadow_angle || -45}</angle>` +
+                    `<ghost>false</ghost>` +
+                    `<isExtendedShadowFragment>true</isExtendedShadowFragment>` +
+                    `<eFragmentType>0</eFragmentType>` +
+                    `<fragmentOff>${shadowOff}</fragmentOff>` +
+                    `<placeHolder>false</placeHolder>` +
+                    `<annotation>65537</annotation>` +
+                    `<placeHolderShaderIndex>4294967295</placeHolderShaderIndex>` +
+                    `<painterMix>0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 </painterMix>` +
+                `</Fragment>`;
+                if (config.shadow_enabled) {
+                    shaderRefs[0] = nextShaderRef++;
+                }
+
+                let shaderList = '';
+                for (let i = 0; i <= 15; i++) {
+                    const ref = shaderRefs[i] || 0;
+                    shaderList += `<ShaderRef PainterNumber="${i}"><shaderRef>${ref}</shaderRef></ShaderRef>`;
+                }
+                shaderList += `<ShaderRef PainterNumber="-1"><shaderRef>0</shaderRef></ShaderRef>`;
+
+                config._shaderRefs = shaderRefs;
+                config._nextShaderRef = nextShaderRef;
+
+                return `<Styles>` +
+                    `<Style ID="${styleID}">` +
+                        `<StyleBase Version="4">` +
+                            `<type>50000</type>` +
+                            `<positionDominance>0</positionDominance>` +
+                            `<lineGradient>false</lineGradient>` +
+                            `<styleRef>${styleID}</styleRef>` +
+                            `<faceDistortX>0</faceDistortX>` +
+                            `<faceDistortY>0</faceDistortY>` +
+                            `<shadow_softness>30</shadow_softness>` +
+                            `<personality>0</personality>` +
+                            `<linked>false</linked>` +
+                            `<EmbellishmentSizeRule>false</EmbellishmentSizeRule>` +
+                            `<PainterRampType>Basic</PainterRampType>` +
+                        `</StyleBase>` +
+                        `<FragmentList Version="5">` +
+                            fragments +
+                        `</FragmentList>` +
+                        `<ShaderList Version="1">` +
+                            shaderList +
+                        `</ShaderList>` +
+                    `</Style>` +
+                `</Styles>`;
+            }
+
+            _buildShaders(config) {
+                let shaders = '<Shaders>';
+                const shaderRefs = config._shaderRefs || {};
+
+                for (const [painter, shaderRef] of Object.entries(shaderRefs)) {
+                    const painterNum = parseInt(painter);
+
+                    if (painterNum === 15) {
+                        shaders += this._buildFaceShader(shaderRef, config);
+                    } else if (painterNum === 0) {
+                        shaders += this._buildShadowShader(shaderRef, config);
+                    } else if (painterNum >= 10 && painterNum <= 13) {
+                        const strokeNum = 14 - painterNum;
+                        const strokeColor = config[`stroke${strokeNum}_color`] || '#000000';
+                        shaders += this._buildStrokeShader(shaderRef, strokeColor);
+                    }
+                }
+
+                shaders += '</Shaders>';
+                return shaders;
+            }
+
+            _buildStrokeShader(shaderRef, color) {
+                const rgb = this._parseColor(color);
+
+                let colorSpecs = '';
+                for (let i = 0; i <= 4; i++) {
+                    colorSpecs += `<ColorSpec index="${i}">` +
+                        `<red>${rgb.r}</red>` +
+                        `<green>${rgb.g}</green>` +
+                        `<blue>${rgb.b}</blue>` +
+                        `<xpar>0</xpar>` +
+                    `</ColorSpec>`;
+                }
+
+                return `<Shader Version="4">` +
+                    `<cReference>${shaderRef}</cReference>` +
+                    `<textureRef>0</textureRef>` +
+                    `<colorOption>4</colorOption>` +
+                    `<shaderOn>true</shaderOn>` +
+                    `<glintSize>10</glintSize>` +
+                    `<glintOffset>0</glintOffset>` +
+                    `<rampPosTop>75</rampPosTop>` +
+                    `<rampPosBottom>25</rampPosBottom>` +
+                    `<rampAngle>0</rampAngle>` +
+                    `<bevelBalance>0</bevelBalance>` +
+                    `<rampCycle>0</rampCycle>` +
+                    `<classicStyle>0</classicStyle>` +
+                    `<rampType>0</rampType>` +
+                    colorSpecs +
+                    `<glintAngle>0</glintAngle>` +
+                    `<bevelSize>0</bevelSize>` +
+                    `<bevelDirection>0</bevelDirection>` +
+                    `<bevelPipe>false</bevelPipe>` +
+                    `<bevelAngle>0</bevelAngle>` +
+                    `<bevelShape>1</bevelShape>` +
+                    `<bevelShining>0</bevelShining>` +
+                    `<bevelLight>false</bevelLight>` +
+                    `<bevelMerge>true</bevelMerge>` +
+                    `<sheenOn>false</sheenOn>` +
+                `</Shader>`;
+            }
+
+            _buildFaceShader(shaderRef, config) {
+                const fillType = config.fillType || 'solid';
+                const gradient = config.fillGradient;
+
+                let colorOption, rampType, rampAngle, rampPosTop, rampPosBottom;
+                let colorSpecs = '';
+
+                if ((fillType === 'gradient-linear' || fillType === 'gradient-radial') && gradient) {
+                    // グラデーション設定
+                    colorOption = 0;
+                    rampType = -1;
+                    rampAngle = gradient.angle || 0;
+
+                    // 比率の設定（ratioStart/ratioEndから計算）
+                    const ratioStart = gradient.ratioStart || 0;
+                    const ratioEnd = gradient.ratioEnd || 100;
+
+                    if (fillType === 'gradient-linear') {
+                        // 線形グラデーション：デフォルト値75/25をベースに調整
+                        rampPosTop = 100 - ratioStart;
+                        rampPosBottom = 100 - ratioEnd;
+                    } else {
+                        // 円形グラデーション：デフォルト値85.8696/44.5652をベースに調整
+                        const baseTop = 85.8696;
+                        const baseBottom = 44.5652;
+                        const range = baseTop - baseBottom;
+                        rampPosTop = baseTop - (ratioStart / 100 * range);
+                        rampPosBottom = baseBottom - (ratioEnd / 100 * range);
+                    }
+
+                    // ColorSpecの生成（グラデーション用）
+                    const rgb1 = this._parseColor(gradient.color1 || '#fdff00');
+                    const rgb2 = this._parseColor(gradient.color2 || '#ff6600');
+
+                    // index 0: 開始色
+                    colorSpecs += `<ColorSpec index="0">` +
+                        `<red>${rgb1.r}</red>` +
+                        `<green>${rgb1.g}</green>` +
+                        `<blue>${rgb1.b}</blue>` +
+                        `<xpar>0</xpar>` +
+                    `</ColorSpec>`;
+
+                    // index 1: 補間用（開始色）
+                    colorSpecs += `<ColorSpec index="1">` +
+                        `<red>${rgb1.r}</red>` +
+                        `<green>${rgb1.g}</green>` +
+                        `<blue>${rgb1.b}</blue>` +
+                        `<xpar>0</xpar>` +
+                    `</ColorSpec>`;
+
+                    if (gradient.useColor3) {
+                        // index 2: 中間色
+                        const rgb3 = this._parseColor(gradient.color3 || '#ffaa00');
+                        colorSpecs += `<ColorSpec index="2">` +
+                            `<red>${rgb3.r}</red>` +
+                            `<green>${rgb3.g}</green>` +
+                            `<blue>${rgb3.b}</blue>` +
+                            `<xpar>0</xpar>` +
+                        `</ColorSpec>`;
+                    } else {
+                        // 中間色なし：補間
+                        const midR = Math.round((rgb1.r + rgb2.r) / 2);
+                        const midG = Math.round((rgb1.g + rgb2.g) / 2);
+                        const midB = Math.round((rgb1.b + rgb2.b) / 2);
+                        colorSpecs += `<ColorSpec index="2">` +
+                            `<red>${midR}</red>` +
+                            `<green>${midG}</green>` +
+                            `<blue>${midB}</blue>` +
+                            `<xpar>0</xpar>` +
+                        `</ColorSpec>`;
+                    }
+
+                    // index 3: 補間用（終了色）
+                    colorSpecs += `<ColorSpec index="3">` +
+                        `<red>${rgb2.r}</red>` +
+                        `<green>${rgb2.g}</green>` +
+                        `<blue>${rgb2.b}</blue>` +
+                        `<xpar>0</xpar>` +
+                    `</ColorSpec>`;
+
+                    // index 4: 終了色
+                    colorSpecs += `<ColorSpec index="4">` +
+                        `<red>${rgb2.r}</red>` +
+                        `<green>${rgb2.g}</green>` +
+                        `<blue>${rgb2.b}</blue>` +
+                        `<xpar>0</xpar>` +
+                    `</ColorSpec>`;
+                } else {
+                    // ベタ塗り設定
+                    colorOption = 4;
+                    rampType = 0;
+                    rampAngle = 0;
+                    rampPosTop = 75;
+                    rampPosBottom = 25;
+
+                    const rgb = this._parseColor(config.fillColor || '#ffffff');
+                    for (let i = 0; i <= 4; i++) {
+                        colorSpecs += `<ColorSpec index="${i}">` +
+                            `<red>${rgb.r}</red>` +
+                            `<green>${rgb.g}</green>` +
+                            `<blue>${rgb.b}</blue>` +
+                            `<xpar>0</xpar>` +
+                        `</ColorSpec>`;
+                    }
+                }
+
+                return `<Shader Version="4">` +
+                    `<cReference>${shaderRef}</cReference>` +
+                    `<textureRef>0</textureRef>` +
+                    `<colorOption>${colorOption}</colorOption>` +
+                    `<shaderOn>true</shaderOn>` +
+                    `<glintSize>10</glintSize>` +
+                    `<glintOffset>0</glintOffset>` +
+                    `<rampPosTop>${rampPosTop}</rampPosTop>` +
+                    `<rampPosBottom>${rampPosBottom}</rampPosBottom>` +
+                    `<rampAngle>${rampAngle}</rampAngle>` +
+                    `<bevelBalance>0</bevelBalance>` +
+                    `<rampCycle>0</rampCycle>` +
+                    `<classicStyle>0</classicStyle>` +
+                    `<rampType>${rampType}</rampType>` +
+                    colorSpecs +
+                    `<glintAngle>0</glintAngle>` +
+                    `<bevelSize>0</bevelSize>` +
+                    `<bevelDirection>0</bevelDirection>` +
+                    `<bevelPipe>false</bevelPipe>` +
+                    `<bevelAngle>0</bevelAngle>` +
+                    `<bevelShape>1</bevelShape>` +
+                    `<bevelShining>0</bevelShining>` +
+                    `<bevelLight>false</bevelLight>` +
+                    `<bevelMerge>true</bevelMerge>` +
+                    `<sheenOn>false</sheenOn>` +
+                `</Shader>`;
+            }
+
+            _buildShadowShader(shaderRef, config) {
+                const rgb = this._parseColor(config.shadow_color || '#000000');
+                const opacity = config.shadow_opacity || 50;
+                const xpar = Math.round((100 - opacity) * 255 / 100);
+
+                let colorSpecs = '';
+                for (let i = 0; i <= 4; i++) {
+                    colorSpecs += `<ColorSpec index="${i}">` +
+                        `<red>${rgb.r}</red>` +
+                        `<green>${rgb.g}</green>` +
+                        `<blue>${rgb.b}</blue>` +
+                        `<xpar>${i === 0 ? xpar : 0}</xpar>` +
+                    `</ColorSpec>`;
+                }
+
+                return `<Shader Version="4">` +
+                    `<cReference>${shaderRef}</cReference>` +
+                    `<textureRef>0</textureRef>` +
+                    `<colorOption>0</colorOption>` +
+                    `<shaderOn>true</shaderOn>` +
+                    `<glintSize>0</glintSize>` +
+                    `<glintOffset>0</glintOffset>` +
+                    `<rampPosTop>75</rampPosTop>` +
+                    `<rampPosBottom>25</rampPosBottom>` +
+                    `<rampAngle>0</rampAngle>` +
+                    `<bevelBalance>0</bevelBalance>` +
+                    `<rampCycle>0</rampCycle>` +
+                    `<classicStyle>0</classicStyle>` +
+                    `<rampType>0</rampType>` +
+                    colorSpecs +
+                    `<glintAngle>0</glintAngle>` +
+                    `<bevelSize>0</bevelSize>` +
+                    `<bevelDirection>0</bevelDirection>` +
+                    `<bevelPipe>false</bevelPipe>` +
+                    `<bevelAngle>0</bevelAngle>` +
+                    `<bevelShape>1</bevelShape>` +
+                    `<bevelShining>0</bevelShining>` +
+                    `<bevelLight>false</bevelLight>` +
+                    `<bevelMerge>true</bevelMerge>` +
+                    `<sheenOn>false</sheenOn>` +
+                `</Shader>`;
+            }
+
+            _buildLayers(config) {
+                const text = config.text || 'サンプル';
+                const posX = config.posX || 960;
+                const posY = config.posY || 540;
+                const textAlign = config.textAlign || 'left';
+                const styleRef = this.nextStyleID;
+                const textRef = this.nextTextDescID;
+                const fontSize = config.fontSize || 72;
+                const txBase = fontSize * 1.2;
+                const kerning = config.kerning || 0;
+
+                return `<Layers>` +
+                    `<Layer>` +
+                        `<DrawPage></DrawPage>` +
+                        `<TextPage>` +
+                            `<TextChain>` +
+                                `<ChainProperty>` +
+                                    `<Position><x>${posX}</x><y>${posY}</y></Position>` +
+                                    `<Size><x>1000</x><y>200</y></Size>` +
+                                    `<wordWrap>false</wordWrap>` +
+                                    `<Alignment>${textAlign}</Alignment>` +
+                                `</ChainProperty>` +
+                                `<ChainTabs></ChainTabs>` +
+                                `<TextLine Version="2" objectID="1" persistentID="1">` +
+                                    `<BaseProperties Version="5">` +
+                                        `<txBase>${txBase}</txBase>` +
+                                        `<XPos>${posX}</XPos>` +
+                                        `<angle>0</angle>` +
+                                        `<verticalText>false</verticalText>` +
+                                        `<objectLeading>0</objectLeading>` +
+                                    `</BaseProperties>` +
+                                    `<EnclosingObjectType>block</EnclosingObjectType>` +
+                                    `<Alignment>${textAlign}</Alignment>` +
+                                    `<RTL>false</RTL>` +
+                                    `<TRString>${this._escapeXML(text)}</TRString>` +
+                                    `<RunLengthEncodedCharacterAttributes>` +
+                                        `<CharacterAttributes ` +
+                                            `RunCount="${text.length}" ` +
+                                            `StyleRef="${styleRef}" ` +
+                                            `TextRef="${textRef}" ` +
+                                            `TXKerning="${kerning}" ` +
+                                            `TXPostKerning="${kerning}" ` +
+                                            `BaselineShifting="0" />` +
+                                    `</RunLengthEncodedCharacterAttributes>` +
+                                    `<tagName></tagName>` +
+                                `</TextLine>` +
+                            `</TextChain>` +
+                        `</TextPage>` +
+                        `<MergeGroups></MergeGroups>` +
+                    `</Layer>` +
+                `</Layers>`;
+            }
+
+            _buildTextures() {
+                return `<Textures></Textures>`;
+            }
+
+            _buildLogos() {
+                return `<Logos></Logos>`;
+            }
+
+            _buildVLS() {
+                return `<VLS>` +
+                    `<FileReference Version="1">` +
+                        `<fileString></fileString>` +
+                        `<seClass>2</seClass>` +
+                        `<seCode>1000</seCode>` +
+                    `</FileReference>` +
+                `</VLS>`;
+            }
+
+            _parseColor(hex) {
+                const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+                return result ? {
+                    r: parseInt(result[1], 16),
+                    g: parseInt(result[2], 16),
+                    b: parseInt(result[3], 16)
+                } : { r: 255, g: 255, b: 255 };
+            }
+
+            _escapeXML(str) {
+                if (!str) return '';
+                return String(str)
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&apos;');
+            }
+        }
+
+        // 整列関数
+        function alignCenter() {
+            if (!selectedObject) {
+                alert('オブジェクトを選択してください');
+                return;
+            }
+
+            const metrics = measureText(selectedObject);
+            selectedObject.x = (canvas.width - metrics.width) / 2;
+            updatePropertiesPanel();
+            render();
+        }
+
+        function alignMiddle() {
+            if (!selectedObject) {
+                alert('オブジェクトを選択してください');
+                return;
+            }
+
+            const metrics = measureText(selectedObject);
+            selectedObject.y = (canvas.height - metrics.height) / 2 + metrics.height;
+            updatePropertiesPanel();
+            render();
+        }
+
+        // レイヤー管理関数
+        function bringToFront() {
+            if (!selectedObject) return;
+
+            // テキストオブジェクトの場合
+            const textIndex = textObjects.indexOf(selectedObject);
+            if (textIndex > -1 && textIndex < textObjects.length - 1) {
+                textObjects.splice(textIndex, 1);
+                textObjects.push(selectedObject);
+                render();
+                return;
+            }
+
+            // 図形オブジェクトの場合
+            const shapeIndex = shapeObjects.indexOf(selectedObject);
+            if (shapeIndex > -1 && shapeIndex < shapeObjects.length - 1) {
+                shapeObjects.splice(shapeIndex, 1);
+                shapeObjects.push(selectedObject);
+                render();
+            }
+        }
+
+        function sendToBack() {
+            if (!selectedObject) return;
+
+            // テキストオブジェクトの場合
+            const textIndex = textObjects.indexOf(selectedObject);
+            if (textIndex > 0) {
+                textObjects.splice(textIndex, 1);
+                textObjects.unshift(selectedObject);
+                render();
+                return;
+            }
+
+            // 図形オブジェクトの場合
+            const shapeIndex = shapeObjects.indexOf(selectedObject);
+            if (shapeIndex > 0) {
+                shapeObjects.splice(shapeIndex, 1);
+                shapeObjects.unshift(selectedObject);
+                render();
+            }
+        }
+
+        function bringForward() {
+            if (!selectedObject) return;
+
+            // テキストオブジェクトの場合
+            const textIndex = textObjects.indexOf(selectedObject);
+            if (textIndex > -1 && textIndex < textObjects.length - 1) {
+                const temp = textObjects[textIndex + 1];
+                textObjects[textIndex + 1] = textObjects[textIndex];
+                textObjects[textIndex] = temp;
+                render();
+                return;
+            }
+
+            // 図形オブジェクトの場合
+            const shapeIndex = shapeObjects.indexOf(selectedObject);
+            if (shapeIndex > -1 && shapeIndex < shapeObjects.length - 1) {
+                const temp = shapeObjects[shapeIndex + 1];
+                shapeObjects[shapeIndex + 1] = shapeObjects[shapeIndex];
+                shapeObjects[shapeIndex] = temp;
+                render();
+            }
+        }
+
+        function sendBackward() {
+            if (!selectedObject) return;
+
+            // テキストオブジェクトの場合
+            const textIndex = textObjects.indexOf(selectedObject);
+            if (textIndex > 0) {
+                const temp = textObjects[textIndex - 1];
+                textObjects[textIndex - 1] = textObjects[textIndex];
+                textObjects[textIndex] = temp;
+                render();
+                return;
+            }
+
+            // 図形オブジェクトの場合
+            const shapeIndex = shapeObjects.indexOf(selectedObject);
+            if (shapeIndex > 0) {
+                const temp = shapeObjects[shapeIndex - 1];
+                shapeObjects[shapeIndex - 1] = shapeObjects[shapeIndex];
+                shapeObjects[shapeIndex] = temp;
+                render();
+            }
+        }
+
+        // ビューコントロール関数
+        function zoomIn() {
+            viewportScale *= 1.2;
+            applyViewportTransform();
+        }
+
+        function zoomOut() {
+            viewportScale /= 1.2;
+            applyViewportTransform();
+        }
+
+        function fitToScreen() {
+            const container = document.querySelector('.canvas-area');
+            const scaleX = (container.clientWidth - 40) / canvas.width;
+            const scaleY = (container.clientHeight - 40) / canvas.height;
+            viewportScale = Math.min(scaleX, scaleY);
+            viewportOffsetX = 0;
+            viewportOffsetY = 0;
+            applyViewportTransform();
+        }
+
+        function resetView() {
+            viewportScale = 1;
+            viewportOffsetX = 0;
+            viewportOffsetY = 0;
+            applyViewportTransform();
+        }
+
+        function applyViewportTransform() {
+            canvas.style.transform = `scale(${viewportScale}) translate(${viewportOffsetX}px, ${viewportOffsetY}px)`;
+        }
+
+        // キーボードショートカット
+        document.addEventListener('keydown', (e) => {
+            // IME入力中はショートカットを無効化
+            if (isTyping) return;
+
+            if (e.ctrlKey || e.metaKey) {
+                // ズーム・ビュー操作
+                if (e.key === '=' || e.key === '+') {
+                    e.preventDefault();
+                    zoomIn();
+                } else if (e.key === '-') {
+                    e.preventDefault();
+                    zoomOut();
+                } else if (e.key === '0') {
+                    e.preventDefault();
+                    fitToScreen();
+                } else if (e.key === 'r' || e.key === 'R') {
+                    e.preventDefault();
+                    resetView();
+                }
+                // レイヤー管理
+                else if (e.key === ']') {
+                    e.preventDefault();
+                    bringToFront();
+                } else if (e.key === '[') {
+                    e.preventDefault();
+                    sendToBack();
+                }
+            } else {
+                // ツール切り替え
+                if (e.key === 'v' || e.key === 'V') {
+                    switchTool('select');
+                } else if (e.key === 'T' && e.shiftKey) {
+                    switchTool('pathText');
+                } else if (e.key === 't' || e.key === 'T') {
+                    switchTool('text');
+                } else if (e.key === 'r' || e.key === 'R') {
+                    switchTool('rectangle');
+                } else if (e.key === 'u' || e.key === 'U') {
+                    switchTool('roundRect');
+                } else if (e.key === 'e' || e.key === 'E') {
+                    switchTool('ellipse');
+                } else if (e.key === 'l' || e.key === 'L') {
+                    switchTool('line');
+                } else if (e.key === 'p' || e.key === 'P') {
+                    switchTool('pen');
+                } else if (e.key === 'b' || e.key === 'B') {
+                    switchTool('chamferRect');
+                } else if (e.key === 'a' || e.key === 'A') {
+                    switchTool('triangle');
+                } else if (e.key === 'c' || e.key === 'C') {
+                    switchTool('arc');
+                }
+            }
+        });
+
+        // 初期表示を画面に合わせる
+        setTimeout(fitToScreen, 100);
+
+        // 初期レンダリング
+        render();
+    </script>
+</body>
+</html>
