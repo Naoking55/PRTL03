@@ -1817,12 +1817,15 @@
                     }
                     if (obj.closed) ctx.closePath();
                     if (obj.fillType !== 'none') {
+                        ctx.globalAlpha = (obj.fillOpacity || 100) / 100;
                         ctx.fillStyle = obj.fill || '#ffffff';
                         ctx.fill();
                     }
+                    ctx.globalAlpha = (obj.strokeOpacity || 100) / 100;
                     ctx.strokeStyle = obj.stroke || '#ffffff';
                     ctx.lineWidth = obj.strokeWidth || 3;
                     ctx.stroke();
+                    ctx.globalAlpha = 1.0;
                 } else if (obj.chars) {
                     drawTextObject(ctx, obj);
                 }
@@ -2639,9 +2642,11 @@
                         if (obj) {
                             enterEditMode(obj.id);
                             cursorPos = getCharIndexAt(obj, x, y);
+                            render();
                         } else {
                             createTextObject('', x, y);
                             enterEditMode(textObjects[textObjects.length - 1].id);
+                            render();
                         }
                     }
                 } else if (obj) {
@@ -2651,6 +2656,7 @@
                 } else {
                     createTextObject('', x, y);
                     enterEditMode(textObjects[textObjects.length - 1].id);
+                    render();
                 }
             } else if (currentTool === 'textV') {
                 // 縦書きテキスト
@@ -2719,6 +2725,7 @@
                 updateLayerList();
                 pathPoints = [];
                 isDrawingPath = false;
+                setTool('select');  // ペン完成後、選択ツールに切り替え
                 render();
                 return;
             }
@@ -2736,6 +2743,7 @@
                 }
                 pathPoints = [];
                 isDrawingPath = false;
+                setTool('select');  // パス上文字完成後、選択ツールに切り替え
                 render();
                 return;
             }
@@ -2890,6 +2898,7 @@
                 const h = Math.abs(tempShape.y2 - tempShape.y1);
                 if (w > minSize || h > minSize) {
                     createShapeObject(tempShape);
+                    setTool('select');  // 図形作成後、選択ツールに切り替え
                 }
                 isDrawingShape = false;
                 tempShape = null;
