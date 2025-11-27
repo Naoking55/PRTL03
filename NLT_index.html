@@ -2145,6 +2145,8 @@
                 ctx.save();
                 ctx.strokeStyle = '#000000';
                 ctx.lineWidth = 3;
+                ctx.lineJoin = 'round';
+                ctx.lineCap = 'round';
                 ctx.beginPath();
                 ctx.moveTo(penPoints[0].x, penPoints[0].y);
                 for (let i = 1; i < penPoints.length; i++) {
@@ -2351,6 +2353,8 @@
                     ctx.strokeStyle = obj.stroke.color;
                 }
                 ctx.lineWidth = obj.stroke.size;
+                ctx.lineJoin = 'round';
+                ctx.lineCap = 'round';
                 drawShapePath();
                 ctx.stroke();
             }
