@@ -1204,6 +1204,12 @@
         let selectedAnchorIndex = -1; // 選択中のアンカーポイントのインデックス
         let draggedHandleType = null; // 'in' or 'out'
 
+        // パス上文字ツール関連の変数
+        let isDrawingPathTextPath = false; // パス上文字用のパス描画中
+        let currentPathTextPath = null; // 現在描画中のパス上文字用パス
+        let isDraggingPathTextHandle = false; // パス上文字のハンドルをドラッグ中
+        let selectedPathTextAnchorIndex = -1; // パス上文字の選択中アンカーポイント
+
         let renderScheduled = false; // render()のスケジュール管理
 
         canvas.addEventListener('mousedown', (e) => {
@@ -1215,110 +1221,137 @@
             dragStartY = y;
 
             if (currentTool === 'pathText') {
-                // パス上文字ツール: 既存のパス（線またはペンツール）を選択
-                let selectedPath = null;
-                let pathPoints = [];
+                // パス上文字ツール: 既存のパスを選択するか、新しいパスを作成
+                if (!isDrawingPathTextPath) {
+                    // まず既存のパス（線またはペンツール）を探す
+                    let selectedPath = null;
+                    let pathPoints = [];
 
-                // shapeObjectsから線またはペンツールのパスを探す（後ろから）
-                for (let i = shapeObjects.length - 1; i >= 0; i--) {
-                    const obj = shapeObjects[i];
+                    // shapeObjectsから線またはペンツールのパスを探す（後ろから）
+                    for (let i = shapeObjects.length - 1; i >= 0; i--) {
+                        const obj = shapeObjects[i];
 
-                    if (obj.type === 'line') {
-                        // 線ツールで作成された線: 線に近いかチェック
-                        const startX = obj.x;
-                        const startY = obj.y;
-                        const endX = obj.x + obj.width;
-                        const endY = obj.y + obj.height;
+                        if (obj.type === 'line') {
+                            // 線ツールで作成された線: 線に近いかチェック
+                            const startX = obj.x;
+                            const startY = obj.y;
+                            const endX = obj.x + obj.width;
+                            const endY = obj.y + obj.height;
 
-                        // 線との距離を計算
-                        const dist = distanceToLineSegment(x, y, startX, startY, endX, endY);
-                        if (dist < 20) {
-                            selectedPath = obj;
-                            pathPoints = [
-                                { x: startX, y: startY },
-                                { x: endX, y: endY }
-                            ];
-                            break;
-                        }
-                    } else if (obj.type === 'pen') {
-                        // ペンツールで作成されたパス
-                        if (obj.anchors && obj.anchors.length > 0) {
-                            // 新しいペンツール（ベジエパス）: アンカーポイントに近いかチェック
-                            for (let j = 0; j < obj.anchors.length; j++) {
-                                const p = obj.anchors[j];
-                                const dist = Math.sqrt((x - p.x) ** 2 + (y - p.y) ** 2);
-                                if (dist < 20) {
-                                    selectedPath = obj;
-                                    // アンカーポイントをパスポイントに変換
-                                    pathPoints = obj.anchors.map(a => ({ x: a.x, y: a.y }));
-                                    break;
-                                }
+                            // 線との距離を計算
+                            const dist = distanceToLineSegment(x, y, startX, startY, endX, endY);
+                            if (dist < 20) {
+                                selectedPath = obj;
+                                pathPoints = [
+                                    { x: startX, y: startY },
+                                    { x: endX, y: endY }
+                                ];
+                                break;
                             }
-                            if (selectedPath) break;
-                        } else if (obj.points && obj.points.length > 0) {
-                            // 古いペンツール（フリーハンド）: パス上の点に近いかチェック
-                            for (let j = 0; j < obj.points.length; j++) {
-                                const p = obj.points[j];
-                                const dist = Math.sqrt((x - p.x) ** 2 + (y - p.y) ** 2);
-                                if (dist < 20) {
-                                    selectedPath = obj;
-                                    pathPoints = [...obj.points];
-                                    break;
+                        } else if (obj.type === 'pen') {
+                            // ペンツールで作成されたパス
+                            if (obj.anchors && obj.anchors.length > 0) {
+                                // 新しいペンツール（ベジエパス）: アンカーポイントに近いかチェック
+                                for (let j = 0; j < obj.anchors.length; j++) {
+                                    const p = obj.anchors[j];
+                                    const dist = Math.sqrt((x - p.x) ** 2 + (y - p.y) ** 2);
+                                    if (dist < 20) {
+                                        selectedPath = obj;
+                                        // アンカーポイントをパスポイントに変換
+                                        pathPoints = obj.anchors.map(a => ({ x: a.x, y: a.y }));
+                                        break;
+                                    }
                                 }
+                                if (selectedPath) break;
+                            } else if (obj.points && obj.points.length > 0) {
+                                // 古いペンツール（フリーハンド）: パス上の点に近いかチェック
+                                for (let j = 0; j < obj.points.length; j++) {
+                                    const p = obj.points[j];
+                                    const dist = Math.sqrt((x - p.x) ** 2 + (y - p.y) ** 2);
+                                    if (dist < 20) {
+                                        selectedPath = obj;
+                                        pathPoints = [...obj.points];
+                                        break;
+                                    }
+                                }
+                                if (selectedPath) break;
                             }
-                            if (selectedPath) break;
                         }
                     }
-                }
 
-                // パスが見つかった場合、パス上文字オブジェクトを作成
-                if (selectedPath && pathPoints.length >= 2) {
-                    const newPathText = {
-                        text: '',
-                        path: pathPoints,
-                        fontSize: 100,
-                        fontFamily: 'Yu Gothic UI',
-                        scaleX: 100,
-                        kerning: 0,
-                        tracking: 0,
-                        baselineShift: 0,
-                        rotation: 0,
-                        leading: 0,
-                        slant: 0,
-                        underline: false,
-                        smallCaps: false,
-                        smallCapsSize: 75,
-                        fill: {
-                            enabled: true,
-                            type: 'solid',
-                            color: '#fdff00',
-                            opacity: 100
-                        },
-                        strokes: [
-                            { enabled: false, size: 8, color: '#000000', opacity: 100 },
-                            { enabled: false, size: 50, color: '#ffffff', opacity: 100 },
-                            { enabled: false, size: 68, color: '#000000', opacity: 100 },
-                            { enabled: false, size: 78, color: '#000000', opacity: 100 }
-                        ],
-                        shadow: {
-                            enabled: false,
-                            color: '#000000',
-                            opacity: 50,
-                            distance: 10,
-                            angle: 135,
-                            size: 90,
-                            blur: 0
-                        }
-                    };
+                    if (selectedPath && pathPoints.length >= 2) {
+                        // パスが見つかった場合、パス上文字オブジェクトを作成
+                        const newPathText = {
+                            text: '',
+                            path: pathPoints,
+                            fontSize: 100,
+                            fontFamily: 'Yu Gothic UI',
+                            scaleX: 100,
+                            kerning: 0,
+                            tracking: 0,
+                            baselineShift: 0,
+                            rotation: 0,
+                            leading: 0,
+                            slant: 0,
+                            underline: false,
+                            smallCaps: false,
+                            smallCapsSize: 75,
+                            fill: {
+                                enabled: true,
+                                type: 'solid',
+                                color: '#fdff00',
+                                opacity: 100
+                            },
+                            strokes: [
+                                { enabled: false, size: 8, color: '#000000', opacity: 100 },
+                                { enabled: false, size: 50, color: '#ffffff', opacity: 100 },
+                                { enabled: false, size: 68, color: '#000000', opacity: 100 },
+                                { enabled: false, size: 78, color: '#000000', opacity: 100 }
+                            ],
+                            shadow: {
+                                enabled: false,
+                                color: '#000000',
+                                opacity: 50,
+                                distance: 10,
+                                angle: 135,
+                                size: 90,
+                                blur: 0
+                            }
+                        };
 
-                    pathTextObjects.push(newPathText);
-                    selectedObject = newPathText;
-                    updatePropertiesPanel();
-                    startTyping();
-                    render();
+                        pathTextObjects.push(newPathText);
+                        selectedObject = newPathText;
+                        updatePropertiesPanel();
+                        startTyping();
+                        render();
+                    } else {
+                        // パスが見つからなかった場合、新しいパスの作成を開始
+                        isDrawingPathTextPath = true;
+                        currentPathTextPath = {
+                            anchors: [{
+                                x: x,
+                                y: y,
+                                handleIn: null,
+                                handleOut: null,
+                                type: 'corner'
+                            }]
+                        };
+                        isDraggingPathTextHandle = true;
+                        selectedPathTextAnchorIndex = 0;
+                        render();
+                    }
                 } else {
-                    // パスが見つからなかった場合
-                    alert('パスが見つかりません。先に線ツールまたはペンツールでパスを作成してください。');
+                    // パス描画中 - 新しいアンカーポイントを追加
+                    currentPathTextPath.anchors.push({
+                        x: x,
+                        y: y,
+                        handleIn: null,
+                        handleOut: null,
+                        type: 'corner'
+                    });
+                    isDraggingPathTextHandle = true;
+                    selectedPathTextAnchorIndex = currentPathTextPath.anchors.length - 1;
+                    render();
                 }
             } else if (currentTool === 'text') {
                 // まず既存のテキストオブジェクトをクリックしたか確認
@@ -1524,6 +1557,28 @@
                 }
             } else if (currentTool === 'deleteAnchor') {
                 // アンカーポイントの削除ツール
+                // パス上文字オブジェクトのアンカーポイントを探す
+                for (let i = pathTextObjects.length - 1; i >= 0; i--) {
+                    const obj = pathTextObjects[i];
+                    // pathプロパティがアンカー配列の場合
+                    if (obj.path && obj.path.length > 0 && obj.path[0].handleIn !== undefined) {
+                        for (let j = 0; j < obj.path.length; j++) {
+                            const anchor = obj.path[j];
+                            const dist = Math.sqrt((x - anchor.x) ** 2 + (y - anchor.y) ** 2);
+                            if (dist < 10) {
+                                // アンカーポイントが2つ以下の場合は削除しない
+                                if (obj.path.length > 2) {
+                                    obj.path.splice(j, 1);
+                                    render();
+                                } else {
+                                    alert('パスには最低2つのアンカーポイントが必要です。');
+                                }
+                                return;
+                            }
+                        }
+                    }
+                }
+
                 // ペンツールで作成されたパスのアンカーポイントを探す
                 for (let i = shapeObjects.length - 1; i >= 0; i--) {
                     const obj = shapeObjects[i];
@@ -1546,6 +1601,37 @@
                 }
             } else if (currentTool === 'addAnchor') {
                 // アンカーポイントの追加ツール
+                // パス上文字オブジェクトのパスの線分を探す
+                for (let i = pathTextObjects.length - 1; i >= 0; i--) {
+                    const obj = pathTextObjects[i];
+                    // pathプロパティがアンカー配列の場合
+                    if (obj.path && obj.path.length >= 2 && obj.path[0].handleIn !== undefined) {
+                        // 各線分をチェック
+                        for (let j = 0; j < obj.path.length - 1; j++) {
+                            const p1 = obj.path[j];
+                            const p2 = obj.path[j + 1];
+                            const dist = distanceToLineSegment(x, y, p1.x, p1.y, p2.x, p2.y);
+                            if (dist < 10) {
+                                // 線分上の位置を計算（簡易的に中点を使用）
+                                const t = 0.5;
+                                const newX = p1.x + (p2.x - p1.x) * t;
+                                const newY = p1.y + (p2.y - p1.y) * t;
+
+                                // 新しいアンカーポイントを挿入
+                                obj.path.splice(j + 1, 0, {
+                                    x: newX,
+                                    y: newY,
+                                    handleIn: null,
+                                    handleOut: null,
+                                    type: 'corner'
+                                });
+                                render();
+                                return;
+                            }
+                        }
+                    }
+                }
+
                 // ペンツールで作成されたパスの線分を探す
                 for (let i = shapeObjects.length - 1; i >= 0; i--) {
                     const obj = shapeObjects[i];
@@ -1680,7 +1766,24 @@
             const x = (e.clientX - rect.left) * (canvas.width / rect.width);
             const y = (e.clientY - rect.top) * (canvas.height / rect.height);
 
-            if (isDraggingHandle && currentPath && selectedAnchorIndex >= 0) {
+            if (isDraggingPathTextHandle && currentPathTextPath && selectedPathTextAnchorIndex >= 0) {
+                // パス上文字ツール: ベジエハンドルをドラッグ中
+                const anchor = currentPathTextPath.anchors[selectedPathTextAnchorIndex];
+                anchor.handleOut = { x: x - anchor.x, y: y - anchor.y };
+                anchor.type = 'smooth';
+                // スムーズポイントの場合、反対側のハンドルも調整
+                if (anchor.handleIn) {
+                    const length = Math.sqrt(anchor.handleIn.x ** 2 + anchor.handleIn.y ** 2);
+                    const outLength = Math.sqrt(anchor.handleOut.x ** 2 + anchor.handleOut.y ** 2);
+                    if (outLength > 0) {
+                        anchor.handleIn = {
+                            x: -(anchor.handleOut.x / outLength) * length,
+                            y: -(anchor.handleOut.y / outLength) * length
+                        };
+                    }
+                }
+                scheduleRender();
+            } else if (isDraggingHandle && currentPath && selectedAnchorIndex >= 0) {
                 // ペンツール: ベジエハンドルをドラッグ中
                 const anchor = currentPath.anchors[selectedAnchorIndex];
                 if (draggedHandleType === 'out') {
@@ -1766,7 +1869,11 @@
         });
 
         canvas.addEventListener('mouseup', () => {
-            if (isDraggingHandle) {
+            if (isDraggingPathTextHandle) {
+                // パス上文字ツール: ハンドルのドラッグ終了
+                isDraggingPathTextHandle = false;
+                render();
+            } else if (isDraggingHandle) {
                 // ペンツール: ハンドルのドラッグ終了
                 isDraggingHandle = false;
                 draggedHandleType = null;
@@ -1786,7 +1893,56 @@
         });
 
         canvas.addEventListener('dblclick', (e) => {
-            if (currentTool === 'select' && selectedObject) {
+            if (currentTool === 'pathText' && isDrawingPathTextPath && currentPathTextPath && currentPathTextPath.anchors.length >= 2) {
+                // パス上文字ツール: ダブルクリックでパスを確定してテキスト入力モードへ
+                const newPathText = {
+                    text: '',
+                    path: currentPathTextPath.anchors,
+                    fontSize: 100,
+                    fontFamily: 'Yu Gothic UI',
+                    scaleX: 100,
+                    kerning: 0,
+                    tracking: 0,
+                    baselineShift: 0,
+                    rotation: 0,
+                    leading: 0,
+                    slant: 0,
+                    underline: false,
+                    smallCaps: false,
+                    smallCapsSize: 75,
+                    fill: {
+                        enabled: true,
+                        type: 'solid',
+                        color: '#fdff00',
+                        opacity: 100
+                    },
+                    strokes: [
+                        { enabled: false, size: 8, color: '#000000', opacity: 100 },
+                        { enabled: false, size: 50, color: '#ffffff', opacity: 100 },
+                        { enabled: false, size: 68, color: '#000000', opacity: 100 },
+                        { enabled: false, size: 78, color: '#000000', opacity: 100 }
+                    ],
+                    shadow: {
+                        enabled: false,
+                        color: '#000000',
+                        opacity: 50,
+                        distance: 10,
+                        angle: 135,
+                        size: 90,
+                        blur: 0
+                    }
+                };
+
+                pathTextObjects.push(newPathText);
+                selectedObject = newPathText;
+                isDrawingPathTextPath = false;
+                currentPathTextPath = null;
+                isDraggingPathTextHandle = false;
+                selectedPathTextAnchorIndex = -1;
+                updatePropertiesPanel();
+                startTyping();
+                render();
+            } else if (currentTool === 'select' && selectedObject) {
                 // ダブルクリックでテキスト編集モード
                 startTyping();
             }
@@ -1947,6 +2103,40 @@
 
         // 図形内の点かどうかを判定する関数
         function isPointInShape(x, y, obj) {
+            // ペンツールで作成されたパスの判定
+            if (obj.type === 'pen' && obj.anchors && obj.anchors.length > 0) {
+                // アンカーポイントに近いかチェック
+                for (let i = 0; i < obj.anchors.length; i++) {
+                    const anchor = obj.anchors[i];
+                    const dist = Math.sqrt((x - anchor.x) ** 2 + (y - anchor.y) ** 2);
+                    if (dist < 15) {
+                        return true;
+                    }
+                }
+
+                // パスの線分に近いかチェック
+                for (let i = 0; i < obj.anchors.length - 1; i++) {
+                    const p1 = obj.anchors[i];
+                    const p2 = obj.anchors[i + 1];
+                    const dist = distanceToLineSegment(x, y, p1.x, p1.y, p2.x, p2.y);
+                    if (dist < 15) {
+                        return true;
+                    }
+                }
+
+                // 閉じたパスの場合、最後と最初のポイントを結ぶ線分もチェック
+                if (obj.closed && obj.anchors.length > 2) {
+                    const p1 = obj.anchors[obj.anchors.length - 1];
+                    const p2 = obj.anchors[0];
+                    const dist = distanceToLineSegment(x, y, p1.x, p1.y, p2.x, p2.y);
+                    if (dist < 15) {
+                        return true;
+                    }
+                }
+
+                return false;
+            }
+
             const minX = Math.min(obj.x, obj.x + obj.width);
             const minY = Math.min(obj.y, obj.y + obj.height);
             const maxX = Math.max(obj.x, obj.x + obj.width);
@@ -2145,6 +2335,67 @@
                     imeInput.blur();
                     imeInput.classList.remove('active');
                     render();
+                }
+            } else if (isDrawingPathTextPath && currentPathTextPath) {
+                // パス上文字ツールでパス描画中
+                if (e.key === 'Escape' || e.key === 'Enter' || e.key === 't' || e.key === 'T') {
+                    // パスを確定してテキスト入力モードへ
+                    if (currentPathTextPath.anchors.length >= 2) {
+                        const newPathText = {
+                            text: '',
+                            path: currentPathTextPath.anchors,
+                            fontSize: 100,
+                            fontFamily: 'Yu Gothic UI',
+                            scaleX: 100,
+                            kerning: 0,
+                            tracking: 0,
+                            baselineShift: 0,
+                            rotation: 0,
+                            leading: 0,
+                            slant: 0,
+                            underline: false,
+                            smallCaps: false,
+                            smallCapsSize: 75,
+                            fill: {
+                                enabled: true,
+                                type: 'solid',
+                                color: '#fdff00',
+                                opacity: 100
+                            },
+                            strokes: [
+                                { enabled: false, size: 8, color: '#000000', opacity: 100 },
+                                { enabled: false, size: 50, color: '#ffffff', opacity: 100 },
+                                { enabled: false, size: 68, color: '#000000', opacity: 100 },
+                                { enabled: false, size: 78, color: '#000000', opacity: 100 }
+                            ],
+                            shadow: {
+                                enabled: false,
+                                color: '#000000',
+                                opacity: 50,
+                                distance: 10,
+                                angle: 135,
+                                size: 90,
+                                blur: 0
+                            }
+                        };
+
+                        pathTextObjects.push(newPathText);
+                        selectedObject = newPathText;
+                        isDrawingPathTextPath = false;
+                        currentPathTextPath = null;
+                        isDraggingPathTextHandle = false;
+                        selectedPathTextAnchorIndex = -1;
+                        updatePropertiesPanel();
+                        startTyping();
+                        render();
+                    } else {
+                        // アンカーポイントが不足している場合はキャンセル
+                        isDrawingPathTextPath = false;
+                        currentPathTextPath = null;
+                        isDraggingPathTextHandle = false;
+                        selectedPathTextAnchorIndex = -1;
+                        render();
+                    }
                 }
             } else if (isDrawingPath && currentPath) {
                 // ペンツールでパス描画中
@@ -2363,6 +2614,11 @@
                 drawPathWithAnchors(currentPath, true);
             }
 
+            // パス上文字ツールでパス描画中の場合
+            if (isDrawingPathTextPath && currentPathTextPath) {
+                drawPathTextPathWithAnchors(currentPathTextPath, true);
+            }
+
             // 全テキストオブジェクトを描画
             textObjects.forEach(obj => {
                 drawTextObject(obj, obj === selectedObject);
@@ -2492,6 +2748,102 @@
                 pathObj.anchors.forEach((anchor, index) => {
                     // アンカーポイント
                     ctx.fillStyle = index === selectedAnchorIndex ? '#ff0000' : '#ffffff';
+                    ctx.strokeStyle = '#000000';
+                    ctx.lineWidth = 1;
+                    ctx.beginPath();
+                    ctx.arc(anchor.x, anchor.y, 4, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.stroke();
+
+                    // ハンドルを描画
+                    if (anchor.handleOut) {
+                        const outX = anchor.x + anchor.handleOut.x;
+                        const outY = anchor.y + anchor.handleOut.y;
+
+                        // ハンドルライン
+                        ctx.strokeStyle = '#0099ff';
+                        ctx.lineWidth = 1;
+                        ctx.beginPath();
+                        ctx.moveTo(anchor.x, anchor.y);
+                        ctx.lineTo(outX, outY);
+                        ctx.stroke();
+
+                        // ハンドルポイント
+                        ctx.fillStyle = '#0099ff';
+                        ctx.beginPath();
+                        ctx.arc(outX, outY, 3, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+
+                    if (anchor.handleIn) {
+                        const inX = anchor.x + anchor.handleIn.x;
+                        const inY = anchor.y + anchor.handleIn.y;
+
+                        // ハンドルライン
+                        ctx.strokeStyle = '#0099ff';
+                        ctx.lineWidth = 1;
+                        ctx.beginPath();
+                        ctx.moveTo(anchor.x, anchor.y);
+                        ctx.lineTo(inX, inY);
+                        ctx.stroke();
+
+                        // ハンドルポイント
+                        ctx.fillStyle = '#0099ff';
+                        ctx.beginPath();
+                        ctx.arc(inX, inY, 3, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                });
+            }
+
+            ctx.restore();
+        }
+
+        // パス上文字ツールのパス描画関数
+        function drawPathTextPathWithAnchors(pathObj, showAnchors) {
+            if (!pathObj || !pathObj.anchors || pathObj.anchors.length === 0) return;
+
+            ctx.save();
+
+            // パスを描画
+            ctx.beginPath();
+            const firstAnchor = pathObj.anchors[0];
+            ctx.moveTo(firstAnchor.x, firstAnchor.y);
+
+            for (let i = 1; i < pathObj.anchors.length; i++) {
+                const prevAnchor = pathObj.anchors[i - 1];
+                const currAnchor = pathObj.anchors[i];
+
+                if (prevAnchor.handleOut && currAnchor.handleIn) {
+                    // ベジエ曲線
+                    const cp1x = prevAnchor.x + prevAnchor.handleOut.x;
+                    const cp1y = prevAnchor.y + prevAnchor.handleOut.y;
+                    const cp2x = currAnchor.x + currAnchor.handleIn.x;
+                    const cp2y = currAnchor.y + currAnchor.handleIn.y;
+                    ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, currAnchor.x, currAnchor.y);
+                } else if (prevAnchor.handleOut) {
+                    // 2次ベジエ曲線
+                    const cpx = prevAnchor.x + prevAnchor.handleOut.x;
+                    const cpy = prevAnchor.y + prevAnchor.handleOut.y;
+                    ctx.quadraticCurveTo(cpx, cpy, currAnchor.x, currAnchor.y);
+                } else {
+                    // 直線
+                    ctx.lineTo(currAnchor.x, currAnchor.y);
+                }
+            }
+
+            // パスを描画（ストロークのみ）
+            ctx.strokeStyle = '#0099ff';
+            ctx.lineWidth = 2;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.stroke();
+
+            // アンカーポイントとハンドルを表示
+            if (showAnchors) {
+                pathObj.anchors.forEach((anchor, index) => {
+                    // アンカーポイント
+                    ctx.fillStyle = index === selectedPathTextAnchorIndex ? '#ff0000' : '#ffffff';
                     ctx.strokeStyle = '#000000';
                     ctx.lineWidth = 1;
                     ctx.beginPath();
@@ -3173,40 +3525,96 @@
             let totalLength = 0;
             const pathSegments = [];
 
-            if (obj.bezierPath) {
-                // ベジェ曲線パスの場合
+            // pathがアンカー配列かどうかを判定
+            const hasAnchors = obj.path[0].handleIn !== undefined || obj.path[0].handleOut !== undefined;
+
+            if (obj.bezierPath || hasAnchors) {
+                // ベジェ曲線パスの場合（アンカー形式も含む）
                 for (let i = 0; i < obj.path.length - 1; i++) {
                     const p1 = obj.path[i];
                     const p2 = obj.path[i + 1];
 
-                    // ベジェ曲線セグメントの長さを計算（サブディビジョン法）
-                    const subdivisions = 50;
-                    let segmentLength = 0;
-                    let prevPoint = p1;
+                    // アンカー形式の場合、ベジェ曲線かどうかを判定
+                    const isBezierSegment = hasAnchors && (p1.handleOut || p2.handleIn);
 
-                    const points = [];
-                    for (let t = 0; t <= subdivisions; t++) {
-                        const ratio = t / subdivisions;
-                        const point = getBezierPoint(p1, p2, ratio);
-                        points.push(point);
+                    if (isBezierSegment) {
+                        // ベジェ曲線セグメントの長さを計算（サブディビジョン法）
+                        const subdivisions = 50;
+                        let segmentLength = 0;
+                        let prevPoint = { x: p1.x, y: p1.y };
 
-                        if (t > 0) {
-                            const dx = point.x - prevPoint.x;
-                            const dy = point.y - prevPoint.y;
-                            segmentLength += Math.sqrt(dx * dx + dy * dy);
+                        const points = [];
+                        for (let t = 0; t <= subdivisions; t++) {
+                            const ratio = t / subdivisions;
+                            let point;
+
+                            if (p1.handleOut && p2.handleIn) {
+                                // ベジエ3次曲線
+                                const cp1x = p1.x + (p1.handleOut?.x || 0);
+                                const cp1y = p1.y + (p1.handleOut?.y || 0);
+                                const cp2x = p2.x + (p2.handleIn?.x || 0);
+                                const cp2y = p2.y + (p2.handleIn?.y || 0);
+                                const t2 = ratio * ratio;
+                                const t3 = t2 * ratio;
+                                const mt = 1 - ratio;
+                                const mt2 = mt * mt;
+                                const mt3 = mt2 * mt;
+                                point = {
+                                    x: p1.x * mt3 + cp1x * 3 * mt2 * ratio + cp2x * 3 * mt * t2 + p2.x * t3,
+                                    y: p1.y * mt3 + cp1y * 3 * mt2 * ratio + cp2y * 3 * mt * t2 + p2.y * t3
+                                };
+                            } else if (p1.handleOut) {
+                                // 2次ベジエ曲線
+                                const cpx = p1.x + (p1.handleOut?.x || 0);
+                                const cpy = p1.y + (p1.handleOut?.y || 0);
+                                const t2 = ratio * ratio;
+                                const mt = 1 - ratio;
+                                const mt2 = mt * mt;
+                                point = {
+                                    x: p1.x * mt2 + cpx * 2 * mt * ratio + p2.x * t2,
+                                    y: p1.y * mt2 + cpy * 2 * mt * ratio + p2.y * t2
+                                };
+                            } else {
+                                // 直線
+                                point = {
+                                    x: p1.x + (p2.x - p1.x) * ratio,
+                                    y: p1.y + (p2.y - p1.y) * ratio
+                                };
+                            }
+
+                            points.push(point);
+
+                            if (t > 0) {
+                                const dx = point.x - prevPoint.x;
+                                const dy = point.y - prevPoint.y;
+                                segmentLength += Math.sqrt(dx * dx + dy * dy);
+                            }
+                            prevPoint = point;
                         }
-                        prevPoint = point;
-                    }
 
-                    pathSegments.push({
-                        start: p1,
-                        end: p2,
-                        length: segmentLength,
-                        startDist: totalLength,
-                        isBezier: true,
-                        subdivisions: points
-                    });
-                    totalLength += segmentLength;
+                        pathSegments.push({
+                            start: p1,
+                            end: p2,
+                            length: segmentLength,
+                            startDist: totalLength,
+                            isBezier: true,
+                            subdivisions: points
+                        });
+                        totalLength += segmentLength;
+                    } else {
+                        // 直線セグメント
+                        const dx = p2.x - p1.x;
+                        const dy = p2.y - p1.y;
+                        const segmentLength = Math.sqrt(dx * dx + dy * dy);
+                        pathSegments.push({
+                            start: p1,
+                            end: p2,
+                            length: segmentLength,
+                            startDist: totalLength,
+                            isBezier: false
+                        });
+                        totalLength += segmentLength;
+                    }
                 }
             } else {
                 // 直線パスの場合
