@@ -379,6 +379,8 @@
                 ↓
             </div>
             <div class="toolbar-separator"></div>
+            <input type="file" id="prtlFileInput" accept=".prtl" style="display: none;" onchange="importPRTL(event)">
+            <button class="btn" onclick="document.getElementById('prtlFileInput').click()" style="width: auto; padding: 6px 12px;">PRTL読み込み</button>
             <button class="btn btn-primary" onclick="exportPRTL()" style="width: auto; padding: 6px 12px;">PRTL書き出し</button>
         </div>
 
@@ -3109,23 +3111,64 @@
 
             const text = obj.text || '';
             const scaleX = obj.scaleX / 100;
+            const isVertical = obj.verticalText || false;
 
-            // パスの全長を計算
+            // パスの全長を計算（ベジェ曲線対応）
             let totalLength = 0;
             const pathSegments = [];
-            for (let i = 0; i < obj.path.length - 1; i++) {
-                const p1 = obj.path[i];
-                const p2 = obj.path[i + 1];
-                const dx = p2.x - p1.x;
-                const dy = p2.y - p1.y;
-                const segmentLength = Math.sqrt(dx * dx + dy * dy);
-                pathSegments.push({
-                    start: p1,
-                    end: p2,
-                    length: segmentLength,
-                    startDist: totalLength
-                });
-                totalLength += segmentLength;
+
+            if (obj.bezierPath) {
+                // ベジェ曲線パスの場合
+                for (let i = 0; i < obj.path.length - 1; i++) {
+                    const p1 = obj.path[i];
+                    const p2 = obj.path[i + 1];
+
+                    // ベジェ曲線セグメントの長さを計算（サブディビジョン法）
+                    const subdivisions = 50;
+                    let segmentLength = 0;
+                    let prevPoint = p1;
+
+                    const points = [];
+                    for (let t = 0; t <= subdivisions; t++) {
+                        const ratio = t / subdivisions;
+                        const point = getBezierPoint(p1, p2, ratio);
+                        points.push(point);
+
+                        if (t > 0) {
+                            const dx = point.x - prevPoint.x;
+                            const dy = point.y - prevPoint.y;
+                            segmentLength += Math.sqrt(dx * dx + dy * dy);
+                        }
+                        prevPoint = point;
+                    }
+
+                    pathSegments.push({
+                        start: p1,
+                        end: p2,
+                        length: segmentLength,
+                        startDist: totalLength,
+                        isBezier: true,
+                        subdivisions: points
+                    });
+                    totalLength += segmentLength;
+                }
+            } else {
+                // 直線パスの場合
+                for (let i = 0; i < obj.path.length - 1; i++) {
+                    const p1 = obj.path[i];
+                    const p2 = obj.path[i + 1];
+                    const dx = p2.x - p1.x;
+                    const dy = p2.y - p1.y;
+                    const segmentLength = Math.sqrt(dx * dx + dy * dy);
+                    pathSegments.push({
+                        start: p1,
+                        end: p2,
+                        length: segmentLength,
+                        startDist: totalLength,
+                        isBezier: false
+                    });
+                    totalLength += segmentLength;
+                }
             }
 
             // 各文字をパスに沿って配置
@@ -3147,14 +3190,31 @@
                 }
 
                 if (segment) {
-                    // 線形補間で文字の位置と角度を計算
-                    const x = segment.start.x + (segment.end.x - segment.start.x) * segmentT;
-                    const y = segment.start.y + (segment.end.y - segment.start.y) * segmentT;
-                    const angle = Math.atan2(segment.end.y - segment.start.y, segment.end.x - segment.start.x);
+                    let x, y, angle;
+
+                    if (segment.isBezier) {
+                        // ベジェ曲線セグメントの場合
+                        const result = getPointAndTangentOnBezier(segment, segmentT);
+                        x = result.x;
+                        y = result.y;
+                        angle = result.angle;
+                    } else {
+                        // 直線セグメントの場合
+                        x = segment.start.x + (segment.end.x - segment.start.x) * segmentT;
+                        y = segment.start.y + (segment.end.y - segment.start.y) * segmentT;
+                        angle = Math.atan2(segment.end.y - segment.start.y, segment.end.x - segment.start.x);
+                    }
 
                     ctx.save();
                     ctx.translate(x, y);
-                    ctx.rotate(angle + obj.rotation * Math.PI / 180);
+
+                    // 縦書きの場合は90度回転
+                    if (isVertical) {
+                        ctx.rotate(angle + Math.PI / 2 + obj.rotation * Math.PI / 180);
+                    } else {
+                        ctx.rotate(angle + obj.rotation * Math.PI / 180);
+                    }
+
                     ctx.scale(scaleX, 1);
 
                     // ベースラインシフトを適用
@@ -3266,9 +3326,30 @@
                 ctx.setLineDash([5, 5]);
                 ctx.beginPath();
                 ctx.moveTo(obj.path[0].x, obj.path[0].y);
-                for (let i = 1; i < obj.path.length; i++) {
-                    ctx.lineTo(obj.path[i].x, obj.path[i].y);
+
+                if (obj.bezierPath) {
+                    // ベジェ曲線として描画
+                    for (let i = 0; i < obj.path.length - 1; i++) {
+                        const p1 = obj.path[i];
+                        const p2 = obj.path[i + 1];
+
+                        if (p1.handleOut && p2.handleIn) {
+                            const cp1x = p1.x + p1.handleOut.x;
+                            const cp1y = p1.y + p1.handleOut.y;
+                            const cp2x = p2.x + p2.handleIn.x;
+                            const cp2y = p2.y + p2.handleIn.y;
+                            ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, p2.x, p2.y);
+                        } else {
+                            ctx.lineTo(p2.x, p2.y);
+                        }
+                    }
+                } else {
+                    // 直線として描画
+                    for (let i = 1; i < obj.path.length; i++) {
+                        ctx.lineTo(obj.path[i].x, obj.path[i].y);
+                    }
                 }
+
                 ctx.stroke();
                 ctx.setLineDash([]);
 
@@ -3283,6 +3364,74 @@
                     ctx.stroke();
                 });
             }
+        }
+
+        // ベジェ曲線上の点を計算（3次ベジエ）
+        function getBezierPoint(p1, p2, t) {
+            if (!p1.handleOut && !p2.handleIn) {
+                // ハンドルがない場合は線形補間
+                return {
+                    x: p1.x + (p2.x - p1.x) * t,
+                    y: p1.y + (p2.y - p1.y) * t
+                };
+            }
+
+            const cp1x = p1.x + (p1.handleOut ? p1.handleOut.x : 0);
+            const cp1y = p1.y + (p1.handleOut ? p1.handleOut.y : 0);
+            const cp2x = p2.x + (p2.handleIn ? p2.handleIn.x : 0);
+            const cp2y = p2.y + (p2.handleIn ? p2.handleIn.y : 0);
+
+            // 3次ベジェ曲線の計算
+            const t1 = 1 - t;
+            const t1_2 = t1 * t1;
+            const t1_3 = t1_2 * t1;
+            const t_2 = t * t;
+            const t_3 = t_2 * t;
+
+            const x = t1_3 * p1.x + 3 * t1_2 * t * cp1x + 3 * t1 * t_2 * cp2x + t_3 * p2.x;
+            const y = t1_3 * p1.y + 3 * t1_2 * t * cp1y + 3 * t1 * t_2 * cp2y + t_3 * p2.y;
+
+            return { x, y };
+        }
+
+        // ベジェ曲線セグメント上の点と接線を取得
+        function getPointAndTangentOnBezier(segment, segmentT) {
+            const p1 = segment.start;
+            const p2 = segment.end;
+
+            // サブディビジョンポイントから補間
+            if (segment.subdivisions) {
+                const subdivisions = segment.subdivisions;
+                const index = segmentT * (subdivisions.length - 1);
+                const i1 = Math.floor(index);
+                const i2 = Math.min(i1 + 1, subdivisions.length - 1);
+                const localT = index - i1;
+
+                const pt1 = subdivisions[i1];
+                const pt2 = subdivisions[i2];
+
+                const x = pt1.x + (pt2.x - pt1.x) * localT;
+                const y = pt1.y + (pt2.y - pt1.y) * localT;
+                const angle = Math.atan2(pt2.y - pt1.y, pt2.x - pt1.x);
+
+                return { x, y, angle };
+            }
+
+            // フォールバック：ベジェ曲線から直接計算
+            const point = getBezierPoint(p1, p2, segmentT);
+
+            // 接線を計算（微小なdt で近似）
+            const dt = 0.01;
+            const t2 = Math.min(segmentT + dt, 1.0);
+            const point2 = getBezierPoint(p1, p2, t2);
+
+            const angle = Math.atan2(point2.y - point.y, point2.x - point.x);
+
+            return {
+                x: point.x,
+                y: point.y,
+                angle: angle
+            };
         }
 
         function drawTextSelection() {
@@ -3535,6 +3684,235 @@
             link.click();
 
             console.log('✅ PRTL書き出し完了');
+        }
+
+        // PRTL読み込み
+        function importPRTL(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const content = e.target.result;
+                    parsePRTLFile(content);
+                    console.log('✅ PRTL読み込み完了');
+                } catch (error) {
+                    console.error('❌ PRTL読み込みエラー:', error);
+                    alert('PRTLファイルの読み込みに失敗しました: ' + error.message);
+                }
+            };
+            reader.readAsText(file, 'UTF-16');
+        }
+
+        // PRTLファイルを解析してオブジェクトを作成
+        function parsePRTLFile(xmlString) {
+            const parser = new DOMParser();
+            const xmlDoc = parser.parseFromString(xmlString, 'text/xml');
+
+            // エラーチェック
+            const parseError = xmlDoc.querySelector('parsererror');
+            if (parseError) {
+                throw new Error('XML解析エラー');
+            }
+
+            // TextLineを取得
+            const textLines = xmlDoc.querySelectorAll('TextLine');
+
+            textLines.forEach((textLine, index) => {
+                const baseProps = textLine.querySelector('BaseProperties');
+                const splineData = textLine.querySelector('SplineData');
+                const enclosingType = textLine.querySelector('EnclosingObjectType')?.textContent;
+                const trString = textLine.querySelector('TRString')?.textContent || '';
+                const verticalText = baseProps?.querySelector('verticalText')?.textContent === 'true';
+
+                // スタイル情報を取得
+                const charAttrs = textLine.querySelector('CharacterAttributes');
+                const styleRef = charAttrs?.getAttribute('StyleRef');
+                const textRef = charAttrs?.getAttribute('TextRef');
+                const txKerning = parseFloat(charAttrs?.getAttribute('TXKerning') || '0');
+
+                // TextDescriptionからフォント情報を取得
+                const textDesc = xmlDoc.querySelector(`TextDescription[Reference="${textRef}"]`);
+                const typeSpec = textDesc?.querySelector('TypeSpec');
+                const fontSize = parseInt(typeSpec?.querySelector('size')?.textContent || '72');
+                const txWidth = parseFloat(typeSpec?.querySelector('txWidth')?.textContent || '100');
+                const fontFamily = typeSpec?.querySelector('fifontFamilyName')?.textContent || 'Arial';
+
+                // スタイル情報を取得（fill, stroke, shadowなど）
+                const style = xmlDoc.querySelector(`Style[ID="${styleRef}"]`);
+                const fillShader = getShaderFromStyle(xmlDoc, style, 15); // painter 15 = fill
+                const strokeShader1 = getShaderFromStyle(xmlDoc, style, 13); // painter 13 = stroke
+                const strokeShader2 = getShaderFromStyle(xmlDoc, style, 12); // painter 12 = stroke
+
+                if (enclosingType === 'spline' && splineData) {
+                    // パス上文字ツール
+                    const path = parseSplineData(splineData);
+
+                    if (path.length > 0) {
+                        const pathTextObj = {
+                            text: trString,
+                            path: path,
+                            bezierPath: true, // ベジェ曲線パスであることを示す
+                            fontSize: fontSize,
+                            fontFamily: fontFamily,
+                            scaleX: txWidth,
+                            kerning: txKerning,
+                            verticalText: verticalText,
+                            rotation: 0,
+                            baselineShift: 0,
+                            fill: fillShader || {
+                                enabled: true,
+                                type: 'solid',
+                                color: '#ff3b3b',
+                                opacity: 100
+                            },
+                            strokes: [
+                                strokeShader1 || { enabled: false, size: 0, color: '#000000' },
+                                strokeShader2 || { enabled: false, size: 0, color: '#000000' },
+                                { enabled: false, size: 0, color: '#000000' },
+                                { enabled: false, size: 0, color: '#000000' }
+                            ],
+                            shadow: {
+                                enabled: false,
+                                distance: 0,
+                                angle: 0,
+                                color: '#000000',
+                                opacity: 100
+                            }
+                        };
+
+                        pathTextObjects.push(pathTextObj);
+                    }
+                } else {
+                    // 通常のテキスト（block, box, normalなど）
+                    const txBase = parseFloat(baseProps?.querySelector('txBase')?.textContent || fontSize);
+                    const xPos = parseFloat(baseProps?.querySelector('XPos')?.textContent || '960');
+                    const yPos = txBase; // txBaseをY位置として使用
+
+                    const textObj = {
+                        text: trString,
+                        x: xPos,
+                        y: yPos,
+                        fontSize: fontSize,
+                        fontFamily: fontFamily,
+                        scaleX: txWidth,
+                        scaleY: 100,
+                        kerning: txKerning,
+                        rotation: 0,
+                        baselineShift: 0,
+                        fill: fillShader || {
+                            enabled: true,
+                            type: 'solid',
+                            color: '#ff3b3b',
+                            opacity: 100
+                        },
+                        strokes: [
+                            strokeShader1 || { enabled: false, size: 0, color: '#000000' },
+                            strokeShader2 || { enabled: false, size: 0, color: '#000000' },
+                            { enabled: false, size: 0, color: '#000000' },
+                            { enabled: false, size: 0, color: '#000000' }
+                        ],
+                        shadow: {
+                            enabled: false,
+                            distance: 0,
+                            angle: 0,
+                            color: '#000000',
+                            opacity: 100
+                        }
+                    };
+
+                    textObjects.push(textObj);
+                }
+            });
+
+            // 再描画
+            render();
+        }
+
+        // SplineDataを解析してベジェパスに変換
+        function parseSplineData(splineData) {
+            const polyPoints = splineData.querySelector('PolyPoints');
+            if (!polyPoints) return [];
+
+            const controlPoints = polyPoints.querySelectorAll('ControlPoint');
+            const path = [];
+
+            // crsrX, crsrYをオフセットとして取得
+            const offsetX = parseFloat(splineData.querySelector('crsrX')?.textContent || '0');
+            const offsetY = parseFloat(splineData.querySelector('crsrY')?.textContent || '0');
+
+            controlPoints.forEach((cp, index) => {
+                const cpElement = cp.querySelector('cp');
+                const forwardElement = cp.querySelector('forward');
+                const backwardElement = cp.querySelector('backward');
+
+                const x = parseFloat(cpElement?.getAttribute('x') || '0') + offsetX;
+                const y = parseFloat(cpElement?.getAttribute('y') || '0') + offsetY;
+
+                const forwardX = parseFloat(forwardElement?.getAttribute('x') || '0');
+                const forwardY = parseFloat(forwardElement?.getAttribute('y') || '0');
+                const backwardX = parseFloat(backwardElement?.getAttribute('x') || '0');
+                const backwardY = parseFloat(backwardElement?.getAttribute('y') || '0');
+
+                path.push({
+                    x: x,
+                    y: y,
+                    handleOut: forwardX !== 0 || forwardY !== 0 ? { x: forwardX, y: forwardY } : null,
+                    handleIn: backwardX !== 0 || backwardY !== 0 ? { x: backwardX, y: backwardY } : null
+                });
+            });
+
+            return path;
+        }
+
+        // スタイルからシェーダー情報を取得
+        function getShaderFromStyle(xmlDoc, style, painterNumber) {
+            if (!style) return null;
+
+            const shaderList = style.querySelector('ShaderList');
+            const shaderRef = shaderList?.querySelector(`ShaderRef[PainterNumber="${painterNumber}"]`)?.querySelector('shaderRef')?.textContent;
+
+            if (!shaderRef || shaderRef === '0') return null;
+
+            const shader = xmlDoc.querySelector(`Shader[cReference="${shaderRef}"]`);
+            if (!shader) return null;
+
+            const colorSpec = shader.querySelector('ColorSpec[index="0"]');
+            const red = parseInt(colorSpec?.querySelector('red')?.textContent || '255');
+            const green = parseInt(colorSpec?.querySelector('green')?.textContent || '255');
+            const blue = parseInt(colorSpec?.querySelector('blue')?.textContent || '255');
+
+            const color = `#${red.toString(16).padStart(2, '0')}${green.toString(16).padStart(2, '0')}${blue.toString(16).padStart(2, '0')}`;
+
+            // Painter 15はfill、それ以外はstroke
+            if (painterNumber === 15) {
+                return {
+                    enabled: true,
+                    type: 'solid',
+                    color: color,
+                    opacity: 100
+                };
+            } else {
+                // strokeの場合、fragmentリストからサイズを取得
+                const fragmentList = style.querySelector('FragmentList');
+                const fragments = fragmentList?.querySelectorAll('Fragment');
+                let strokeSize = 0;
+
+                fragments?.forEach(frag => {
+                    const annotation = frag.querySelector('annotation')?.textContent;
+                    if ((painterNumber === 13 && annotation === '1') ||
+                        (painterNumber === 12 && annotation === '2')) {
+                        strokeSize = parseFloat(frag.querySelector('size')?.textContent || '0');
+                    }
+                });
+
+                return {
+                    enabled: strokeSize > 0,
+                    size: strokeSize,
+                    color: color
+                };
+            }
         }
 
         // PRTLGeneratorV2クラス（既存のものを再利用）
