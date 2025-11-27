@@ -1124,6 +1124,9 @@
                 const newWidth = Math.max(200, Math.min(600, startWidth + delta));
                 panel.style.width = newWidth + 'px';
 
+                // キャンバスサイズを更新
+                updateCanvasSize();
+
                 e.preventDefault();
             }
 
@@ -3934,10 +3937,18 @@
                     const depthDx = Math.cos(depthAngle);
                     const depthDy = Math.sin(depthAngle);
 
+                    // 外側のエッジストロークのサイズを計算
+                    let outerEdgeSize = 0;
+                    for (let k = i + 1; k < enabledStrokes.length; k++) {
+                        if (enabledStrokes[k].type === 'edge') {
+                            outerEdgeSize += enabledStrokes[k].size;
+                        }
+                    }
+
                     for (let d = st.size; d > 0; d -= 0.5) {
-                        ctx.lineWidth = innerWidth + d;
+                        ctx.lineWidth = innerWidth + d + outerEdgeSize;
                         ctx.save();
-                        ctx.translate((innerWidth + d) * depthDx, (innerWidth + d) * depthDy);
+                        ctx.translate((innerWidth + d + outerEdgeSize) * depthDx, (innerWidth + d + outerEdgeSize) * depthDy);
                         renderTextFunc(ctx);
                         ctx.restore();
                     }
@@ -4089,13 +4100,28 @@
                         ctx.fillText(char, offsetX, offsetY);
                     }
 
-                    // ストローク描画
+                    // ストローク描画（改良版：エッジと奥行きの組み合わせに対応）
                     if (obj.strokes) {
+                        // 各ストロークより外側のエッジストロークの合計サイズを計算
+                        const outerEdgeSizes = [];
+                        for (let j = obj.strokes.length - 1; j >= 0; j--) {
+                            let outerSize = 0;
+                            for (let k = obj.strokes.length - 1; k > j; k--) {
+                                const outerStroke = obj.strokes[k];
+                                if (outerStroke.enabled && outerStroke.size > 0 && outerStroke.type === 'edge') {
+                                    outerSize += outerStroke.size;
+                                }
+                            }
+                            outerEdgeSizes[j] = outerSize;
+                        }
+
+                        // ストロークを逆順で描画
                         for (let j = obj.strokes.length - 1; j >= 0; j--) {
                             const stroke = obj.strokes[j];
                             if (stroke.enabled && stroke.size > 0) {
                                 const strokeType = stroke.type || 'edge';
                                 const strokeOpacity = (stroke.opacity || 100) / 100;
+                                const outerEdgeSize = outerEdgeSizes[j];
 
                                 if (strokeType === 'depth') {
                                     // 奥行きタイプ: 角度とオフセットで描画
@@ -4103,13 +4129,14 @@
                                     const depthDx = Math.cos(depthAngle);
                                     const depthDy = Math.sin(depthAngle);
 
+                                    // 奥行きの各レイヤーに外側のエッジサイズを加算
                                     for (let d = stroke.size; d > 0; d -= 0.5) {
                                         ctx.save();
                                         ctx.globalAlpha = strokeOpacity;
                                         ctx.strokeStyle = stroke.color;
-                                        ctx.lineWidth = d;
+                                        ctx.lineWidth = d + outerEdgeSize;
                                         ctx.lineJoin = stroke.join || 'round';
-                                        ctx.translate(d * depthDx, d * depthDy);
+                                        ctx.translate((d + outerEdgeSize) * depthDx, (d + outerEdgeSize) * depthDy);
                                         ctx.strokeText(char, 0, 0);
                                         ctx.restore();
                                     }
@@ -4256,13 +4283,28 @@
                     renderWithKerning((txt, x, y) => ctx.fillText(txt, x + offsetX, y + offsetY));
                 }
 
-                // ストローク描画（外側から内側へ）
+                // ストローク描画（改良版：エッジと奥行きの組み合わせに対応）
                 if (obj.strokes) {
+                    // 各ストロークより外側のエッジストロークの合計サイズを計算
+                    const outerEdgeSizes = [];
+                    for (let i = obj.strokes.length - 1; i >= 0; i--) {
+                        let outerSize = 0;
+                        for (let k = obj.strokes.length - 1; k > i; k--) {
+                            const outerStroke = obj.strokes[k];
+                            if (outerStroke.enabled && outerStroke.size > 0 && outerStroke.type === 'edge') {
+                                outerSize += outerStroke.size;
+                            }
+                        }
+                        outerEdgeSizes[i] = outerSize;
+                    }
+
+                    // ストロークを逆順で描画
                     for (let i = obj.strokes.length - 1; i >= 0; i--) {
                         const stroke = obj.strokes[i];
                         if (stroke.enabled && stroke.size > 0) {
                             const strokeType = stroke.type || 'edge';
                             const strokeOpacity = (stroke.opacity || 100) / 100;
+                            const outerEdgeSize = outerEdgeSizes[i];
 
                             if (strokeType === 'depth') {
                                 // 奥行きタイプ: 角度とオフセットで描画
@@ -4270,13 +4312,14 @@
                                 const depthDx = Math.cos(depthAngle);
                                 const depthDy = Math.sin(depthAngle);
 
+                                // 奥行きの各レイヤーに外側のエッジサイズを加算
                                 for (let d = stroke.size; d > 0; d -= 0.5) {
                                     ctx.save();
                                     ctx.globalAlpha = strokeOpacity;
                                     ctx.strokeStyle = stroke.color;
-                                    ctx.lineWidth = d;
+                                    ctx.lineWidth = d + outerEdgeSize;
                                     ctx.lineJoin = stroke.join || 'round';
-                                    ctx.translate(d * depthDx, d * depthDy);
+                                    ctx.translate((d + outerEdgeSize) * depthDx, (d + outerEdgeSize) * depthDy);
                                     renderWithKerning((txt, x, y) => ctx.strokeText(txt, x, y));
                                     ctx.restore();
                                 }
