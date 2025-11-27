@@ -2449,7 +2449,7 @@
                 canvas.style.cursor = 'default';
             }
 
-            if (tool === 'select' && editingObjId) exitEditMode();
+            if (editingObjId && tool !== 'text' && tool !== 'textV') exitEditMode();
         }
 
         function alignToCenter(axis) {
@@ -2655,7 +2655,25 @@
             } else if (currentTool === 'textV') {
                 // 縦書きテキスト
                 const obj = findObjectAt(x, y);
-                if (obj && obj.type === 'text') {
+                if (editingObjId) {
+                    if (obj && obj.id === editingObjId) {
+                        const charIdx = getCharIndexAt(obj, x, y);
+                        selectedCharStart = charIdx;
+                        selectedCharEnd = charIdx;
+                        cursorPos = charIdx;
+                        isSelecting = true;
+                        render();
+                    } else {
+                        exitEditMode();
+                        if (obj && obj.type === 'text') {
+                            enterEditMode(obj.id);
+                            cursorPos = getCharIndexAt(obj, x, y);
+                        } else {
+                            createTextObject('', x, y, true); // vertical=true
+                            enterEditMode(textObjects[textObjects.length - 1].id);
+                        }
+                    }
+                } else if (obj && obj.type === 'text') {
                     enterEditMode(obj.id);
                     cursorPos = getCharIndexAt(obj, x, y);
                     render();
@@ -6147,10 +6165,10 @@
 
                         ctx.strokeStyle = '#fff'; ctx.lineWidth = 2;
                         ctx.beginPath();
-                        // 縦書きなので縦方向のカーソルを描画
-                        const cursorHeight = line[cIdx] ? line[cIdx].fontSize : obj.fontSize;
-                        ctx.moveTo(colX, cY);
-                        ctx.lineTo(colX, cY + cursorHeight);
+                        // 縦書きなので横方向のカーソルを描画
+                        const cursorWidth = line[cIdx] ? line[cIdx].fontSize : obj.fontSize;
+                        ctx.moveTo(colX - cursorWidth / 2, cY);
+                        ctx.lineTo(colX + cursorWidth / 2, cY);
                         ctx.stroke();
                     }
 
