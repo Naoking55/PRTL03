@@ -1191,7 +1191,7 @@
 
                         // 線との距離を計算
                         const dist = distanceToLineSegment(x, y, startX, startY, endX, endY);
-                        if (dist < 20) {
+                        if (dist < 30) {
                             selectedPath = obj;
                             pathPoints = [
                                 { x: startX, y: startY },
@@ -1205,7 +1205,7 @@
                             for (let j = 0; j < obj.points.length; j++) {
                                 const p = obj.points[j];
                                 const dist = Math.sqrt((x - p.x) ** 2 + (y - p.y) ** 2);
-                                if (dist < 20) {
+                                if (dist < 30) {
                                     selectedPath = obj;
                                     pathPoints = [...obj.points];
                                     break;
@@ -1282,6 +1282,13 @@
 
                 // 既存のテキストをクリックしていない場合のみ新しいテキストを作成
                 if (!clickedExistingText) {
+                    // 空のテキストオブジェクトを削除
+                    for (let i = textObjects.length - 1; i >= 0; i--) {
+                        if (textObjects[i].text.trim() === '') {
+                            textObjects.splice(i, 1);
+                        }
+                    }
+
                     // 新しいテキストオブジェクトを作成
                     const newText = {
                         text: '',
@@ -1347,6 +1354,13 @@
 
                 // 既存のテキストをクリックしていない場合のみ新しいテキストを作成
                 if (!clickedExistingText) {
+                    // 空のテキストオブジェクトを削除
+                    for (let i = textObjects.length - 1; i >= 0; i--) {
+                        if (textObjects[i].text.trim() === '') {
+                            textObjects.splice(i, 1);
+                        }
+                    }
+
                     // 新しい縦書きテキストオブジェクトを作成
                     const newText = {
                         text: '',
@@ -2072,7 +2086,7 @@
 
             if (obj.vertical) {
                 // 縦書きの場合
-                const charCount = (obj.text || '|').length;
+                const charCount = (obj.text || '―').length;
                 return {
                     width: obj.fontSize * (obj.scaleX / 100),
                     height: obj.fontSize * charCount
@@ -2467,7 +2481,7 @@
             ctx.textBaseline = 'top';
             ctx.textAlign = 'left';
 
-            const text = obj.text || '|';
+            const text = obj.text || (obj.vertical ? '―' : '|');
 
             if (obj.vertical) {
                 // 縦書き描画
