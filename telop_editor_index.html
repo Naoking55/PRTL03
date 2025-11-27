@@ -2449,7 +2449,7 @@
                 canvas.style.cursor = 'default';
             }
 
-            if (editingObjId && tool !== 'text' && tool !== 'textV') exitEditMode();
+            if (tool === 'select' && editingObjId) exitEditMode();
         }
 
         function alignToCenter(axis) {
@@ -2655,25 +2655,7 @@
             } else if (currentTool === 'textV') {
                 // 縦書きテキスト
                 const obj = findObjectAt(x, y);
-                if (editingObjId) {
-                    if (obj && obj.id === editingObjId) {
-                        const charIdx = getCharIndexAt(obj, x, y);
-                        selectedCharStart = charIdx;
-                        selectedCharEnd = charIdx;
-                        cursorPos = charIdx;
-                        isSelecting = true;
-                        render();
-                    } else {
-                        exitEditMode();
-                        if (obj && obj.type === 'text') {
-                            enterEditMode(obj.id);
-                            cursorPos = getCharIndexAt(obj, x, y);
-                        } else {
-                            createTextObject('', x, y, true); // vertical=true
-                            enterEditMode(textObjects[textObjects.length - 1].id);
-                        }
-                    }
-                } else if (obj && obj.type === 'text') {
+                if (obj && obj.type === 'text') {
                     enterEditMode(obj.id);
                     cursorPos = getCharIndexAt(obj, x, y);
                     render();
@@ -2744,12 +2726,14 @@
             if (currentTool === 'pathText' && isDrawingPath && pathPoints.length >= 2) {
                 const rect = canvas.getBoundingClientRect();
                 scale = canvas.width / rect.width;
-                const text = prompt('パスに表示するテキストを入力:', 'サンプルテキスト') || 'サンプルテキスト';
-                saveState();
-                const pathTextObj = createPathTextObject(text, pathPoints);
-                textObjects.push(pathTextObj);
-                selectObject(pathTextObj.id);
-                updateLayerList();
+                const text = prompt('パスに表示するテキストを入力:', 'サンプルテキスト');
+                if (text) {
+                    saveState();
+                    const pathTextObj = createPathTextObject(text, pathPoints);
+                    textObjects.push(pathTextObj);
+                    selectObject(pathTextObj.id);
+                    updateLayerList();
+                }
                 pathPoints = [];
                 isDrawingPath = false;
                 render();
@@ -2785,54 +2769,20 @@
                     const dx = x - resizeStart.x;
                     const dy = y - resizeStart.y;
                     const origBounds = resizeStart.bounds;
+                    let sfX = 1, sfY = 1;
+                    if (resizeHandle.includes('e')) sfX = (origBounds.w + dx) / origBounds.w;
+                    else if (resizeHandle.includes('w')) sfX = (origBounds.w - dx) / origBounds.w;
+                    if (resizeHandle.includes('s')) sfY = (origBounds.h + dy) / origBounds.h;
+                    else if (resizeHandle.includes('n')) sfY = (origBounds.h - dy) / origBounds.h;
+                    if (sfX <= 0) sfX = 0.1;
+                    if (sfY <= 0) sfY = 0.1;
                     const origObj = resizeStart.obj;
-
-                    // 図形オブジェクトの場合
-                    if (['rect', 'roundRect', 'ellipse', 'triangle', 'line', 'arc', 'chamferRect'].includes(obj.type)) {
-                        let newWidth = origObj.width;
-                        let newHeight = origObj.height;
-                        let newX = origObj.x;
-                        let newY = origObj.y;
-
-                        if (resizeHandle.includes('e')) {
-                            newWidth = Math.max(1, origObj.width + dx);
-                            newX = origObj.x + dx / 2;
-                        } else if (resizeHandle.includes('w')) {
-                            newWidth = Math.max(1, origObj.width - dx);
-                            newX = origObj.x - dx / 2;
+                    obj.chars.forEach((c, i) => {
+                        if (origObj.chars[i]) {
+                            c.fontSize = Math.max(1, Math.round(origObj.chars[i].fontSize * sfY));
+                            c.scaleX = Math.max(10, Math.round((origObj.chars[i].scaleX || 100) * sfX));
                         }
-
-                        if (resizeHandle.includes('s')) {
-                            newHeight = Math.max(1, origObj.height + dy);
-                            newY = origObj.y + dy / 2;
-                        } else if (resizeHandle.includes('n')) {
-                            newHeight = Math.max(1, origObj.height - dy);
-                            newY = origObj.y - dy / 2;
-                        }
-
-                        obj.width = newWidth;
-                        obj.height = newHeight;
-                        obj.x = newX;
-                        obj.y = newY;
-                    } else {
-                        // テキストオブジェクトの場合
-                        let sfX = 1, sfY = 1;
-                        if (resizeHandle.includes('e')) sfX = (origBounds.w + dx) / origBounds.w;
-                        else if (resizeHandle.includes('w')) sfX = (origBounds.w - dx) / origBounds.w;
-                        if (resizeHandle.includes('s')) sfY = (origBounds.h + dy) / origBounds.h;
-                        else if (resizeHandle.includes('n')) sfY = (origBounds.h - dy) / origBounds.h;
-                        if (sfX <= 0) sfX = 0.1;
-                        if (sfY <= 0) sfY = 0.1;
-
-                        if (obj.chars) {
-                            obj.chars.forEach((c, i) => {
-                                if (origObj.chars[i]) {
-                                    c.fontSize = Math.max(1, Math.round(origObj.chars[i].fontSize * sfY));
-                                    c.scaleX = Math.max(10, Math.round((origObj.chars[i].scaleX || 100) * sfX));
-                                }
-                            });
-                        }
-                    }
+                    });
                     render();
                     updateLayerProps();
                 }
@@ -6165,10 +6115,8 @@
 
                         ctx.strokeStyle = '#fff'; ctx.lineWidth = 2;
                         ctx.beginPath();
-                        // 縦書きなので横方向のカーソルを描画
-                        const cursorWidth = line[cIdx] ? line[cIdx].fontSize : obj.fontSize;
-                        ctx.moveTo(colX - cursorWidth / 2, cY);
-                        ctx.lineTo(colX + cursorWidth / 2, cY);
+                        ctx.moveTo(colX - colWidth / 2, cY);
+                        ctx.lineTo(colX + colWidth / 2, cY);
                         ctx.stroke();
                     }
 
