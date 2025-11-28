@@ -281,7 +281,7 @@
             <button class="btn btn-secondary" onclick="exportGIF()">GIF書き出し</button>
             <button class="btn btn-secondary" onclick="exportWebM()">WebM書き出し</button>
             <button class="btn btn-primary" onclick="exportPRTL()">PRTL書き出し</button>
-            <button class="btn btn-secondary" onclick="batchExportPRTL()" title="全キャンバスをPRTL形式で一括書き出し（連番: _000, _001...)">バッチPRTL書き出し</button>
+            <button class="btn btn-secondary" onclick="batchExportPRTL()" title="全キャンバスをPRTL形式で一括書き出し、ZIPファイルにまとめてダウンロード（連番: _000, _001...)">バッチPRTL書き出し</button>
             <button class="btn btn-success" onclick="importPRTL()" title="PRTLファイルを読み込んでキャンバスに表示">PRTL読み込み</button>
             <button class="btn btn-primary" onclick="exportMOGRT()">MOGRT書き出し</button>
             <button class="btn btn-secondary" onclick="saveProject()">プロジェクト保存</button>
@@ -8236,7 +8236,7 @@
         }
 
         // バッチPRTL書き出し機能
-        function batchExportPRTL() {
+        async function batchExportPRTL() {
             if (canvases.length === 0) {
                 alert('キャンバスがありません');
                 return;
@@ -8257,8 +8257,9 @@
             };
 
             const generator = new PRTLGenerator();
+            const zip = new JSZip();
 
-            // 各キャンバスを順番に書き出し
+            // 各キャンバスを順番に処理してZIPに追加
             canvases.forEach((cvs, idx) => {
                 // キャンバスを切り替え
                 textObjects = JSON.parse(JSON.stringify(cvs.objects || []));
@@ -8266,21 +8267,12 @@
                 canvasBgOpacity = cvs.bgOpacity || 100;
                 bgImage = cvs.bgImage || null;
 
-                // レンダリングして画像を生成
+                // レンダリング
                 render();
 
                 const paddedIdx = String(idx).padStart(3, '0');
 
-                // PNG書き出し
-                canvas.toBlob(blob => {
-                    const link = document.createElement('a');
-                    link.download = `${baseName}-${paddedIdx}.png`;
-                    link.href = URL.createObjectURL(blob);
-                    link.click();
-                    setTimeout(() => URL.revokeObjectURL(link.href), 100);
-                }, 'image/png');
-
-                // PRTL書き出し
+                // PRTL生成
                 const canvasData = {
                     resolution: `${canvas.width}x${canvas.height}`,
                     objects: textObjects
@@ -8288,16 +8280,11 @@
                 const prtlXML = generator.generatePRTL(canvasData);
 
                 // UTF-8（BOMなし）でエンコード
-                // 参考PRTLファイルはUTF-8（BOMなし）で保存されているが、XMLヘッダーではUTF-16と宣言される
-                const encoder = new TextEncoder(); // UTF-8エンコーディング
+                const encoder = new TextEncoder();
                 const utf8Array = encoder.encode(prtlXML);
 
-                const prtlBlob = new Blob([utf8Array], { type: 'application/octet-stream' });
-                const prtlLink = document.createElement('a');
-                prtlLink.download = `${baseName}-${paddedIdx}.prtl`;
-                prtlLink.href = URL.createObjectURL(prtlBlob);
-                prtlLink.click();
-                setTimeout(() => URL.revokeObjectURL(prtlLink.href), 100);
+                // ZIPファイルに追加
+                zip.file(`${baseName}-${paddedIdx}.prtl`, utf8Array);
             });
 
             // 元のキャンバスに戻す
@@ -8307,7 +8294,21 @@
             bgImage = currentCanvas.bgImage;
 
             render();
-            alert(`${canvases.length}個のPNGとPRTLファイルを書き出しました`);
+
+            // ZIPファイルを生成してダウンロード
+            try {
+                const zipBlob = await zip.generateAsync({ type: 'blob' });
+                const link = document.createElement('a');
+                link.download = `${baseName}.zip`;
+                link.href = URL.createObjectURL(zipBlob);
+                link.click();
+                setTimeout(() => URL.revokeObjectURL(link.href), 100);
+
+                alert(`${canvases.length}個のPRTLファイルをZIPに書き出しました`);
+            } catch (error) {
+                console.error('ZIP生成エラー:', error);
+                alert('ZIPファイルの生成に失敗しました');
+            }
         }
 
         // PRSL読み込み機能
