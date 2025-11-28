@@ -294,10 +294,11 @@
 
         #imeInput.active {
             z-index: 9999;
-            opacity: 0.01; /* ほぼ透明だが入力可能 */
+            opacity: 0.3; /* 少し可視化してカーソルとテキストを見やすく */
             pointer-events: auto;
-            color: rgba(255, 255, 255, 0.1); /* 微かに見える */
-            caret-color: transparent; /* カーソルを透明に */
+            color: rgba(255, 255, 255, 0.8); /* テキストを見えるように */
+            caret-color: #0099ff; /* カーソルを青色で可視化 */
+            background: rgba(0, 0, 0, 0.3); /* 背景を少し暗く */
         }
 
         /* スクロールバーのスタイル */
@@ -2107,6 +2108,9 @@
                 if (!isDrawingPath) {
                     // 新しいパスの開始
                     isDrawingPath = true;
+
+                    // 設定パネルからfillとstrokeの値を取得
+                    const fillType = document.getElementById('fill_type').value;
                     currentPath = {
                         type: 'pen',
                         anchors: [{
@@ -2118,31 +2122,79 @@
                         }],
                         closed: false,
                         fill: {
-                            enabled: false,
-                            type: 'solid',
-                            color: '#ffffff',
-                            opacity: 100
+                            enabled: document.getElementById('fill_enabled').checked,
+                            type: fillType,
+                            color: document.getElementById('fill_color').value,
+                            opacity: parseInt(document.getElementById('fill_opacity').value) || 100
                         },
                         // 複数ストローク設定
                         strokes: [
                             {
-                                enabled: true,
-                                type: 'edge',  // 'edge', 'depth', 'drop'
-                                color: '#000000',
-                                size: 3,
-                                opacity: 100,
-                                angle: 0,  // depth/dropで使用（度数）
-                                join: 'round'  // 'round', 'miter', 'bevel'
+                                enabled: document.getElementById('stroke1_enabled').checked,
+                                type: document.getElementById('stroke1_type').value || 'edge',
+                                size: parseInt(document.getElementById('stroke1_size').value) || 0,
+                                join: document.getElementById('stroke1_join').value || 'round',
+                                color: document.getElementById('stroke1_color').value,
+                                opacity: parseInt(document.getElementById('stroke1_opacity').value) || 100,
+                                angle: parseInt(document.getElementById('stroke1_angle').value) || 45
+                            },
+                            {
+                                enabled: document.getElementById('stroke2_enabled').checked,
+                                type: document.getElementById('stroke2_type').value || 'edge',
+                                size: parseInt(document.getElementById('stroke2_size').value) || 0,
+                                join: document.getElementById('stroke2_join').value || 'round',
+                                color: document.getElementById('stroke2_color').value,
+                                opacity: parseInt(document.getElementById('stroke2_opacity').value) || 100,
+                                angle: parseInt(document.getElementById('stroke2_angle').value) || 45
+                            },
+                            {
+                                enabled: document.getElementById('stroke3_enabled').checked,
+                                type: document.getElementById('stroke3_type').value || 'edge',
+                                size: parseInt(document.getElementById('stroke3_size').value) || 0,
+                                join: document.getElementById('stroke3_join').value || 'round',
+                                color: document.getElementById('stroke3_color').value,
+                                opacity: parseInt(document.getElementById('stroke3_opacity').value) || 100,
+                                angle: parseInt(document.getElementById('stroke3_angle').value) || 45
+                            },
+                            {
+                                enabled: document.getElementById('stroke4_enabled').checked,
+                                type: document.getElementById('stroke4_type').value || 'edge',
+                                size: parseInt(document.getElementById('stroke4_size').value) || 0,
+                                join: document.getElementById('stroke4_join').value || 'round',
+                                color: document.getElementById('stroke4_color').value,
+                                opacity: parseInt(document.getElementById('stroke4_opacity').value) || 100,
+                                angle: parseInt(document.getElementById('stroke4_angle').value) || 45
                             }
                         ],
                         // 後方互換性のための単一ストローク設定
                         stroke: {
-                            enabled: true,
-                            size: 3,
-                            color: '#000000',
-                            opacity: 100
+                            enabled: document.getElementById('stroke1_enabled').checked,
+                            size: parseInt(document.getElementById('stroke1_size').value) || 3,
+                            color: document.getElementById('stroke1_color').value,
+                            opacity: parseInt(document.getElementById('stroke1_opacity').value) || 100
                         }
                     };
+
+                    // グラデーションやシーンの設定も追加
+                    if (fillType === 'gradient-linear' || fillType === 'gradient-radial') {
+                        currentPath.fill.gradient = {
+                            type: fillType,
+                            colorStops: [
+                                { position: 0, color: document.getElementById('gradient_color1').value },
+                                { position: 100, color: document.getElementById('gradient_color2').value }
+                            ],
+                            angle: parseInt(document.getElementById('gradient_angle').value) || 0
+                        };
+                    }
+
+                    if (fillType === 'sheen') {
+                        currentPath.fill.sheen = {
+                            direction: document.getElementById('sheen_direction').value,
+                            intensity: parseInt(document.getElementById('sheen_intensity').value) || 50,
+                            size: parseInt(document.getElementById('sheen_size').value) || 50
+                        };
+                    }
+
                     isDraggingHandle = true;
                     selectedAnchorIndex = 0;
                     draggedHandleType = 'out';
@@ -3008,6 +3060,42 @@
                 selectionStart = e.target.selectionStart;
                 selectionEnd = e.target.selectionEnd;
                 cursorPosition = e.target.selectionStart;
+                render();
+            }
+        });
+
+        // IME入力フィールドのkeydownイベント（矢印キーとShift+矢印キーでの選択を処理）
+        document.getElementById('imeInput').addEventListener('keydown', (e) => {
+            if (!selectedObject || !isTyping) return;
+
+            // 矢印キー、Home、End、PageUp、PageDownは入力フィールドのデフォルト動作を許可
+            const navigationKeys = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'PageUp', 'PageDown'];
+            if (navigationKeys.includes(e.key)) {
+                // デフォルトの動作を許可（入力フィールドのカーソル移動と選択）
+                // イベント後に選択範囲を更新
+                setTimeout(() => {
+                    if (selectedObject && isTyping) {
+                        const imeInput = document.getElementById('imeInput');
+                        selectionStart = imeInput.selectionStart;
+                        selectionEnd = imeInput.selectionEnd;
+                        cursorPosition = imeInput.selectionStart;
+                        render();
+                    }
+                }, 0);
+            }
+        });
+
+        // IME入力フィールドのkeyupイベント（矢印キー操作後の選択範囲更新）
+        document.getElementById('imeInput').addEventListener('keyup', (e) => {
+            if (!selectedObject || !isTyping) return;
+
+            // 矢印キー、Home、End、PageUp、PageDownの後に選択範囲を更新
+            const navigationKeys = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'PageUp', 'PageDown'];
+            if (navigationKeys.includes(e.key)) {
+                const imeInput = document.getElementById('imeInput');
+                selectionStart = imeInput.selectionStart;
+                selectionEnd = imeInput.selectionEnd;
+                cursorPosition = imeInput.selectionStart;
                 render();
             }
         });
