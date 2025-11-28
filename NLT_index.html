@@ -1561,7 +1561,7 @@
         // プロパティ変更時のリアルタイム更新
         const propertyInputs = [
             'prop_x', 'prop_y', 'prop_fontSize', 'prop_fontFamily',
-            'prop_kerning', 'prop_tracking', 'prop_rotation', 'prop_vertical',
+            'prop_kerning', 'prop_tracking', 'prop_baselineShift', 'prop_rotation', 'prop_vertical',
             'prop_leading', 'prop_slant', 'prop_underline', 'prop_smallCaps', 'prop_smallCapsSize',
             'fill_color', 'fill_opacity', 'fill_enabled',
             'stroke1_enabled', 'stroke1_type', 'stroke1_size', 'stroke1_join', 'stroke1_color', 'stroke1_opacity', 'stroke1_angle',
@@ -1822,6 +1822,12 @@
         let currentPathTextPath = null; // 現在描画中のパス上文字用パス
         let isDraggingPathTextHandle = false; // パス上文字のハンドルをドラッグ中
         let selectedPathTextAnchorIndex = -1; // パス上文字の選択中アンカーポイント
+
+        // 選択ボックス関連の変数
+        let isDrawingSelectionBox = false; // 選択ボックス描画中
+        let selectionBoxStart = { x: 0, y: 0 }; // 選択ボックスの開始位置
+        let selectionBoxEnd = { x: 0, y: 0 }; // 選択ボックスの終了位置
+        let selectedLayers = []; // 選択されたレイヤーの配列
 
         let renderScheduled = false; // render()のスケジュール管理
 
@@ -2375,6 +2381,14 @@
                     dragTarget = 'object';
                     dragStartObjX = selectedObject.x;
                     dragStartObjY = selectedObject.y;
+                } else {
+                    // オブジェクトが選択されなかった場合、選択ボックスを開始
+                    isDrawingSelectionBox = true;
+                    selectionBoxStart = { x: x, y: y };
+                    selectionBoxEnd = { x: x, y: y };
+                    selectedObject = null;
+                    updatePropertiesPanel();
+                    render();
                 }
             }
         });
@@ -2384,7 +2398,11 @@
             const x = (e.clientX - rect.left) * (canvas.width / rect.width);
             const y = (e.clientY - rect.top) * (canvas.height / rect.height);
 
-            if (isDraggingPathTextHandle && currentPathTextPath && selectedPathTextAnchorIndex >= 0) {
+            if (isDrawingSelectionBox) {
+                // 選択ボックスの終了位置を更新
+                selectionBoxEnd = { x: x, y: y };
+                scheduleRender();
+            } else if (isDraggingPathTextHandle && currentPathTextPath && selectedPathTextAnchorIndex >= 0) {
                 // パス上文字ツール: ベジエハンドルをドラッグ中
                 const anchor = currentPathTextPath.anchors[selectedPathTextAnchorIndex];
                 anchor.handleOut = { x: x - anchor.x, y: y - anchor.y };
@@ -2487,7 +2505,63 @@
         });
 
         canvas.addEventListener('mouseup', () => {
-            if (isDraggingPathTextHandle) {
+            if (isDrawingSelectionBox) {
+                // 選択ボックス内のレイヤーを選択
+                const boxMinX = Math.min(selectionBoxStart.x, selectionBoxEnd.x);
+                const boxMaxX = Math.max(selectionBoxStart.x, selectionBoxEnd.x);
+                const boxMinY = Math.min(selectionBoxStart.y, selectionBoxEnd.y);
+                const boxMaxY = Math.max(selectionBoxStart.y, selectionBoxEnd.y);
+
+                selectedLayers = [];
+
+                // すべてのオブジェクトをチェック
+                // テキストオブジェクトをチェック
+                textObjects.forEach(obj => {
+                    const metrics = measureText(obj);
+                    const objMinX = obj.x;
+                    const objMaxX = obj.x + metrics.width;
+                    const objMinY = obj.y;
+                    const objMaxY = obj.y + metrics.height;
+
+                    // 選択ボックスと交差するかチェック
+                    if (!(objMaxX < boxMinX || objMinX > boxMaxX || objMaxY < boxMinY || objMinY > boxMaxY)) {
+                        selectedLayers.push({ type: 'text', object: obj });
+                    }
+                });
+
+                // 図形オブジェクトをチェック
+                shapeObjects.forEach(obj => {
+                    const objMinX = Math.min(obj.x, obj.x + obj.width);
+                    const objMaxX = Math.max(obj.x, obj.x + obj.width);
+                    const objMinY = Math.min(obj.y, obj.y + obj.height);
+                    const objMaxY = Math.max(obj.y, obj.y + obj.height);
+
+                    // 選択ボックスと交差するかチェック
+                    if (!(objMaxX < boxMinX || objMinX > boxMaxX || objMaxY < boxMinY || objMinY > boxMaxY)) {
+                        selectedLayers.push({ type: 'shape', object: obj });
+                    }
+                });
+
+                // パス上文字オブジェクトをチェック
+                pathTextObjects.forEach(obj => {
+                    if (obj.path && obj.path.length > 0) {
+                        // パスの最初のポイントが選択ボックス内にあるかチェック
+                        const p = obj.path[0];
+                        if (p.x >= boxMinX && p.x <= boxMaxX && p.y >= boxMinY && p.y <= boxMaxY) {
+                            selectedLayers.push({ type: 'pathText', object: obj });
+                        }
+                    }
+                });
+
+                // 選択されたレイヤーがある場合、最初のレイヤーを選択オブジェクトとして設定
+                if (selectedLayers.length > 0) {
+                    selectedObject = selectedLayers[0].object;
+                    updatePropertiesPanel();
+                }
+
+                isDrawingSelectionBox = false;
+                render();
+            } else if (isDraggingPathTextHandle) {
                 // パス上文字ツール: ハンドルのドラッグ終了
                 isDraggingPathTextHandle = false;
                 render();
@@ -3343,6 +3417,24 @@
             // カーソル描画（入力中の場合）
             if (isTyping && selectedObject && cursorVisible) {
                 drawCursor();
+            }
+
+            // 選択ボックスの描画
+            if (isDrawingSelectionBox) {
+                const boxMinX = Math.min(selectionBoxStart.x, selectionBoxEnd.x);
+                const boxMaxX = Math.max(selectionBoxStart.x, selectionBoxEnd.x);
+                const boxMinY = Math.min(selectionBoxStart.y, selectionBoxEnd.y);
+                const boxMaxY = Math.max(selectionBoxStart.y, selectionBoxEnd.y);
+
+                ctx.save();
+                ctx.strokeStyle = '#0099ff';
+                ctx.lineWidth = 1;
+                ctx.setLineDash([5, 5]);
+                ctx.strokeRect(boxMinX, boxMinY, boxMaxX - boxMinX, boxMaxY - boxMinY);
+                ctx.fillStyle = 'rgba(0, 153, 255, 0.1)';
+                ctx.fillRect(boxMinX, boxMinY, boxMaxX - boxMinX, boxMaxY - boxMinY);
+                ctx.setLineDash([]);
+                ctx.restore();
             }
 
             // オブジェクト数が変わった場合、または選択オブジェクトが変わった場合、レイヤーリストを更新
@@ -4871,20 +4963,86 @@
             const start = Math.min(selectionStart, selectionEnd);
             const end = Math.max(selectionStart, selectionEnd);
 
-            const textBeforeSelection = selectedObject.text.substring(0, start);
-            const selectedText = selectedObject.text.substring(start, end);
+            // パス上文字の場合
+            if (selectedObject.path && selectedObject.path.length >= 2) {
+                const text = selectedObject.text || '';
+                const scaleX = selectedObject.scaleX / 100;
 
-            const metricsBeforeSelection = ctx.measureText(textBeforeSelection);
-            const metricsSelectedText = ctx.measureText(selectedText);
+                // パスの全長を計算
+                let totalLength = 0;
+                const pathSegments = [];
+                for (let i = 0; i < selectedObject.path.length - 1; i++) {
+                    const p1 = selectedObject.path[i];
+                    const p2 = selectedObject.path[i + 1];
+                    const dx = p2.x - p1.x;
+                    const dy = p2.y - p1.y;
+                    const segmentLength = Math.sqrt(dx * dx + dy * dy);
+                    pathSegments.push({
+                        start: p1,
+                        end: p2,
+                        length: segmentLength,
+                        startDist: totalLength
+                    });
+                    totalLength += segmentLength;
+                }
 
-            const selectionX = selectedObject.x + metricsBeforeSelection.width * (selectedObject.scaleX / 100);
-            const selectionWidth = metricsSelectedText.width * (selectedObject.scaleX / 100);
-            const selectionY = selectedObject.y;
-            const selectionHeight = selectedObject.fontSize;
+                // 選択範囲の各文字をハイライト
+                let currentDist = 0;
+                for (let i = 0; i < text.length; i++) {
+                    const char = text[i];
+                    const charWidth = ctx.measureText(char).width * scaleX;
 
-            // 青いハイライト（レガシータイトルと同じ）
-            ctx.fillStyle = 'rgba(0, 102, 204, 0.3)';
-            ctx.fillRect(selectionX, selectionY, selectionWidth, selectionHeight);
+                    // 選択範囲内の文字のみハイライト
+                    if (i >= start && i < end) {
+                        // 現在の距離に対応するパスセグメントを見つける
+                        let segment = null;
+                        let segmentT = 0;
+                        for (let j = 0; j < pathSegments.length; j++) {
+                            const seg = pathSegments[j];
+                            if (currentDist >= seg.startDist && currentDist <= seg.startDist + seg.length) {
+                                segment = seg;
+                                segmentT = (currentDist - seg.startDist) / seg.length;
+                                break;
+                            }
+                        }
+
+                        if (segment) {
+                            const x = segment.start.x + (segment.end.x - segment.start.x) * segmentT;
+                            const y = segment.start.y + (segment.end.y - segment.start.y) * segmentT;
+                            const angle = Math.atan2(segment.end.y - segment.start.y, segment.end.x - segment.start.x);
+
+                            ctx.save();
+                            ctx.translate(x, y);
+                            ctx.rotate(angle + selectedObject.rotation * Math.PI / 180);
+                            ctx.scale(scaleX, 1);
+
+                            // 青いハイライト
+                            ctx.fillStyle = 'rgba(0, 102, 204, 0.3)';
+                            ctx.fillRect(0, 0, charWidth / scaleX, selectedObject.fontSize);
+
+                            ctx.restore();
+                        }
+                    }
+
+                    currentDist += charWidth + (selectedObject.kerning || 0);
+                }
+            } else {
+                // 通常のテキストオブジェクトの場合
+                const textBeforeSelection = selectedObject.text.substring(0, start);
+                const selectedText = selectedObject.text.substring(start, end);
+
+                const metricsBeforeSelection = ctx.measureText(textBeforeSelection);
+                const metricsSelectedText = ctx.measureText(selectedText);
+
+                const selectionX = selectedObject.x + metricsBeforeSelection.width * (selectedObject.scaleX / 100);
+                const selectionWidth = metricsSelectedText.width * (selectedObject.scaleX / 100);
+                const selectionY = selectedObject.y;
+                const selectionHeight = selectedObject.fontSize;
+
+                // 青いハイライト（レガシータイトルと同じ）
+                ctx.fillStyle = 'rgba(0, 102, 204, 0.3)';
+                ctx.fillRect(selectionX, selectionY, selectionWidth, selectionHeight);
+            }
 
             ctx.restore();
         }
